@@ -14,9 +14,9 @@ The project will include:
 
 ## Project status
 
-🚧 Bootstrap phase.
+🚧 Core implementation phase.
 
-The first milestone is a correct and testable shogi core: board state, legal moves, move application/undo, SFEN/USI notation, repetition handling, and a stable engine interface.
+The current core includes board/hand representation, SFEN parsing and serialization, and pseudo-legal move generation including promotion and basic drop restrictions. Full king-safety legality, make/unmake, hashing, repetition handling, and USI remain upcoming milestones.
 
 ## Design principles
 
@@ -26,18 +26,30 @@ The first milestone is a correct and testable shogi core: board state, legal mov
 4. **Explainability is useful.** Evaluation-based engines should be able to expose why a position received its score.
 5. **Experiments stay reproducible.** Seeds, engine settings, model versions, and game records should be preservable.
 6. **Obake are allowed to be silly, not corrupt the rules.** Character behavior belongs above the authoritative legal-move layer.
+7. **Implementation tasks should be local.** The repository should make it easy for Codex or a human contributor to identify the target subsystem, acceptance tests, and out-of-scope behavior.
 
 ## Planned layout
 
 ```text
-engine/       core shogi engine and common AI interfaces
+engine/       core shogi state and rules
 engines/      individual AI implementations
 protocol/     USI and other frontends
 tools/        training, self-play, conversion, and analysis tools
 tests/        correctness and regression tests
-docs/         architecture and engine notes
+doc/          detailed project documentation
+  architecture/    architecture and dependency decisions
+  specifications/  rule, API, and file-format specifications
+  diagrams/        diagrams, tables, and visual design notes
 models/       model metadata/pointers; large trained data is not committed here
 ```
+
+Repository-level information stays in this README. Detailed documentation should normally be added under `doc/`, using a suitable subdirectory rather than placing many unrelated files directly in `doc/`.
+
+## Documentation
+
+- [Architecture](doc/architecture/ARCHITECTURE.md)
+- [Move generation specification](doc/specifications/MOVE_GENERATION.md)
+- [Diagram area](doc/diagrams/README.md)
 
 ## Initial engine families
 
