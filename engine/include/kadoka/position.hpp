@@ -30,6 +30,7 @@ public:
 
     [[nodiscard]] const Piece& at(Square square) const;
     [[nodiscard]] std::uint8_t hand_count(Color color, PieceType type) const;
+    [[nodiscard]] Position after_move(const Move& move) const;
     [[nodiscard]] std::string to_sfen() const;
 
 private:
