@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(kadoka_shogi_core
+    engine/src/movegen.cpp
     engine/src/position.cpp
 )
 
@@ -25,6 +26,11 @@ enable_testing()
 add_executable(core_smoke_test
     tests/core_smoke_test.cpp
 )
-
 target_link_libraries(core_smoke_test PRIVATE kadoka_shogi_core)
 add_test(NAME core_smoke_test COMMAND core_smoke_test)
+
+add_executable(movegen_test
+    tests/movegen_test.cpp
+)
+target_link_libraries(movegen_test PRIVATE kadoka_shogi_core)
+add_test(NAME movegen_test COMMAND movegen_test)
