@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include <vector>
+#include <string_view>
 
 namespace kadoka::shogi {
 
@@ -21,6 +21,7 @@ public:
     Position();
 
     [[nodiscard]] static Position startpos();
+    [[nodiscard]] static Position from_sfen(std::string_view sfen);
 
     [[nodiscard]] const Board& board() const noexcept { return board_; }
     [[nodiscard]] const Hands& hands() const noexcept { return hands_; }
@@ -28,10 +29,8 @@ public:
     [[nodiscard]] std::uint32_t ply() const noexcept { return ply_; }
 
     [[nodiscard]] const Piece& at(Square square) const;
+    [[nodiscard]] std::uint8_t hand_count(Color color, PieceType type) const;
     [[nodiscard]] std::string to_sfen() const;
-
-    // Intentionally conservative bootstrap API. Legal move generation and
-    // make/unmake are added next, after representation tests are locked down.
 
 private:
     [[nodiscard]] static std::size_t index_of(Square square);
