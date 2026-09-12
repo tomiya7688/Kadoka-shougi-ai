@@ -64,4 +64,11 @@ Repository-level information stays in this README. Detailed documentation should
 
 ## License
 
-A license has not been selected yet.
+This repository uses two license layers with a deliberately narrow boundary:
+
+- **MIT License** (`LICENSE`) — applies to the software and technical AI contents, including source code, algorithms, search/evaluation/learning methods, model implementations, trained weights, parameters, datasets, protocols, tools, tests, and technical documentation unless separately noted.
+- **Kadoka Shougi AI Character License** (`CHARACTER_LICENSE.md`) — applies only to official AI character **names** and **visual character designs / character artwork**.
+
+For example, the name and visual appearance of an AI such as **賢者メリースライム** are covered by the character license, while the AI engine itself — including its methods, model, learned weights, parameters, and implementation — is MIT-licensed.
+
+A character name appearing inside MIT-licensed source code or model metadata does not change the license of the technical implementation itself.
