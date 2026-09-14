@@ -15,6 +15,12 @@ bool has_move(const std::vector<Move>& moves, Square from, Square to) {
     });
 }
 
+bool has_drop(const std::vector<Move>& moves, PieceType piece, Square to) {
+    return std::any_of(moves.begin(), moves.end(), [&](const Move& move) {
+        return move.is_drop() && move.drop_piece == piece && move.to == to;
+    });
+}
+
 } // namespace
 
 int main() {
@@ -43,6 +49,34 @@ int main() {
         assert(next.hand_count(Color::Black, PieceType::Pawn) == 1);
         assert(next.side_to_move() == Color::White);
         assert(next.ply() == 2);
+    }
+
+    {
+        const Position mate = Position::from_sfen("7lk/7l1/7G1/9/9/9/9/9/K8 b P 1");
+        const auto pseudo = generate_pseudo_legal_moves(mate);
+        const auto legal = generate_legal_moves(mate);
+        assert(has_drop(pseudo, PieceType::Pawn, Square{1, 2}));
+        assert(!has_drop(legal, PieceType::Pawn, Square{1, 2}));
+    }
+
+    {
+        const Position escapable = Position::from_sfen("7lk/7l1/9/9/9/9/9/9/K8 b P 1");
+        const auto legal = generate_legal_moves(escapable);
+        assert(has_drop(legal, PieceType::Pawn, Square{1, 2}));
+    }
+
+    {
+        const Position mate = Position::from_sfen("k8/9/9/9/9/9/7g1/7L1/7LK w p 1");
+        const auto pseudo = generate_pseudo_legal_moves(mate);
+        const auto legal = generate_legal_moves(mate);
+        assert(has_drop(pseudo, PieceType::Pawn, Square{1, 8}));
+        assert(!has_drop(legal, PieceType::Pawn, Square{1, 8}));
+    }
+
+    {
+        const Position escapable = Position::from_sfen("k8/9/9/9/9/9/9/7L1/7LK w p 1");
+        const auto legal = generate_legal_moves(escapable);
+        assert(has_drop(legal, PieceType::Pawn, Square{1, 8}));
     }
 
     return 0;
