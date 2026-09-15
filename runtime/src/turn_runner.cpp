@@ -3,6 +3,7 @@
 #include "kadoka/movegen.hpp"
 
 #include <algorithm>
+#include <utility>
 
 namespace kadoka::shogi::runtime {
 namespace {
