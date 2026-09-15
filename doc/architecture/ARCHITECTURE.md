@@ -39,11 +39,26 @@ Planned families:
 - `obake_kadoka`
 - `obake_maru`
 
+### `runtime/`
+Minimal match-time coordination shared by built-in and external AI adapters.
+
+Responsibilities:
+- call an engine through the common interface
+- validate AI output against authoritative core legality
+- return explicit applied / rejected / no-legal-move status
+- preserve the current canonical position when an AI returns an illegal move
+
+The runtime must stay small. Training, dataset conversion, model analysis, GUI behavior, and transport-specific process management do not belong in the match hot path.
+
 ### `protocol/`
 Frontends and adapters such as CLI and USI. Protocol code translates external commands into core positions/search limits but does not implement shogi rules.
 
+Future process/IPC/network adapters should translate their external representation into the common engine/runtime boundary rather than bypassing core validation.
+
 ### `tools/`
 Self-play, training, dataset conversion, benchmarks, tournament runners, and analysis utilities.
+
+Tooling may use runtime for actual games, but heavy conversion, training, and analysis stay outside runtime.
 
 ### `tests/`
 Correctness and regression tests. Tests should be grouped by the subsystem they lock down. Small SFEN positions are preferred for rule regressions because they make failures reproducible and easy to understand.
@@ -63,13 +78,24 @@ Add new subdirectories instead of accumulating unrelated documents at the root o
 Keep dependencies simple and one-way where practical:
 
 ```text
-engine <- engines <- protocol/tools
-   ^          ^
-   |          |
- tests ------+
+                 engines
+                    ↓
+engine/core ← runtime ← protocol / headless tools
+     ↑          ↑
+     └── tests ─┘
+
+Creator / Training / Analysis
+             ↓
+        engines/adapters
+             ↓
+           runtime
+             ↓
+         engine/core
 ```
 
-The shared `engine` layer must not import a concrete AI implementation. AI implementations may depend on the engine core. Frontends may depend on both but should not become a second rules engine.
+The shared `engine` layer must not import a concrete AI implementation or runtime behavior. AI implementations may depend on the engine core. Runtime depends on the common engine contract and authoritative legal-move APIs, but not on a concrete AI family. Frontends may depend on runtime and adapters but should not become a second rules engine.
+
+Runtime must not depend upward on Creator/Training/Analysis. This mirrors the sibling-project direction used by Kadoka Othello AI and Kadoka Tetris AI: match-time code stays lightweight, while model creation and heavy data work remain outside the hot path.
 
 ## Codex implementation conventions
 
@@ -91,9 +117,11 @@ Every engine receives an immutable `Position` and `SearchLimits`, and returns a 
 
 Time-limited engines should keep a valid current best move so they can terminate cleanly at the requested budget. Engines that support full-search or convergence modes may expose those modes through engine-specific options later without changing the common match interface.
 
+The engine result is not authoritative game state. Runtime validates the returned move against `generate_legal_moves()` before deriving the next canonical `Position`. See `doc/specifications/ENGINE_RUNTIME.md`.
+
 ## Obake rule
 
-Obake engines may propose silly or illegal intentions for UI/character purposes, but the authoritative game core never accepts an illegal move. UI speech and rejected-attempt logging stay outside the canonical game record.
+Obake engines may propose silly or illegal intentions for UI/character purposes, but the authoritative game core never accepts an illegal move. Runtime reports the rejected attempt and leaves the canonical position unchanged. UI speech and rejected-attempt logging stay outside the canonical game record.
 
 ## Near-term milestones
 
@@ -102,6 +130,7 @@ Obake engines may propose silly or illegal intentions for UI/character purposes,
 3. Filter self-check and implement attack/check detection.
 4. Add make/unmake plus position hashing.
 5. Implement pawn-drop mate rejection at the legal-move layer.
-6. Add repetition/perpetual-check adjudication.
-7. Add USI frontend.
-8. Build the first deliberately weak Obake engine and the first real evaluation engine on the same interface.
+6. Add a validated engine runtime boundary for built-in/external adapters.
+7. Add repetition/perpetual-check adjudication.
+8. Add USI frontend.
+9. Build the first deliberately weak Obake engine and the first real evaluation engine on the same interface.
