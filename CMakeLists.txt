@@ -17,6 +17,20 @@ target_include_directories(kadoka_shogi_core
         ${CMAKE_CURRENT_SOURCE_DIR}/engine/include
 )
 
+add_library(kadoka_shogi_runtime
+    runtime/src/turn_runner.cpp
+)
+
+target_include_directories(kadoka_shogi_runtime
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/runtime/include
+)
+
+target_link_libraries(kadoka_shogi_runtime
+    PUBLIC
+        kadoka_shogi_core
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -36,3 +50,7 @@ add_test(NAME movegen_test COMMAND movegen_test)
 add_executable(legal_move_test tests/legal_move_test.cpp)
 target_link_libraries(legal_move_test PRIVATE kadoka_shogi_core)
 add_test(NAME legal_move_test COMMAND legal_move_test)
+
+add_executable(runtime_turn_runner_test tests/runtime_turn_runner_test.cpp)
+target_link_libraries(runtime_turn_runner_test PRIVATE kadoka_shogi_runtime)
+add_test(NAME runtime_turn_runner_test COMMAND runtime_turn_runner_test)
