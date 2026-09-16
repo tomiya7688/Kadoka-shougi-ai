@@ -66,9 +66,11 @@ int main() {
 
         const MatchResult result = run_headless_match(black, white, initial, limits);
 
-        assert(result.end_reason == MatchEndReason::PlyLimit);
+        assert(result.outcome.result == GameResult::Unresolved);
+        assert(result.outcome.reason == GameEndReason::PlyLimit);
+        assert(!result.outcome.winner.has_value());
+        assert(!result.outcome.loser.has_value());
         assert(!result.stopped_side.has_value());
-        assert(!result.losing_side.has_value());
         assert(result.accepted_moves.size() == 2);
         assert(result.black_illegal_outputs == 1);
         assert(result.white_illegal_outputs == 0);
@@ -95,9 +97,11 @@ int main() {
 
         const MatchResult result = run_headless_match(black, white, initial, limits);
 
-        assert(result.end_reason == MatchEndReason::EngineAttemptLimit);
+        assert(result.outcome.result == GameResult::Unresolved);
+        assert(result.outcome.reason == GameEndReason::EngineAttemptLimit);
         assert(result.stopped_side == Color::Black);
-        assert(!result.losing_side.has_value());
+        assert(!result.outcome.winner.has_value());
+        assert(!result.outcome.loser.has_value());
         assert(result.accepted_moves.empty());
         assert(result.black_illegal_outputs == 2);
         assert(result.white_illegal_outputs == 0);
@@ -117,12 +121,35 @@ int main() {
 
         const MatchResult result = run_headless_match(black, white, empty);
 
-        assert(result.end_reason == MatchEndReason::NoLegalMoves);
+        assert(result.outcome.result == GameResult::Unresolved);
+        assert(result.outcome.reason == GameEndReason::NoLegalMoves);
         assert(result.stopped_side == Color::Black);
-        assert(!result.losing_side.has_value());
+        assert(!result.outcome.winner.has_value());
+        assert(!result.outcome.loser.has_value());
         assert(result.accepted_moves.empty());
         assert(result.black_illegal_outputs == 0);
         assert(result.white_illegal_outputs == 0);
+        assert(black.calls() == 0);
+        assert(white.calls() == 0);
+    }
+
+    {
+        const Position mate = Position::from_sfen("4k4/9/9/9/9/9/9/3grg3/4K4 b - 1");
+        SequenceEngine black({
+            Move{Square{5, 9}, Square{4, 9}, PieceType::None, false},
+        });
+        SequenceEngine white({
+            Move{Square{5, 1}, Square{4, 1}, PieceType::None, false},
+        });
+
+        const MatchResult result = run_headless_match(black, white, mate);
+
+        assert(result.outcome.result == GameResult::WhiteWin);
+        assert(result.outcome.reason == GameEndReason::Checkmate);
+        assert(result.outcome.winner == Color::White);
+        assert(result.outcome.loser == Color::Black);
+        assert(!result.stopped_side.has_value());
+        assert(result.accepted_moves.empty());
         assert(black.calls() == 0);
         assert(white.calls() == 0);
     }
@@ -150,9 +177,11 @@ int main() {
         limits.max_plies = 64;
 
         const MatchResult result = run_headless_match(black, white, initial, limits);
-        assert(result.end_reason == MatchEndReason::RepetitionDraw);
+        assert(result.outcome.result == GameResult::ReplayRequired);
+        assert(result.outcome.reason == GameEndReason::Repetition);
+        assert(!result.outcome.winner.has_value());
+        assert(!result.outcome.loser.has_value());
         assert(!result.stopped_side.has_value());
-        assert(!result.losing_side.has_value());
         assert(result.accepted_moves.size() == 12);
     }
 
@@ -179,9 +208,11 @@ int main() {
         limits.max_plies = 64;
 
         const MatchResult result = run_headless_match(black, white, initial, limits);
-        assert(result.end_reason == MatchEndReason::PerpetualCheckLoss);
+        assert(result.outcome.result == GameResult::WhiteWin);
+        assert(result.outcome.reason == GameEndReason::PerpetualCheckViolation);
+        assert(result.outcome.winner == Color::White);
+        assert(result.outcome.loser == Color::Black);
         assert(!result.stopped_side.has_value());
-        assert(result.losing_side == Color::Black);
         assert(result.accepted_moves.size() == 12);
     }
 
