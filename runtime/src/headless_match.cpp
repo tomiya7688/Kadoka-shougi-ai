@@ -1,5 +1,6 @@
 #include "kadoka/runtime/headless_match.hpp"
 
+#include "kadoka/impasse.hpp"
 #include "kadoka/repetition.hpp"
 #include "kadoka/terminal.hpp"
 
@@ -31,6 +32,17 @@ std::optional<Color> repetition_loser(RepetitionStatus status) {
     return std::nullopt;
 }
 
+bool apply_500_move_impasse_if_ready(
+    const std::vector<Position>& history,
+    MatchResult& result) {
+    if (adjudicate_500_move_impasse(history) != Move500ImpasseStatus::Replay) {
+        return false;
+    }
+    result.outcome = make_replay_outcome(GameEndReason::Impasse);
+    result.stopped_side.reset();
+    return true;
+}
+
 } // namespace
 
 MatchResult run_headless_match(
@@ -44,6 +56,10 @@ MatchResult run_headless_match(
     std::vector<Position> history;
     history.reserve(static_cast<std::size_t>(limits.max_plies) + 1);
     history.push_back(initial_position);
+
+    if (apply_500_move_impasse_if_ready(history, result)) {
+        return result;
+    }
 
     while (result.accepted_moves.size() < static_cast<std::size_t>(limits.max_plies)) {
         const Color side = result.final_position.side_to_move();
@@ -94,6 +110,10 @@ MatchResult run_headless_match(
         if (const std::optional<Color> loser = repetition_loser(repetition.status); loser.has_value()) {
             result.outcome = make_win_outcome(opposite(*loser), GameEndReason::PerpetualCheckViolation);
             result.stopped_side.reset();
+            return result;
+        }
+
+        if (apply_500_move_impasse_if_ready(history, result)) {
             return result;
         }
     }
