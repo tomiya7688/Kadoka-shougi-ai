@@ -4,9 +4,9 @@
 
 The headless match runner executes two `Engine` implementations without a GUI while preserving the authoritative shogi-core boundary.
 
-It is intentionally a Runtime component, not a second rules engine. Every AI decision is passed through `run_engine_turn()`, so built-in engines, character engines, and future external adapters all receive the same legality treatment.
+Every AI decision passes through `run_engine_turn()`. Single-position terminal facts and history-dependent repetition facts come from the Core. Runtime execution failures remain Runtime facts.
 
-History-dependent shogi rules are also delegated to the Core. The runtime stores canonical history and asks the Core repetition adjudicator for a result after each accepted move.
+The final public result is `MatchResult::outcome`, using the common contract in `GAME_OUTCOME.md`.
 
 ## API
 
@@ -19,17 +19,9 @@ MatchResult run_headless_match(
 );
 ```
 
-`MatchLimits` currently contains:
-
-- per-side `SearchLimits`
-- `max_engine_attempts_per_turn`
-- `max_plies`
-
-The two sides may therefore use different time/node/depth budgets while still sharing one match loop.
+`MatchLimits` contains per-side `SearchLimits`, `max_engine_attempts_per_turn`, and `max_plies`.
 
 ## Illegal-output retry
-
-An engine may return an illegal move. This is expected to be possible for external adapters and character-oriented engines such as Kadoka/Maru.
 
 For one ply:
 
@@ -43,110 +35,116 @@ run_engine_turn validation
    └─ illegal -> keep same position and retry
 ```
 
-`max_engine_attempts_per_turn` is the total number of `Engine::search` calls permitted for that side on that ply.
+`max_engine_attempts_per_turn` is the total number of engine calls permitted for that side on one ply.
 
-Examples:
+Rejected outputs increment the per-side illegal-output counter, but they do not enter `accepted_moves`, do not enter repetition history, and never mutate the canonical position.
 
-- `1`: no retry after the first illegal output
-- `3`: at most three total engine decisions for that ply
-- `0`: the attempt limit is already reached; the match stops without calling the engine
+If the attempt limit is exhausted, the outcome is:
 
-Illegal outputs are counted in `black_illegal_outputs` / `white_illegal_outputs` for diagnostics, but they are not inserted into `accepted_moves`, do not enter repetition history, and never mutate the canonical position.
+```text
+result = Unresolved
+reason = EngineAttemptLimit
+```
 
-## Accepted move record and history
+`stopped_side` identifies the side whose engine could not continue. This is diagnostic information, not an automatic shogi loss.
 
-`MatchResult::accepted_moves` contains only moves accepted by the authoritative Core.
+## Checkmate and no-legal-move handling
 
-The runner also keeps an in-memory canonical position history consisting of the initial position plus the position after every accepted move. This history is passed to `adjudicate_repetition()` after each accepted move.
+`run_engine_turn()` reports `NoLegalMoves` without assigning a winner.
 
-This distinction is important for later Dataset generation:
+The Headless Match Runtime then asks the Core `adjudicate_terminal_position()` for the authoritative single-position fact.
 
-- canonical match record: legal accepted moves only
-- diagnostic/character log: rejected intentions may be recorded separately by a higher layer
+If the side to move is checkmated:
 
-The headless runtime does not currently persist either form to disk.
+```text
+result = opponent win
+reason = Checkmate
+winner = opponent
+loser = side to move
+```
 
-## End reasons
+The engine is not called.
 
-### `NoLegalMoves`
+If a synthetic/non-standard position has no legal moves but the Core does not establish checkmate, the runtime returns:
 
-The current side has no legal move according to the Core.
+```text
+result = Unresolved
+reason = NoLegalMoves
+```
 
-- that engine is not called
-- `stopped_side` identifies the side to move
-- the runtime does not yet classify checkmate/stalemate/result semantics
+This prevents malformed positions from silently becoming wins.
 
-### `EngineAttemptLimit`
+## Repetition
 
-The current side failed to produce a legal move within `max_engine_attempts_per_turn`.
+The runner keeps canonical position history consisting of the initial position plus the position after every accepted move. After each accepted move it calls the Core repetition adjudicator.
 
-- `stopped_side` identifies that side
-- the canonical position remains at the last accepted position
-- the opponent is not advanced automatically
+Ordinary fourfold repetition maps to:
 
-A future match-policy layer may decide whether this is a loss, adapter failure, disqualification, or recoverable external-process error.
+```text
+result = ReplayRequired
+reason = Repetition
+```
 
-### `RepetitionDraw`
+This is deliberately not represented as `Draw`, because the Japan Shogi Association rule requires a replay and does not count the repetition game as a completed game.
 
-The Core detected the fourth occurrence of the same board, both hands, and side to move, and did not identify one side as the unique continuous checker.
+Continuous-check repetition maps to a normal win/loss:
 
-- `stopped_side` is empty
-- `losing_side` is empty
-- the current single game terminates as ordinary repetition
+```text
+result = opponent-of-checker win
+reason = PerpetualCheckViolation
+winner/loser = present
+```
 
-Tournament-level replay/side-switch policy is deliberately outside this runner.
+## Ply safety guard
 
-### `PerpetualCheckLoss`
+If `max_plies` is reached before an official result:
 
-The Core detected fourfold repetition and one player's every move through the repetition sequence was check.
+```text
+result = Unresolved
+reason = PlyLimit
+```
 
-- `losing_side` identifies the continuously checking side
-- `stopped_side` is empty
-- the runtime does not infer this from AI annotations; the Core derives it from canonical positions and attack detection
+This is a runtime safeguard, not a game-rule draw.
 
-### `PlyLimit`
+## MatchResult fields
 
-The configured safety limit was reached after accepted moves without another adjudicated result.
+`MatchResult` contains:
 
-This is a neutral runtime safeguard. `stopped_side` and `losing_side` are empty because neither engine is treated as the cause.
+- `outcome` — canonical result + reason + winner/loser
+- `final_position`
+- `accepted_moves`
+- per-side illegal-output counts
+- optional `stopped_side` for unresolved runtime stops
 
-## What this runner does not decide
+Consumers should use `outcome` for scoring and dataset metadata. `stopped_side` is diagnostics only.
 
-The runtime now handles the single-game termination facts needed for ordinary repetition and continuous-check repetition, but it still does not provide a complete tournament result layer.
+## Deferred result sources
 
-Still deferred:
+`GameEndReason` already reserves stable reason values for several upcoming paths, but this runner does not emit them yet:
 
-- ordinary-repetition replay and side-switch orchestration
 - resignation
-- timeout loss
-- external process crash/disconnect policy
-- checkmate/stalemate result classification
-- entering-king / impasse result policy
-- opening adjudication or special tournament rules
-- Dataset persistence
+- time forfeit
+- entering-king / impasse adjudication
 
-Those policies must consume Core/Runtime facts rather than duplicate move legality or repetition rules.
+External process crash/disconnect policy is also still deferred and should not be conflated with an official game loss unless an explicit match policy says so.
+
+## Dataset and league use
+
+League, benchmark, and dataset writers must preserve both `outcome.result` and `outcome.reason`.
+
+Examples that must remain distinguishable:
+
+- checkmate loss vs perpetual-check loss
+- repetition replay vs scored draw
+- official result vs engine/runtime failure
+- future timeout vs resignation
 
 ## Sibling-project alignment
 
-This follows the shared Kadoka AI family structure:
+The same conceptual result schema should be used across Kadoka Shougi, Othello, and Tetris even though game-specific reasons differ:
 
 ```text
-Creator / Training / Analysis
-            ↓
-     Engine / Adapter
-            ↓
-   Headless Match Runtime
-            ↓
-       Turn Runtime
-            ↓
-      Authoritative Core
+result + reason + winner/loser when known
 ```
 
-The same design principle can be used in Othello and Tetris even though their actions and terminal rules differ:
-
-- AI output is never allowed to mutate canonical state directly
-- rejected output is diagnostic, not canonical history
-- retry/transport policy belongs above rule validation
-- history-dependent game rules remain in the authoritative game layer
-- GUI-free matches are the standard path for league, benchmark, and Dataset generation
+This keeps cross-project league, dataset, Model Hub, and benchmark tooling compatible without forcing identical game-rule implementations.

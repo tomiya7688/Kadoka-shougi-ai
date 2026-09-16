@@ -1,5 +1,6 @@
 #pragma once
 
+#include "kadoka/runtime/game_outcome.hpp"
 #include "kadoka/runtime/turn_runner.hpp"
 
 #include <cstdint>
@@ -7,14 +8,6 @@
 #include <vector>
 
 namespace kadoka::shogi::runtime {
-
-enum class MatchEndReason : std::uint8_t {
-    NoLegalMoves,
-    EngineAttemptLimit,
-    RepetitionDraw,
-    PerpetualCheckLoss,
-    PlyLimit,
-};
 
 struct MatchLimits {
     SearchLimits black_search{};
@@ -28,17 +21,14 @@ struct MatchLimits {
 };
 
 struct MatchResult {
-    MatchEndReason end_reason{MatchEndReason::PlyLimit};
+    GameOutcome outcome{};
     Position final_position{};
     std::vector<Move> accepted_moves{};
     std::uint32_t black_illegal_outputs{0};
     std::uint32_t white_illegal_outputs{0};
-    // Side whose turn could not continue for NoLegalMoves/EngineAttemptLimit.
-    // Empty for repetition and neutral safeguards such as PlyLimit.
+    // Runtime diagnostic only. Set when execution stops because the side to
+    // move could not continue, without implying an official game loss.
     std::optional<Color> stopped_side{};
-    // Set only when a rule adjudication identifies a losing side. Currently
-    // used for continuous-check repetition.
-    std::optional<Color> losing_side{};
 };
 
 // Runs a GUI-free match using the same validated runtime path for both engines.

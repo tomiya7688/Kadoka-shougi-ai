@@ -1,6 +1,7 @@
 #include "kadoka/runtime/headless_match.hpp"
 
 #include "kadoka/repetition.hpp"
+#include "kadoka/terminal.hpp"
 
 #include <cstddef>
 #include <vector>
@@ -54,8 +55,14 @@ MatchResult run_headless_match(
             const TurnResult turn = run_engine_turn(engine, result.final_position, search_limits);
 
             if (turn.status == TurnStatus::NoLegalMoves) {
-                result.end_reason = MatchEndReason::NoLegalMoves;
-                result.stopped_side = side;
+                const TerminalPositionResult terminal = adjudicate_terminal_position(result.final_position);
+                if (terminal.status == TerminalPositionStatus::Checkmate) {
+                    result.outcome = make_win_outcome(*terminal.winner, GameEndReason::Checkmate);
+                    result.stopped_side.reset();
+                } else {
+                    result.outcome = make_unresolved_outcome(GameEndReason::NoLegalMoves);
+                    result.stopped_side = side;
+                }
                 return result;
             }
 
@@ -72,30 +79,27 @@ MatchResult run_headless_match(
         }
 
         if (!move_applied) {
-            result.end_reason = MatchEndReason::EngineAttemptLimit;
+            result.outcome = make_unresolved_outcome(GameEndReason::EngineAttemptLimit);
             result.stopped_side = side;
             return result;
         }
 
         const RepetitionResult repetition = adjudicate_repetition(history);
         if (repetition.status == RepetitionStatus::Draw) {
-            result.end_reason = MatchEndReason::RepetitionDraw;
+            result.outcome = make_replay_outcome(GameEndReason::Repetition);
             result.stopped_side.reset();
-            result.losing_side.reset();
             return result;
         }
 
         if (const std::optional<Color> loser = repetition_loser(repetition.status); loser.has_value()) {
-            result.end_reason = MatchEndReason::PerpetualCheckLoss;
+            result.outcome = make_win_outcome(opposite(*loser), GameEndReason::PerpetualCheckViolation);
             result.stopped_side.reset();
-            result.losing_side = loser;
             return result;
         }
     }
 
-    result.end_reason = MatchEndReason::PlyLimit;
+    result.outcome = make_unresolved_outcome(GameEndReason::PlyLimit);
     result.stopped_side.reset();
-    result.losing_side.reset();
     return result;
 }
 
