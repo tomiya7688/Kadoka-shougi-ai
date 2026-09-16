@@ -20,6 +20,7 @@ add_custom_target(kadoka_rule_check
 
 add_library(kadoka_shogi_core
     engine/src/attack.cpp
+    engine/src/impasse.cpp
     engine/src/legal.cpp
     engine/src/movegen.cpp
     engine/src/position.cpp
@@ -81,6 +82,10 @@ add_executable(terminal_test tests/terminal_test.cpp)
 target_link_libraries(terminal_test PRIVATE kadoka_shogi_core)
 add_test(NAME terminal_test COMMAND terminal_test)
 
+add_executable(impasse_test tests/impasse_test.cpp)
+target_link_libraries(impasse_test PRIVATE kadoka_shogi_core)
+add_test(NAME impasse_test COMMAND impasse_test)
+
 add_executable(runtime_turn_runner_test tests/runtime_turn_runner_test.cpp)
 target_link_libraries(runtime_turn_runner_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME runtime_turn_runner_test COMMAND runtime_turn_runner_test)
@@ -88,6 +93,14 @@ add_test(NAME runtime_turn_runner_test COMMAND runtime_turn_runner_test)
 add_executable(headless_match_test tests/headless_match_test.cpp)
 target_link_libraries(headless_match_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME headless_match_test COMMAND headless_match_test)
+
+add_executable(impasse_outcome_test tests/impasse_outcome_test.cpp)
+target_link_libraries(impasse_outcome_test PRIVATE kadoka_shogi_runtime)
+add_test(NAME impasse_outcome_test COMMAND impasse_outcome_test)
+
+add_executable(headless_impasse_test tests/headless_impasse_test.cpp)
+target_link_libraries(headless_impasse_test PRIVATE kadoka_shogi_runtime)
+add_test(NAME headless_impasse_test COMMAND headless_impasse_test)
 
 add_executable(process_ai_backend_helper tests/process_ai_backend_helper.cpp)
 
