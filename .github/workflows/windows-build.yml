@@ -31,6 +31,10 @@ jobs:
         shell: cmd
         run: build.bat
 
+      - name: CLI smoke
+        shell: cmd
+        run: build\Release\kadoka_shogi.exe
+
       - name: Upload developer executable
         uses: actions/upload-artifact@v4
         with:
