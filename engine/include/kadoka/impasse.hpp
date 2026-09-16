@@ -28,6 +28,12 @@ struct EnteringKingDeclarationResult {
     bool before_500_moves{false};
 };
 
+enum class MutualImpassePolicy : std::uint8_t {
+    Jsa24Point,
+    Tournament27PointReplayTie,
+    Tournament27PointWhiteWinsTie,
+};
+
 enum class MutualImpasseVerdict : std::uint8_t {
     Replay,
     BlackLoses,
@@ -46,7 +52,7 @@ enum class Move500ImpasseStatus : std::uint8_t {
     Replay,
 };
 
-// Computes both ordinary 24-point material and the narrower entering-king
+// Computes both ordinary impasse material and the narrower entering-king
 // declaration material for one side.
 [[nodiscard]] ImpasseAnalysis analyze_impasse(const Position& position, Color color);
 
@@ -57,10 +63,14 @@ enum class Move500ImpasseStatus : std::uint8_t {
     Color declarer
 );
 
-// Point calculation for the mutually agreed 24-point impasse procedure.
-// The caller is responsible for establishing that both players agreed to use
-// the procedure and that the position is otherwise eligible for impasse.
-[[nodiscard]] MutualImpasseResult adjudicate_mutual_impasse_points(const Position& position);
+// Point calculation for a mutually agreed impasse procedure. The caller is
+// responsible for establishing agreement and any non-material eligibility.
+// The default is the JSA 24-point rule; optional tournament 27-point policies
+// are explicit so league/benchmark configuration can reproduce event rules.
+[[nodiscard]] MutualImpasseResult adjudicate_mutual_impasse_points(
+    const Position& position,
+    MutualImpassePolicy policy = MutualImpassePolicy::Jsa24Point
+);
 
 // Detects the automatic 500-move impasse rule from canonical position history.
 // When move 500 ends in check, adjudication is deferred until that checking
