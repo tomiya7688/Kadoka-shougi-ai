@@ -93,7 +93,7 @@ reason = PerpetualCheckViolation
 winner/loser = present
 ```
 
-Repetition is checked before automatic 500-move impasse after an accepted move, so a continuous-check repetition loss is not hidden by the later safety/result rule.
+Repetition is checked before automatic 500-move impasse after an accepted move, so a continuous-check repetition loss is not hidden by the later result rule.
 
 ## Automatic 500-move impasse
 
@@ -110,7 +110,7 @@ If move 500 ends in check, the Core keeps the result pending while that checking
 
 Point totals do not affect the automatic 500-move rule.
 
-The runner also recognizes an initial position already past move 500 when the supplied state is sufficient to establish that the deferred-check exception is not active.
+Correct deferred-check adjudication requires canonical history containing the exact position after move 500 (`ply == 501`). A run started from a later standalone SFEN does not contain enough information to reconstruct whether the move-500 check sequence was continuous, so the runtime does not guess an impasse result in that case.
 
 ## Entering-king declaration and mutually agreed impasse
 
@@ -131,7 +131,7 @@ reason = PlyLimit
 
 This is a runtime safeguard, not a game-rule draw.
 
-The default guard remains useful for malformed/custom positions, but standard games now have the official automatic 500-move impasse path before that safeguard.
+The default guard remains useful for malformed/custom positions, but standard games run from normal history now have the official automatic 500-move impasse path before that safeguard.
 
 ## MatchResult fields
 
