@@ -15,18 +15,10 @@ bool same_move(const Move& lhs, const Move& rhs) {
         && lhs.promote == rhs.promote;
 }
 
-} // namespace
-
-TurnResult run_engine_turn(
-    Engine& engine,
+TurnResult validate_and_apply(
     const Position& position,
-    const SearchLimits& limits) {
-    const auto legal_moves = generate_legal_moves(position);
-    if (legal_moves.empty()) {
-        return TurnResult{TurnStatus::NoLegalMoves, std::nullopt, std::nullopt};
-    }
-
-    SearchResult search_result = engine.search(position, limits);
+    const std::vector<Move>& legal_moves,
+    SearchResult search_result) {
     const bool legal = std::any_of(
         legal_moves.begin(),
         legal_moves.end(),
@@ -49,6 +41,28 @@ TurnResult run_engine_turn(
         std::move(search_result),
         next,
     };
+}
+
+} // namespace
+
+TurnResult run_ai_turn(
+    AIBackend& backend,
+    const Position& position,
+    const SearchLimits& limits) {
+    const auto legal_moves = generate_legal_moves(position);
+    if (legal_moves.empty()) {
+        return TurnResult{TurnStatus::NoLegalMoves, std::nullopt, std::nullopt};
+    }
+
+    return validate_and_apply(position, legal_moves, backend.decide(position, limits));
+}
+
+TurnResult run_engine_turn(
+    Engine& engine,
+    const Position& position,
+    const SearchLimits& limits) {
+    NativeEngineBackend backend{engine};
+    return run_ai_turn(backend, position, limits);
 }
 
 } // namespace kadoka::shogi::runtime
