@@ -27,6 +27,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Validate family model metadata
+        run: python tools/family_metadata/script/validate_metadata.py --game shogi models/examples/family_metadata.json
+
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 
