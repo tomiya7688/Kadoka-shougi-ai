@@ -16,7 +16,7 @@ The project will include:
 
 🚧 Core implementation phase.
 
-The current core includes board/hand representation, SFEN parsing and serialization, and pseudo-legal move generation including promotion and basic drop restrictions. Full king-safety legality, make/unmake, hashing, repetition handling, and USI remain upcoming milestones.
+The current core includes board/hand representation, SFEN parsing and serialization, pseudo-legal/legal move work, and a small validated runtime turn runner. Search, learning engines, repetition/perpetual-check completion and USI remain active milestones.
 
 ## Design principles
 
@@ -27,6 +27,35 @@ The current core includes board/hand representation, SFEN parsing and serializat
 5. **Experiments stay reproducible.** Seeds, engine settings, model versions, and game records should be preservable.
 6. **Obake are allowed to be silly, not corrupt the rules.** Character behavior belongs above the authoritative legal-move layer.
 7. **Implementation tasks should be local.** The repository should make it easy for Codex or a human contributor to identify the target subsystem, acceptance tests, and out-of-scope behavior.
+
+## Build
+
+On Windows:
+
+```bat
+build.bat
+```
+
+This runs the architecture checker, configures CMake, builds Release and runs CTest.
+
+CI mirrors the sibling-project pattern:
+
+- Linux: CMake build + CTest + CLI smoke
+- Windows: `build.bat` + CLI smoke + developer executable artifact
+
+The uploaded executable is a developer build artifact, not yet a formally defined portable distribution package.
+
+## AI-assisted development
+
+Start from `AI_CONTEXT.md` and route the task before opening broad documentation.
+
+```text
+python tools/context_route.py --list
+python tools/context_route.py move-generation
+python tools/kadoka_rule_checker/script/kadoka_rule_checker.py .
+```
+
+The repository adopts context routing and compact dependency checks from Kadoka Othello AI while retaining shogi-specific correctness boundaries.
 
 ## Planned layout
 
@@ -48,6 +77,9 @@ Repository-level information stays in this README. Detailed documentation should
 ## Documentation
 
 - [Architecture](doc/architecture/ARCHITECTURE.md)
+- [Context routing](doc/architecture/CONTEXT_ROUTING.md)
+- [Sibling project alignment](doc/architecture/SIBLING_PROJECT_ALIGNMENT.md)
+- [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
 - [Diagram area](doc/diagrams/README.md)
 
