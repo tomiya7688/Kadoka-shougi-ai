@@ -23,6 +23,7 @@ add_library(kadoka_shogi_core
     engine/src/legal.cpp
     engine/src/movegen.cpp
     engine/src/position.cpp
+    engine/src/repetition.cpp
 )
 
 add_dependencies(kadoka_shogi_core kadoka_rule_check)
@@ -69,6 +70,10 @@ add_test(NAME movegen_test COMMAND movegen_test)
 add_executable(legal_move_test tests/legal_move_test.cpp)
 target_link_libraries(legal_move_test PRIVATE kadoka_shogi_core)
 add_test(NAME legal_move_test COMMAND legal_move_test)
+
+add_executable(repetition_test tests/repetition_test.cpp)
+target_link_libraries(repetition_test PRIVATE kadoka_shogi_core)
+add_test(NAME repetition_test COMMAND repetition_test)
 
 add_executable(runtime_turn_runner_test tests/runtime_turn_runner_test.cpp)
 target_link_libraries(runtime_turn_runner_test PRIVATE kadoka_shogi_runtime)
