@@ -4,7 +4,7 @@
 
 The headless match runner executes two `Engine` implementations without a GUI while preserving the authoritative shogi-core boundary.
 
-Every AI decision passes through `run_engine_turn()`. Single-position terminal facts, history-dependent repetition facts, and automatic 500-move impasse facts come from the Core. Runtime execution failures remain Runtime facts.
+Every AI decision passes through `run_engine_turn()`. Single-position terminal facts, history-dependent repetition facts, and impasse facts come from the Core. Runtime execution failures and tournament policy selection remain Runtime facts.
 
 The final public result is `MatchResult::outcome`, using the common contract in `GAME_OUTCOME.md`.
 
@@ -19,7 +19,9 @@ MatchResult run_headless_match(
 );
 ```
 
-`MatchLimits` contains per-side `SearchLimits`, `max_engine_attempts_per_turn`, and `max_plies`.
+`MatchLimits` contains per-side `SearchLimits`, `max_engine_attempts_per_turn`, `max_plies`, and `automatic_impasse_rule`.
+
+The default automatic impasse rule is `AutomaticImpasseRule::Jsa500Moves`, matching the project's normal JSA-rule profile. Tournament/custom environments can select `AutomaticImpasseRule::Disabled` and apply their own maximum-move or impasse policy above this runtime.
 
 ## Illegal-output retry
 
@@ -93,13 +95,13 @@ reason = PerpetualCheckViolation
 winner/loser = present
 ```
 
-Repetition is checked before automatic 500-move impasse after an accepted move, so a continuous-check repetition loss is not hidden by the later result rule.
+Repetition is checked before automatic impasse after an accepted move, so a continuous-check repetition loss is not hidden by a later result rule.
 
 ## Automatic 500-move impasse
 
-The same canonical history is passed to `adjudicate_500_move_impasse()`.
+When `automatic_impasse_rule == AutomaticImpasseRule::Jsa500Moves`, canonical history is passed to `adjudicate_500_move_impasse()`.
 
-When move 500 completes without check, the runner immediately returns:
+When move 500 completes without check, the runner returns:
 
 ```text
 result = ReplayRequired
@@ -108,7 +110,9 @@ reason = Impasse
 
 If move 500 ends in check, the Core keeps the result pending while that checking side continues its sequence. The replay result is emitted when that side first makes a move that does not continue check.
 
-Point totals do not affect the automatic 500-move rule.
+Point totals do not affect the JSA automatic 500-move rule.
+
+When `automatic_impasse_rule == AutomaticImpasseRule::Disabled`, the Headless Runtime does not perform this automatic adjudication. `max_plies` remains only a neutral safety guard; a tournament-specific `%MAX_MOVES`, declaration rule, or other adjudication belongs to the caller/match policy and must be recorded separately.
 
 Correct deferred-check adjudication requires canonical history containing the exact position after move 500 (`ply == 501`). A run started from a later standalone SFEN does not contain enough information to reconstruct whether the move-500 check sequence was continuous, so the runtime does not guess an impasse result in that case.
 
@@ -131,17 +135,9 @@ reason = PlyLimit
 
 This is a runtime safeguard, not a game-rule draw.
 
-The default guard remains useful for malformed/custom positions, but standard games run from normal history now have the official automatic 500-move impasse path before that safeguard.
-
 ## MatchResult fields
 
-`MatchResult` contains:
-
-- `outcome` — canonical result + reason + winner/loser
-- `final_position`
-- `accepted_moves`
-- per-side illegal-output counts
-- optional `stopped_side` for unresolved runtime stops
+`MatchResult` contains `outcome`, `final_position`, `accepted_moves`, per-side illegal-output counts, and optional `stopped_side` for unresolved runtime stops.
 
 Consumers should use `outcome` for scoring and dataset metadata. `stopped_side` is diagnostics only.
 
@@ -158,16 +154,9 @@ External process crash/disconnect policy is also still deferred and should not b
 
 ## Dataset and league use
 
-League, benchmark, and dataset writers must preserve both `outcome.result` and `outcome.reason`.
+League, benchmark, and dataset writers must preserve both `outcome.result` and `outcome.reason`, plus the selected automatic-impasse and 24/27-point policies when relevant.
 
-Examples that must remain distinguishable:
-
-- checkmate loss vs perpetual-check loss
-- repetition replay vs impasse replay vs scored draw
-- official result vs engine/runtime failure
-- future timeout vs resignation
-
-Tournament-selectable 24/27-point impasse policy must also be preserved in match configuration when relevant.
+This keeps checkmate, repetition replay, impasse replay, runtime failure, timeout, resignation, and tournament-specific maximum-move rules distinguishable.
 
 ## Sibling-project alignment
 
