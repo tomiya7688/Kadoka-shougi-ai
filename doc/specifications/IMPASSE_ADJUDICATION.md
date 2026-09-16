@@ -101,17 +101,26 @@ Move500ImpasseStatus adjudicate_500_move_impasse(
 );
 ```
 
-When 500 moves have been completed, the game becomes impasse and is replayed regardless of point totals.
+Under current JSA official rules, when 500 moves have been completed, the game becomes impasse and is replayed regardless of point totals.
 
 Exception: if the position after move 500 is in check, the game continues while that checking side continues the sequence of checks. The impasse becomes effective when that checking side first makes a move that does not continue check.
 
-The function therefore consumes canonical position history. It does not infer this from AI annotations.
+The Core function always implements the JSA rule semantics. Whether a Headless match applies that automatic rule is a Runtime policy:
+
+```cpp
+limits.automatic_impasse_rule = AutomaticImpasseRule::Jsa500Moves; // default
+limits.automatic_impasse_rule = AutomaticImpasseRule::Disabled;    // tournament/custom rules
+```
+
+This distinction matters because computer-shogi events and other tournaments may use their own maximum-move, declaration, or adjudication policy instead of the JSA 500-move fallback. Disabling the automatic rule does not change Core legality; it only prevents Headless Runtime from auto-ending the game at the JSA threshold.
+
+The function consumes canonical position history. It does not infer this from AI annotations.
 
 For correct deferred-check adjudication, the supplied history must include the exact position immediately after move 500 (`ply == 501`). A later standalone SFEN cannot prove whether a continuous-check sequence began at move 500, so the Core deliberately returns `None` rather than guessing when that threshold position is absent.
 
 The Headless Match Runtime naturally satisfies this requirement for matches it runs through move 500 because it retains every accepted canonical position.
 
-A completed 500-move impasse maps to:
+A completed JSA 500-move impasse maps to:
 
 ```text
 GameResult::ReplayRequired
@@ -122,9 +131,9 @@ GameEndReason::Impasse
 
 Entering-king declaration and mutually agreed impasse are player actions/agreements, not ordinary board moves. The current `Engine::search()` contract returns only a `Move`, so the Headless Match Runtime does not automatically invent declaration or agreement actions for an AI.
 
-This PR provides the authoritative adjudication and outcome mapping needed by a later action/protocol extension. A future engine/protocol action type can add `DeclareEnteringKing` or `AgreeImpasse` without changing the Core rule implementation.
+The authoritative adjudication and outcome mapping are already available for a later action/protocol extension. A future engine/protocol action type can add `DeclareEnteringKing` or `AgreeImpasse` without changing the Core rule implementation.
 
-The automatic 500-move rule requires no player action and is therefore already integrated into Headless Match Runtime.
+The automatic 500-move rule requires no player action. Headless Runtime applies it only when the selected Runtime rule profile enables it.
 
 ## Dataset and league requirements
 
@@ -133,6 +142,7 @@ Persist enough information to reproduce an impasse result:
 - `GameOutcome.result`
 - `GameOutcome.reason`
 - selected mutual-impasse policy, when used
+- selected automatic-impasse rule/profile
 - declarer color for entering-king declarations
 - declaration analysis/point count when diagnostic detail is retained
 - canonical move count / final SFEN

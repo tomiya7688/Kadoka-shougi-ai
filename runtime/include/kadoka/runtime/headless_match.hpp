@@ -9,6 +9,11 @@
 
 namespace kadoka::shogi::runtime {
 
+enum class AutomaticImpasseRule : std::uint8_t {
+    Disabled,
+    Jsa500Moves,
+};
+
 struct MatchLimits {
     SearchLimits black_search{};
     SearchLimits white_search{};
@@ -18,6 +23,10 @@ struct MatchLimits {
     // Safety guard for malformed engines/games that do not reach another
     // adjudicated result. Repetition is checked before this guard is hit.
     std::uint32_t max_plies{512};
+    // Default project rules follow current JSA official rules. Tournament or
+    // engine-specific environments may disable this and apply their own
+    // maximum-move / impasse policy above the runtime.
+    AutomaticImpasseRule automatic_impasse_rule{AutomaticImpasseRule::Jsa500Moves};
 };
 
 struct MatchResult {
