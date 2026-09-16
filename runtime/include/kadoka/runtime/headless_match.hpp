@@ -11,6 +11,8 @@ namespace kadoka::shogi::runtime {
 enum class MatchEndReason : std::uint8_t {
     NoLegalMoves,
     EngineAttemptLimit,
+    RepetitionDraw,
+    PerpetualCheckLoss,
     PlyLimit,
 };
 
@@ -20,7 +22,8 @@ struct MatchLimits {
     // Total Engine::search calls allowed for one side on one ply. A value of 1
     // means an illegal output is not retried. A value of 0 stops immediately.
     std::uint32_t max_engine_attempts_per_turn{3};
-    // Safety guard until repetition/perpetual-check adjudication is implemented.
+    // Safety guard for malformed engines/games that do not reach another
+    // adjudicated result. Repetition is checked before this guard is hit.
     std::uint32_t max_plies{512};
 };
 
@@ -31,8 +34,11 @@ struct MatchResult {
     std::uint32_t black_illegal_outputs{0};
     std::uint32_t white_illegal_outputs{0};
     // Side whose turn could not continue for NoLegalMoves/EngineAttemptLimit.
-    // Empty for neutral safeguards such as PlyLimit.
+    // Empty for repetition and neutral safeguards such as PlyLimit.
     std::optional<Color> stopped_side{};
+    // Set only when a rule adjudication identifies a losing side. Currently
+    // used for continuous-check repetition.
+    std::optional<Color> losing_side{};
 };
 
 // Runs a GUI-free match using the same validated runtime path for both engines.
