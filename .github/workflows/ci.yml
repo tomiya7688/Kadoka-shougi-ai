@@ -35,3 +35,6 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: CLI smoke
+        run: ./build/kadoka_shogi
