@@ -33,6 +33,7 @@ target_include_directories(kadoka_shogi_core
 )
 
 add_library(kadoka_shogi_runtime
+    runtime/src/ai_backend.cpp
     runtime/src/headless_match.cpp
     runtime/src/turn_runner.cpp
 )
