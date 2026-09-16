@@ -56,8 +56,10 @@ enum class Move500ImpasseStatus : std::uint8_t {
 // declaration material for one side.
 [[nodiscard]] ImpasseAnalysis analyze_impasse(const Position& position, Color color);
 
-// Adjudicates an actual declaration attempt under the JSA entering-king
-// declaration rule. Failing any declaration condition is a loss by declarer.
+// Adjudicates the board/turn/move-count conditions of an entering-king
+// declaration attempt. Failing any represented declaration condition is a loss
+// by declarer. Clock validity and prior agreement state belong to the runtime or
+// protocol layer because Position does not contain match-clock state.
 [[nodiscard]] EnteringKingDeclarationResult adjudicate_entering_king_declaration(
     const Position& position,
     Color declarer
