@@ -4,7 +4,7 @@
 
 The headless match runner executes two `Engine` implementations without a GUI while preserving the authoritative shogi-core boundary.
 
-Every AI decision passes through `run_engine_turn()`. Single-position terminal facts and history-dependent repetition facts come from the Core. Runtime execution failures remain Runtime facts.
+Every AI decision passes through `run_engine_turn()`. Single-position terminal facts, history-dependent repetition facts, and automatic 500-move impasse facts come from the Core. Runtime execution failures remain Runtime facts.
 
 The final public result is `MatchResult::outcome`, using the common contract in `GAME_OUTCOME.md`.
 
@@ -37,7 +37,7 @@ run_engine_turn validation
 
 `max_engine_attempts_per_turn` is the total number of engine calls permitted for that side on one ply.
 
-Rejected outputs increment the per-side illegal-output counter, but they do not enter `accepted_moves`, do not enter repetition history, and never mutate the canonical position.
+Rejected outputs increment the per-side illegal-output counter, but they do not enter `accepted_moves`, do not enter canonical rule history, and never mutate the canonical position.
 
 If the attempt limit is exhausted, the outcome is:
 
@@ -85,8 +85,6 @@ result = ReplayRequired
 reason = Repetition
 ```
 
-This is deliberately not represented as `Draw`, because the Japan Shogi Association rule requires a replay and does not count the repetition game as a completed game.
-
 Continuous-check repetition maps to a normal win/loss:
 
 ```text
@@ -94,6 +92,33 @@ result = opponent-of-checker win
 reason = PerpetualCheckViolation
 winner/loser = present
 ```
+
+Repetition is checked before automatic 500-move impasse after an accepted move, so a continuous-check repetition loss is not hidden by the later safety/result rule.
+
+## Automatic 500-move impasse
+
+The same canonical history is passed to `adjudicate_500_move_impasse()`.
+
+When move 500 completes without check, the runner immediately returns:
+
+```text
+result = ReplayRequired
+reason = Impasse
+```
+
+If move 500 ends in check, the Core keeps the result pending while that checking side continues its sequence. The replay result is emitted when that side first makes a move that does not continue check.
+
+Point totals do not affect the automatic 500-move rule.
+
+The runner also recognizes an initial position already past move 500 when the supplied state is sufficient to establish that the deferred-check exception is not active.
+
+## Entering-king declaration and mutually agreed impasse
+
+These are player actions/agreements rather than ordinary moves.
+
+The authoritative Core APIs and `GameOutcome` mapping already exist, but the current `Engine::search()` contract returns only `Move`. Therefore the Headless Match Runtime does not silently auto-declare or invent mutual agreement.
+
+A later action/protocol extension should expose explicit declaration/agreement actions and call the existing Core adjudicators. See `IMPASSE_ADJUDICATION.md`.
 
 ## Ply safety guard
 
@@ -105,6 +130,8 @@ reason = PlyLimit
 ```
 
 This is a runtime safeguard, not a game-rule draw.
+
+The default guard remains useful for malformed/custom positions, but standard games now have the official automatic 500-move impasse path before that safeguard.
 
 ## MatchResult fields
 
@@ -120,11 +147,12 @@ Consumers should use `outcome` for scoring and dataset metadata. `stopped_side` 
 
 ## Deferred result sources
 
-`GameEndReason` already reserves stable reason values for several upcoming paths, but this runner does not emit them yet:
+`GameEndReason` reserves stable reason values for paths still requiring protocol/runtime actions:
 
 - resignation
 - time forfeit
-- entering-king / impasse adjudication
+- explicit entering-king declaration transport
+- explicit mutual-impasse agreement transport
 
 External process crash/disconnect policy is also still deferred and should not be conflated with an official game loss unless an explicit match policy says so.
 
@@ -135,9 +163,11 @@ League, benchmark, and dataset writers must preserve both `outcome.result` and `
 Examples that must remain distinguishable:
 
 - checkmate loss vs perpetual-check loss
-- repetition replay vs scored draw
+- repetition replay vs impasse replay vs scored draw
 - official result vs engine/runtime failure
 - future timeout vs resignation
+
+Tournament-selectable 24/27-point impasse policy must also be preserved in match configuration when relevant.
 
 ## Sibling-project alignment
 
