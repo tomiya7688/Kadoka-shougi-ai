@@ -189,13 +189,9 @@ Move500ImpasseStatus adjudicate_500_move_impasse(const std::vector<Position>& hi
         }
     }
 
+    // Without the exact position after move 500, the Core cannot know whether
+    // a check sequence was already in progress. Never guess from a later SFEN.
     if (threshold_index == history.size()) {
-        // If the supplied history starts after move 500, a non-check position is
-        // enough to know that the deferred-check exception is no longer active.
-        if (history.front().ply() > 501
-            && !is_in_check(history.back(), history.back().side_to_move())) {
-            return Move500ImpasseStatus::Replay;
-        }
         return Move500ImpasseStatus::None;
     }
 
