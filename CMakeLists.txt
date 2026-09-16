@@ -20,6 +20,7 @@ add_custom_target(kadoka_rule_check
 
 add_library(kadoka_shogi_core
     engine/src/attack.cpp
+    engine/src/impasse.cpp
     engine/src/legal.cpp
     engine/src/movegen.cpp
     engine/src/position.cpp
@@ -80,6 +81,10 @@ add_test(NAME repetition_test COMMAND repetition_test)
 add_executable(terminal_test tests/terminal_test.cpp)
 target_link_libraries(terminal_test PRIVATE kadoka_shogi_core)
 add_test(NAME terminal_test COMMAND terminal_test)
+
+add_executable(impasse_test tests/impasse_test.cpp)
+target_link_libraries(impasse_test PRIVATE kadoka_shogi_core)
+add_test(NAME impasse_test COMMAND impasse_test)
 
 add_executable(runtime_turn_runner_test tests/runtime_turn_runner_test.cpp)
 target_link_libraries(runtime_turn_runner_test PRIVATE kadoka_shogi_runtime)
