@@ -32,12 +32,18 @@ std::optional<Color> repetition_loser(RepetitionStatus status) {
     return std::nullopt;
 }
 
-bool apply_500_move_impasse_if_ready(
+bool apply_automatic_impasse_if_ready(
     const std::vector<Position>& history,
+    const MatchLimits& limits,
     MatchResult& result) {
+    if (limits.automatic_impasse_rule == AutomaticImpasseRule::Disabled) {
+        return false;
+    }
+
     if (adjudicate_500_move_impasse(history) != Move500ImpasseStatus::Replay) {
         return false;
     }
+
     result.outcome = make_replay_outcome(GameEndReason::Impasse);
     result.stopped_side.reset();
     return true;
@@ -57,7 +63,7 @@ MatchResult run_headless_match(
     history.reserve(static_cast<std::size_t>(limits.max_plies) + 1);
     history.push_back(initial_position);
 
-    if (apply_500_move_impasse_if_ready(history, result)) {
+    if (apply_automatic_impasse_if_ready(history, limits, result)) {
         return result;
     }
 
@@ -113,7 +119,7 @@ MatchResult run_headless_match(
             return result;
         }
 
-        if (apply_500_move_impasse_if_ready(history, result)) {
+        if (apply_automatic_impasse_if_ready(history, limits, result)) {
             return result;
         }
     }
