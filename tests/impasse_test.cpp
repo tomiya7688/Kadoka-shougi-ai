@@ -83,10 +83,22 @@ int main() {
 
     {
         const Position position = Position::startpos();
-        const MutualImpasseResult result = adjudicate_mutual_impasse_points(position);
-        assert(result.black_points == 27);
-        assert(result.white_points == 27);
-        assert(result.verdict == MutualImpasseVerdict::Replay);
+        const MutualImpasseResult standard = adjudicate_mutual_impasse_points(position);
+        assert(standard.black_points == 27);
+        assert(standard.white_points == 27);
+        assert(standard.verdict == MutualImpasseVerdict::Replay);
+
+        const MutualImpasseResult replay_tie = adjudicate_mutual_impasse_points(
+            position,
+            MutualImpassePolicy::Tournament27PointReplayTie
+        );
+        assert(replay_tie.verdict == MutualImpasseVerdict::Replay);
+
+        const MutualImpasseResult white_wins_tie = adjudicate_mutual_impasse_points(
+            position,
+            MutualImpassePolicy::Tournament27PointWhiteWinsTie
+        );
+        assert(white_wins_tie.verdict == MutualImpasseVerdict::BlackLoses);
     }
 
     {
