@@ -1,0 +1,31 @@
+{
+  "format": "kadoka.ai_metadata.v1",
+  "model_id": "kadoka.shogi.example",
+  "model_name": "Kadoka Shogi Example",
+  "model_version": "0.1.0",
+  "architecture": "evaluation_search",
+  "game": "shogi",
+  "variant": "base",
+  "runtime_requirements": {
+    "runtime": "kadoka_shogi_runtime",
+    "gpu_required": false,
+    "platforms": ["windows", "linux"]
+  },
+  "determinism": {
+    "seed_supported": true,
+    "mode": "fixed_seed_supported"
+  },
+  "dataset_provenance": [],
+  "benchmark_results": [],
+  "source": {
+    "repository": "tomiya7688/Kadoka-shougi-ai",
+    "sibling_family": "Kadoka AI"
+  },
+  "distribution": {
+    "kind": "bundled"
+  },
+  "license": {
+    "technical": "MIT"
+  },
+  "created_at": "2026-09-16"
+}
