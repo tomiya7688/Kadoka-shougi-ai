@@ -94,6 +94,14 @@ add_executable(headless_match_test tests/headless_match_test.cpp)
 target_link_libraries(headless_match_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME headless_match_test COMMAND headless_match_test)
 
+add_executable(impasse_outcome_test tests/impasse_outcome_test.cpp)
+target_link_libraries(impasse_outcome_test PRIVATE kadoka_shogi_runtime)
+add_test(NAME impasse_outcome_test COMMAND impasse_outcome_test)
+
+add_executable(headless_impasse_test tests/headless_impasse_test.cpp)
+target_link_libraries(headless_impasse_test PRIVATE kadoka_shogi_runtime)
+add_test(NAME headless_impasse_test COMMAND headless_impasse_test)
+
 add_executable(process_ai_backend_helper tests/process_ai_backend_helper.cpp)
 
 add_executable(process_ai_backend_test tests/process_ai_backend_test.cpp)
