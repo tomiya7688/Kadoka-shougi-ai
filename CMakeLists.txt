@@ -33,6 +33,7 @@ target_include_directories(kadoka_shogi_core
 )
 
 add_library(kadoka_shogi_runtime
+    runtime/src/headless_match.cpp
     runtime/src/turn_runner.cpp
 )
 
@@ -71,3 +72,7 @@ add_test(NAME legal_move_test COMMAND legal_move_test)
 add_executable(runtime_turn_runner_test tests/runtime_turn_runner_test.cpp)
 target_link_libraries(runtime_turn_runner_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME runtime_turn_runner_test COMMAND runtime_turn_runner_test)
+
+add_executable(headless_match_test tests/headless_match_test.cpp)
+target_link_libraries(headless_match_test PRIVATE kadoka_shogi_runtime)
+add_test(NAME headless_match_test COMMAND headless_match_test)
