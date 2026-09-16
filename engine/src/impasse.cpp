@@ -54,6 +54,42 @@ constexpr std::array<PieceType, 7> hand_piece_types{
     return points;
 }
 
+[[nodiscard]] MutualImpasseVerdict adjudicate_24_point(
+    std::uint32_t black_points,
+    std::uint32_t white_points) {
+    const bool black_has_24 = black_points >= 24;
+    const bool white_has_24 = white_points >= 24;
+    if (black_has_24 && white_has_24) {
+        return MutualImpasseVerdict::Replay;
+    }
+    if (!black_has_24 && white_has_24) {
+        return MutualImpasseVerdict::BlackLoses;
+    }
+    if (black_has_24 && !white_has_24) {
+        return MutualImpasseVerdict::WhiteLoses;
+    }
+    return MutualImpasseVerdict::InvalidMaterial;
+}
+
+[[nodiscard]] MutualImpasseVerdict adjudicate_27_point(
+    std::uint32_t black_points,
+    std::uint32_t white_points,
+    bool white_wins_tie) {
+    const bool black_qualifies = black_points >= 27;
+    const bool white_qualifies = white_points >= 27;
+
+    if (black_points == 27 && white_points == 27) {
+        return white_wins_tie ? MutualImpasseVerdict::BlackLoses : MutualImpasseVerdict::Replay;
+    }
+    if (black_qualifies && !white_qualifies) {
+        return MutualImpasseVerdict::WhiteLoses;
+    }
+    if (!black_qualifies && white_qualifies) {
+        return MutualImpasseVerdict::BlackLoses;
+    }
+    return MutualImpasseVerdict::InvalidMaterial;
+}
+
 } // namespace
 
 ImpasseAnalysis analyze_impasse(const Position& position, Color color) {
@@ -119,21 +155,23 @@ EnteringKingDeclarationResult adjudicate_entering_king_declaration(
     return result;
 }
 
-MutualImpasseResult adjudicate_mutual_impasse_points(const Position& position) {
+MutualImpasseResult adjudicate_mutual_impasse_points(
+    const Position& position,
+    MutualImpassePolicy policy) {
     MutualImpasseResult result;
     result.black_points = analyze_impasse(position, Color::Black).total_points;
     result.white_points = analyze_impasse(position, Color::White).total_points;
 
-    const bool black_has_24 = result.black_points >= 24;
-    const bool white_has_24 = result.white_points >= 24;
-    if (black_has_24 && white_has_24) {
-        result.verdict = MutualImpasseVerdict::Replay;
-    } else if (!black_has_24 && white_has_24) {
-        result.verdict = MutualImpasseVerdict::BlackLoses;
-    } else if (black_has_24 && !white_has_24) {
-        result.verdict = MutualImpasseVerdict::WhiteLoses;
-    } else {
-        result.verdict = MutualImpasseVerdict::InvalidMaterial;
+    switch (policy) {
+    case MutualImpassePolicy::Jsa24Point:
+        result.verdict = adjudicate_24_point(result.black_points, result.white_points);
+        break;
+    case MutualImpassePolicy::Tournament27PointReplayTie:
+        result.verdict = adjudicate_27_point(result.black_points, result.white_points, false);
+        break;
+    case MutualImpassePolicy::Tournament27PointWhiteWinsTie:
+        result.verdict = adjudicate_27_point(result.black_points, result.white_points, true);
+        break;
     }
     return result;
 }
