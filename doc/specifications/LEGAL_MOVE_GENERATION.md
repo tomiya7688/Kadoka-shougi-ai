@@ -8,6 +8,8 @@ The pseudo-legal layer owns piece movement, occupancy, promotion choices, mandat
 
 The legal layer owns king safety and pawn-drop mate (`uchi-fuzume`). A pseudo-legal move is legal only when applying it leaves the moving side's king not in check and, for a checking pawn drop, does not immediately mate the opponent king.
 
+History-dependent rules such as repetition are intentionally handled by a separate Core adjudication layer; they do not change whether one candidate move is geometrically/legal-state valid at the current position.
+
 ## Public API
 
 ```cpp
@@ -38,9 +40,11 @@ A pawn-drop mate candidate is only considered when the dropped pawn itself direc
 
 This keeps the rule local to legal move generation and avoids recursive full legal-move generation for every pawn drop.
 
-## Explicitly deferred
+## History-dependent adjudication
 
-Repetition and perpetual-check adjudication are deferred.
+Fourfold repetition and continuous-check repetition are implemented separately in `repetition.hpp` / `repetition.cpp`.
+
+See `doc/specifications/REPETITION_ADJUDICATION.md`.
 
 ## Regression strategy
 

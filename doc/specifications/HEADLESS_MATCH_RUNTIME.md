@@ -6,6 +6,8 @@ The headless match runner executes two `Engine` implementations without a GUI wh
 
 It is intentionally a Runtime component, not a second rules engine. Every AI decision is passed through `run_engine_turn()`, so built-in engines, character engines, and future external adapters all receive the same legality treatment.
 
+History-dependent shogi rules are also delegated to the Core. The runtime stores canonical history and asks the Core repetition adjudicator for a result after each accepted move.
+
 ## API
 
 ```cpp
@@ -49,11 +51,13 @@ Examples:
 - `3`: at most three total engine decisions for that ply
 - `0`: the attempt limit is already reached; the match stops without calling the engine
 
-Illegal outputs are counted in `black_illegal_outputs` / `white_illegal_outputs` for diagnostics, but they are not inserted into `accepted_moves` and never mutate the canonical position.
+Illegal outputs are counted in `black_illegal_outputs` / `white_illegal_outputs` for diagnostics, but they are not inserted into `accepted_moves`, do not enter repetition history, and never mutate the canonical position.
 
-## Accepted move record
+## Accepted move record and history
 
 `MatchResult::accepted_moves` contains only moves accepted by the authoritative Core.
+
+The runner also keeps an in-memory canonical position history consisting of the initial position plus the position after every accepted move. This history is passed to `adjudicate_repetition()` after each accepted move.
 
 This distinction is important for later Dataset generation:
 
@@ -82,30 +86,46 @@ The current side failed to produce a legal move within `max_engine_attempts_per_
 
 A future match-policy layer may decide whether this is a loss, adapter failure, disqualification, or recoverable external-process error.
 
+### `RepetitionDraw`
+
+The Core detected the fourth occurrence of the same board, both hands, and side to move, and did not identify one side as the unique continuous checker.
+
+- `stopped_side` is empty
+- `losing_side` is empty
+- the current single game terminates as ordinary repetition
+
+Tournament-level replay/side-switch policy is deliberately outside this runner.
+
+### `PerpetualCheckLoss`
+
+The Core detected fourfold repetition and one player's every move through the repetition sequence was check.
+
+- `losing_side` identifies the continuously checking side
+- `stopped_side` is empty
+- the runtime does not infer this from AI annotations; the Core derives it from canonical positions and attack detection
+
 ### `PlyLimit`
 
-The configured safety limit was reached after accepted moves.
+The configured safety limit was reached after accepted moves without another adjudicated result.
 
-This is a neutral runtime safeguard. `stopped_side` is empty because neither engine is treated as the cause.
-
-The guard is especially important until repetition/perpetual-check adjudication exists in the authoritative Core.
+This is a neutral runtime safeguard. `stopped_side` and `losing_side` are empty because neither engine is treated as the cause.
 
 ## What this runner does not decide
 
-The runtime deliberately does not yet assign a winner or final shogi result.
+The runtime now handles the single-game termination facts needed for ordinary repetition and continuous-check repetition, but it still does not provide a complete tournament result layer.
 
 Still deferred:
 
-- repetition / fourfold repetition handling
-- perpetual-check loss adjudication
+- ordinary-repetition replay and side-switch orchestration
 - resignation
 - timeout loss
 - external process crash/disconnect policy
 - checkmate/stalemate result classification
+- entering-king / impasse result policy
 - opening adjudication or special tournament rules
 - Dataset persistence
 
-Those policies must consume Core/Runtime facts rather than duplicate move legality.
+Those policies must consume Core/Runtime facts rather than duplicate move legality or repetition rules.
 
 ## Sibling-project alignment
 
@@ -128,4 +148,5 @@ The same design principle can be used in Othello and Tetris even though their ac
 - AI output is never allowed to mutate canonical state directly
 - rejected output is diagnostic, not canonical history
 - retry/transport policy belongs above rule validation
+- history-dependent game rules remain in the authoritative game layer
 - GUI-free matches are the standard path for league, benchmark, and Dataset generation

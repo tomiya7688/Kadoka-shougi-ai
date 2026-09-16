@@ -68,6 +68,7 @@ int main() {
 
         assert(result.end_reason == MatchEndReason::PlyLimit);
         assert(!result.stopped_side.has_value());
+        assert(!result.losing_side.has_value());
         assert(result.accepted_moves.size() == 2);
         assert(result.black_illegal_outputs == 1);
         assert(result.white_illegal_outputs == 0);
@@ -96,6 +97,7 @@ int main() {
 
         assert(result.end_reason == MatchEndReason::EngineAttemptLimit);
         assert(result.stopped_side == Color::Black);
+        assert(!result.losing_side.has_value());
         assert(result.accepted_moves.empty());
         assert(result.black_illegal_outputs == 2);
         assert(result.white_illegal_outputs == 0);
@@ -117,11 +119,70 @@ int main() {
 
         assert(result.end_reason == MatchEndReason::NoLegalMoves);
         assert(result.stopped_side == Color::Black);
+        assert(!result.losing_side.has_value());
         assert(result.accepted_moves.empty());
         assert(result.black_illegal_outputs == 0);
         assert(result.white_illegal_outputs == 0);
         assert(black.calls() == 0);
         assert(white.calls() == 0);
+    }
+
+    {
+        const Position initial = Position::from_sfen("4k4/9/9/9/9/9/9/9/4K4 b - 1");
+        SequenceEngine black({
+            Move{Square{5, 9}, Square{4, 9}, PieceType::None, false},
+            Move{Square{4, 9}, Square{5, 9}, PieceType::None, false},
+            Move{Square{5, 9}, Square{4, 9}, PieceType::None, false},
+            Move{Square{4, 9}, Square{5, 9}, PieceType::None, false},
+            Move{Square{5, 9}, Square{4, 9}, PieceType::None, false},
+            Move{Square{4, 9}, Square{5, 9}, PieceType::None, false},
+        });
+        SequenceEngine white({
+            Move{Square{5, 1}, Square{4, 1}, PieceType::None, false},
+            Move{Square{4, 1}, Square{5, 1}, PieceType::None, false},
+            Move{Square{5, 1}, Square{4, 1}, PieceType::None, false},
+            Move{Square{4, 1}, Square{5, 1}, PieceType::None, false},
+            Move{Square{5, 1}, Square{4, 1}, PieceType::None, false},
+            Move{Square{4, 1}, Square{5, 1}, PieceType::None, false},
+        });
+
+        MatchLimits limits;
+        limits.max_plies = 64;
+
+        const MatchResult result = run_headless_match(black, white, initial, limits);
+        assert(result.end_reason == MatchEndReason::RepetitionDraw);
+        assert(!result.stopped_side.has_value());
+        assert(!result.losing_side.has_value());
+        assert(result.accepted_moves.size() == 12);
+    }
+
+    {
+        const Position initial = Position::from_sfen("4k4/5R3/9/9/9/9/9/9/K8 b - 1");
+        SequenceEngine black({
+            Move{Square{4, 2}, Square{5, 2}, PieceType::None, false},
+            Move{Square{5, 2}, Square{4, 2}, PieceType::None, false},
+            Move{Square{4, 2}, Square{5, 2}, PieceType::None, false},
+            Move{Square{5, 2}, Square{4, 2}, PieceType::None, false},
+            Move{Square{4, 2}, Square{5, 2}, PieceType::None, false},
+            Move{Square{5, 2}, Square{4, 2}, PieceType::None, false},
+        });
+        SequenceEngine white({
+            Move{Square{5, 1}, Square{4, 1}, PieceType::None, false},
+            Move{Square{4, 1}, Square{5, 1}, PieceType::None, false},
+            Move{Square{5, 1}, Square{4, 1}, PieceType::None, false},
+            Move{Square{4, 1}, Square{5, 1}, PieceType::None, false},
+            Move{Square{5, 1}, Square{4, 1}, PieceType::None, false},
+            Move{Square{4, 1}, Square{5, 1}, PieceType::None, false},
+        });
+
+        MatchLimits limits;
+        limits.max_plies = 64;
+
+        const MatchResult result = run_headless_match(black, white, initial, limits);
+        assert(result.end_reason == MatchEndReason::PerpetualCheckLoss);
+        assert(!result.stopped_side.has_value());
+        assert(result.losing_side == Color::Black);
+        assert(result.accepted_moves.size() == 12);
     }
 
     return 0;
