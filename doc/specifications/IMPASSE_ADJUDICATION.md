@@ -107,7 +107,11 @@ Exception: if the position after move 500 is in check, the game continues while 
 
 The function therefore consumes canonical position history. It does not infer this from AI annotations.
 
-The Headless Match Runtime invokes this adjudicator automatically and maps a completed 500-move impasse to:
+For correct deferred-check adjudication, the supplied history must include the exact position immediately after move 500 (`ply == 501`). A later standalone SFEN cannot prove whether a continuous-check sequence began at move 500, so the Core deliberately returns `None` rather than guessing when that threshold position is absent.
+
+The Headless Match Runtime naturally satisfies this requirement for matches it runs through move 500 because it retains every accepted canonical position.
+
+A completed 500-move impasse maps to:
 
 ```text
 GameResult::ReplayRequired
@@ -132,5 +136,6 @@ Persist enough information to reproduce an impasse result:
 - declarer color for entering-king declarations
 - declaration analysis/point count when diagnostic detail is retained
 - canonical move count / final SFEN
+- canonical history covering move 500 when deferred-check adjudication matters
 
 Do not collapse replay-required impasse into a scored draw.
