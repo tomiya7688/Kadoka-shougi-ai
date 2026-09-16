@@ -36,6 +36,7 @@ target_include_directories(kadoka_shogi_core
 add_library(kadoka_shogi_runtime
     runtime/src/ai_backend.cpp
     runtime/src/headless_match.cpp
+    runtime/src/process_ai_backend.cpp
     runtime/src/turn_runner.cpp
 )
 
@@ -82,3 +83,15 @@ add_test(NAME runtime_turn_runner_test COMMAND runtime_turn_runner_test)
 add_executable(headless_match_test tests/headless_match_test.cpp)
 target_link_libraries(headless_match_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME headless_match_test COMMAND headless_match_test)
+
+add_executable(process_ai_backend_helper tests/process_ai_backend_helper.cpp)
+
+add_executable(process_ai_backend_test tests/process_ai_backend_test.cpp)
+target_link_libraries(process_ai_backend_test PRIVATE kadoka_shogi_runtime)
+add_test(
+    NAME process_ai_backend_test
+    COMMAND process_ai_backend_test
+        $<TARGET_FILE:process_ai_backend_helper>
+        ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/process_ai_backend_helper.py
+)
