@@ -1,6 +1,9 @@
 #include "kadoka/runtime/headless_match.hpp"
 
+#include "kadoka/repetition.hpp"
+
 #include <cstddef>
+#include <vector>
 
 namespace kadoka::shogi::runtime {
 namespace {
@@ -17,6 +20,16 @@ std::uint32_t& illegal_counter_for(Color side, MatchResult& result) {
     return side == Color::Black ? result.black_illegal_outputs : result.white_illegal_outputs;
 }
 
+std::optional<Color> repetition_loser(RepetitionStatus status) {
+    if (status == RepetitionStatus::BlackLosesPerpetualCheck) {
+        return Color::Black;
+    }
+    if (status == RepetitionStatus::WhiteLosesPerpetualCheck) {
+        return Color::White;
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 MatchResult run_headless_match(
@@ -26,6 +39,10 @@ MatchResult run_headless_match(
     const MatchLimits& limits) {
     MatchResult result;
     result.final_position = initial_position;
+
+    std::vector<Position> history;
+    history.reserve(static_cast<std::size_t>(limits.max_plies) + 1);
+    history.push_back(initial_position);
 
     while (result.accepted_moves.size() < static_cast<std::size_t>(limits.max_plies)) {
         const Color side = result.final_position.side_to_move();
@@ -49,6 +66,7 @@ MatchResult run_headless_match(
 
             result.accepted_moves.push_back(turn.search_result->best_move);
             result.final_position = *turn.next_position;
+            history.push_back(result.final_position);
             move_applied = true;
             break;
         }
@@ -58,10 +76,26 @@ MatchResult run_headless_match(
             result.stopped_side = side;
             return result;
         }
+
+        const RepetitionResult repetition = adjudicate_repetition(history);
+        if (repetition.status == RepetitionStatus::Draw) {
+            result.end_reason = MatchEndReason::RepetitionDraw;
+            result.stopped_side.reset();
+            result.losing_side.reset();
+            return result;
+        }
+
+        if (const std::optional<Color> loser = repetition_loser(repetition.status); loser.has_value()) {
+            result.end_reason = MatchEndReason::PerpetualCheckLoss;
+            result.stopped_side.reset();
+            result.losing_side = loser;
+            return result;
+        }
     }
 
     result.end_reason = MatchEndReason::PlyLimit;
     result.stopped_side.reset();
+    result.losing_side.reset();
     return result;
 }
 
