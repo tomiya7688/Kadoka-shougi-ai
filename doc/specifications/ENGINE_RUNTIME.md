@@ -63,6 +63,18 @@ The current position has no legal move.
 
 Game-result adjudication remains a separate responsibility. This status only reports that the legal-move set is empty.
 
+## Match-level policy
+
+Retry limits and alternating two engines now live in the headless match runtime built on top of this one-turn API.
+
+See `doc/specifications/HEADLESS_MATCH_RUNTIME.md`.
+
+The separation is intentional:
+
+- `run_engine_turn()` owns legality validation for exactly one decision.
+- the headless match runner owns retry count, side selection, and match safety limits.
+- future GUI or external-process coordinators may use the same one-turn primitive with different retry/presentation policies.
+
 ## External AI alignment
 
 Future external adapters should still implement or wrap the common `Engine` decision boundary. Transport details such as JSON, process I/O, IPC, network connections, Python, Rust, or Go belong outside the shogi core.
@@ -100,9 +112,8 @@ Binary protocol formats do not need to be identical between games; the responsib
 
 ## Deferred
 
-This slice intentionally does not define:
+This layer still does not define:
 
-- retry-count policy for repeatedly illegal AI output
 - timeout/cancellation policy beyond `SearchLimits`
 - external process lifecycle
 - JSON/USI serialization
