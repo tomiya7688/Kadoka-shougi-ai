@@ -65,8 +65,13 @@ enum class Move500ImpasseStatus : std::uint8_t {
     Color declarer
 );
 
+// Objective positional prerequisite for the mutually agreed impasse procedure:
+ // at least one king has entered the enemy camp. The subjective "no prospect of
+ // mate" condition is represented by both players explicitly agreeing.
+[[nodiscard]] bool is_mutual_impasse_agreement_position(const Position& position);
+
 // Point calculation for a mutually agreed impasse procedure. The caller is
-// responsible for establishing agreement and any non-material eligibility.
+// responsible for establishing agreement.
 // The default is the JSA 24-point rule; optional tournament 27-point policies
 // are explicit so league/benchmark configuration can reproduce event rules.
 [[nodiscard]] MutualImpasseResult adjudicate_mutual_impasse_points(
