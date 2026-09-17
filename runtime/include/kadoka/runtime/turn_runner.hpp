@@ -3,6 +3,7 @@
 #include "kadoka/engine.hpp"
 #include "kadoka/runtime/ai_backend.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <optional>
 
@@ -20,6 +21,9 @@ struct TurnResult {
     TurnStatus status{TurnStatus::NoLegalMoves};
     std::optional<SearchResult> search_result{};
     std::optional<Position> next_position{};
+    // Wall-clock time spent inside AIBackend::decide(). Core move generation
+    // and validation are intentionally excluded from the player's clock.
+    std::chrono::nanoseconds decision_time{0};
 };
 
 // Generic Runtime path for native, process, script, dynamic-library or network

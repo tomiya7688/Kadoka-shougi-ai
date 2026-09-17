@@ -60,6 +60,9 @@ MatchResult run_headless_match(
     MatchResult result;
     result.final_position = initial_position;
 
+    MatchClock clock{limits.black_time_control, limits.white_time_control};
+    result.clock = clock.snapshot();
+
     std::vector<Position> history;
     history.reserve(static_cast<std::size_t>(limits.max_plies) + 1);
     history.push_back(initial_position);
@@ -71,11 +74,30 @@ MatchResult run_headless_match(
     while (result.accepted_moves.size() < static_cast<std::size_t>(limits.max_plies)) {
         const Color side = result.final_position.side_to_move();
         Engine& engine = engine_for(side, black_engine, white_engine);
-        const SearchLimits& search_limits = search_limits_for(side, limits);
+        const SearchLimits& configured_search_limits = search_limits_for(side, limits);
+        clock.begin_turn(side);
 
         bool move_applied = false;
         for (std::uint32_t attempt = 0; attempt < limits.max_engine_attempts_per_turn; ++attempt) {
-            const TurnResult turn = run_engine_turn(engine, result.final_position, search_limits);
+            const SearchLimits search_limits =
+                clock.effective_search_limits(side, configured_search_limits);
+            const TurnResult turn = run_engine_turn(
+                engine,
+                result.final_position,
+                search_limits
+            );
+
+            const ClockChargeResult clock_charge =
+                clock.charge(side, turn.decision_time);
+            result.clock = clock.snapshot();
+            if (clock_charge.time_forfeit) {
+                result.outcome = make_win_outcome(
+                    opposite(side),
+                    GameEndReason::TimeForfeit
+                );
+                result.stopped_side.reset();
+                return result;
+            }
 
             if (turn.status == TurnStatus::NoLegalMoves) {
                 const TerminalPositionResult terminal = adjudicate_terminal_position(result.final_position);

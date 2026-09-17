@@ -19,7 +19,9 @@ MatchResult run_headless_match(
 );
 ```
 
-`MatchLimits` contains per-side `SearchLimits`, `max_engine_attempts_per_turn`, `max_plies`, and `automatic_impasse_rule`.
+`MatchLimits` contains per-side `SearchLimits`, optional per-side `PlayerTimeControl`, `max_engine_attempts_per_turn`, `max_plies`, and `automatic_impasse_rule`.
+
+`SearchLimits.time_limit` is an advisory search budget. `PlayerTimeControl` is the official main-time/byoyomi clock that can decide the game. See `MATCH_CLOCK.md`.
 
 The default automatic impasse rule is `AutomaticImpasseRule::Jsa500Moves`, matching the project's normal JSA-rule profile. Tournament/custom environments can select `AutomaticImpasseRule::Disabled` and apply their own maximum-move or impasse policy above this runtime.
 
@@ -51,6 +53,24 @@ reason = EngineAttemptLimit
 ```
 
 `stopped_side` identifies the side whose engine could not continue. This is diagnostic information, not an automatic shogi loss.
+
+## Match clock and time forfeit
+
+When a side has `PlayerTimeControl`, Runtime measures time spent inside the AI backend for every decision attempt.
+
+Before each call, the remaining official allowance is used to clamp the time budget sent to the engine. After the call, the measured duration is charged to the side's clock.
+
+If the cumulative turn time exceeds remaining main time plus byoyomi:
+
+```text
+result = opponent win
+reason = TimeForfeit
+winner/loser = present
+```
+
+Illegal-output retries consume the same turn clock and do not reset byoyomi. Time checking occurs before resignation or entering-king declaration adjudication, so a late semantic action cannot override a time forfeit.
+
+`MatchResult::clock` exposes remaining main time and total measured decision time for diagnostics and datasets.
 
 ## Checkmate and no-legal-move handling
 
@@ -147,7 +167,6 @@ Consumers should use `outcome` for scoring and dataset metadata. `stopped_side` 
 
 `GameEndReason` reserves stable reason values for paths still requiring protocol/runtime actions:
 
-- time forfeit
 - explicit mutual-impasse agreement transport
 
 External process crash/disconnect policy is also still deferred and should not be conflated with an official game loss unless an explicit match policy says so.

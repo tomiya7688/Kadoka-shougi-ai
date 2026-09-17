@@ -32,7 +32,7 @@ TurnResult run_engine_turn(
 );
 ```
 
-The engine receives the immutable current `Position`. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign` and `DeclareEnteringKing` are semantic actions with no synthetic square or fake move encoding.
+The engine receives the immutable current `Position`. Runtime measures `AIBackend::decide()` with `std::chrono::steady_clock` and returns that duration as `TurnResult::decision_time`; Core move generation and validation are outside that player-clock measurement. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign` and `DeclareEnteringKing` are semantic actions with no synthetic square or fake move encoding.
 
 ### `MoveApplied`
 
@@ -41,6 +41,7 @@ The engine returned a legal move.
 - `search_result` is present.
 - `next_position` is present.
 - the next position is produced only after core validation succeeds.
+- `decision_time` records only the wall time spent in `AIBackend::decide()`.
 
 ### `IllegalMove`
 
