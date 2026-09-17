@@ -219,6 +219,31 @@ int main() {
     }
 
     {
+        const Position mutual = Position::from_sfen(
+            "4K4/9/9/9/9/9/9/9/4k4 b "
+            "RB2G2S2N2L9Prb2g2s2n2l9p 1"
+        );
+        OfferThenMoveEngine black{
+            Move{Square{5, 1}, Square{4, 1}, PieceType::None, false}
+        };
+        FixedActionEngine white{
+            EngineAction::Move,
+            MutualImpasseResponse::Decline
+        };
+
+        MatchLimits limits;
+        limits.max_plies = 1;
+        const MatchResult result =
+            run_headless_match(black, white, mutual, limits);
+
+        assert(result.outcome.result == GameResult::Unresolved);
+        assert(result.outcome.reason == GameEndReason::PlyLimit);
+        assert(result.accepted_moves.size() == 1);
+        assert(black.calls() == 2);
+        assert(white.response_calls() == 1);
+    }
+
+    {
         const Position initial = Position::startpos();
         OfferThenMoveEngine black{
             Move{Square{7, 7}, Square{7, 6}, PieceType::None, false}
