@@ -54,7 +54,19 @@ TurnResult run_ai_turn(
         return TurnResult{TurnStatus::NoLegalMoves, std::nullopt, std::nullopt};
     }
 
-    return validate_and_apply(position, legal_moves, backend.decide(position, limits));
+    SearchResult decision = backend.decide(position, limits);
+    if (decision.action == EngineAction::Resign) {
+        return TurnResult{TurnStatus::Resigned, std::move(decision), std::nullopt};
+    }
+    if (decision.action == EngineAction::DeclareEnteringKing) {
+        return TurnResult{
+            TurnStatus::EnteringKingDeclaration,
+            std::move(decision),
+            std::nullopt,
+        };
+    }
+
+    return validate_and_apply(position, legal_moves, std::move(decision));
 }
 
 TurnResult run_engine_turn(

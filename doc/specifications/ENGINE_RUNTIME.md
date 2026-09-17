@@ -4,7 +4,7 @@
 
 The runtime layer sits between AI engines and the authoritative shogi core.
 
-Its first responsibility is deliberately small: run one engine decision, validate the returned move against the core's legal-move list, and only then derive the next canonical position.
+Its first responsibility is deliberately small: run one engine decision, validate move decisions against the core's legal-move list, and only then derive the next canonical position. Non-move decisions such as resignation or entering-king declaration are surfaced explicitly and never disguised as board moves.
 
 This is the common path for built-in engines and future external/script/process adapters.
 
@@ -32,7 +32,7 @@ TurnResult run_engine_turn(
 );
 ```
 
-The engine receives the immutable current `Position`. The runtime obtains the authoritative legal moves from the core and compares the engine's `best_move` against that set.
+The engine receives the immutable current `Position`. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign` and `DeclareEnteringKing` are semantic actions with no synthetic square or fake move encoding.
 
 ### `MoveApplied`
 
@@ -52,6 +52,23 @@ The engine returned a move that is not in the authoritative legal-move set.
 - callers may query the same engine again, switch adapter/engine, or apply character-specific UI behavior without contaminating the canonical game record.
 
 This is the runtime form of the project rule that Obake/Kadoka-style engines may make rejected attempts while the game itself never accepts an illegal move.
+
+### `Resigned`
+
+The engine explicitly resigned.
+
+- `search_result` is present.
+- `next_position` is absent.
+- match runtime converts this to a win for the opponent with `GameEndReason::Resignation`.
+
+### `EnteringKingDeclaration`
+
+The engine explicitly invoked the entering-king declaration procedure.
+
+- `search_result` is present.
+- `next_position` is absent because a declaration is not a board move.
+- match runtime asks the authoritative impasse adjudicator to determine win, replay, or declaration loss.
+- an invalid declaration is a terminal loss, not an illegal-move retry.
 
 ### `NoLegalMoves`
 
@@ -92,10 +109,19 @@ Turn Runner
       ↓
 Core legal validation
       ↓
-MoveApplied / IllegalMove / NoLegalMoves
+MoveApplied / IllegalMove / Resigned / EnteringKingDeclaration / NoLegalMoves
 ```
 
-The external protocol may serialize an illegal-move response, but the semantic source of truth is `TurnStatus::IllegalMove`.
+The persistent process protocol accepts exactly one decision record per response:
+
+```text
+move normal <from_file> <from_rank> <to_file> <to_rank> <promote_0_or_1>
+move drop <piece> <to_file> <to_rank>
+action resign
+action declare_entering_king
+```
+
+Existing `move` responses remain unchanged. Multiple decision records are rejected. The semantic source of truth remains the normalized `EngineAction` / `TurnStatus`, not transport text.
 
 ## Sibling-project alignment
 
@@ -114,11 +140,9 @@ Binary protocol formats do not need to be identical between games; the responsib
 
 This layer still does not define:
 
-- timeout/cancellation policy beyond `SearchLimits`
-- external process lifecycle
+- timeout/cancellation result policy beyond `SearchLimits`
 - JSON/USI serialization
-- match result adjudication
-- repetition/perpetual-check result handling
+- mutual-impasse agreement signaling between players
 - dataset logging
 
 Those should build on this runtime contract rather than bypass it.

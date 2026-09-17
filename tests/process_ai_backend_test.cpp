@@ -94,6 +94,30 @@ int main(int argc, char** argv) {
 
     {
         const Position position = Position::startpos();
+        PersistentProcessAIBackend backend(make_external_config(helper, "resign"));
+
+        const TurnResult result = run_ai_turn(backend, position);
+        assert(result.status == TurnStatus::Resigned);
+        assert(result.search_result.has_value());
+        assert(result.search_result->action == EngineAction::Resign);
+        assert(!result.next_position.has_value());
+    }
+
+    {
+        const Position position = Position::from_sfen(
+            "9/PPPPPPPPP/G3K4/9/9/9/9/9/4k4 b 2R2BP 1"
+        );
+        PersistentProcessAIBackend backend(make_external_config(helper, "declare"));
+
+        const TurnResult result = run_ai_turn(backend, position);
+        assert(result.status == TurnStatus::EnteringKingDeclaration);
+        assert(result.search_result.has_value());
+        assert(result.search_result->action == EngineAction::DeclareEnteringKing);
+        assert(!result.next_position.has_value());
+    }
+
+    {
+        const Position position = Position::startpos();
         PersistentProcessAIBackend backend(make_external_config(helper, "malformed"));
         bool failed = false;
         try {

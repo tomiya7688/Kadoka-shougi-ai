@@ -47,6 +47,10 @@ int main(int argc, char** argv) {
             std::cout << "move normal invalid\n";
         } else if (mode == "illegal") {
             std::cout << "move normal 7 7 7 5 0\n";
+        } else if (mode == "resign") {
+            std::cout << "action resign\n";
+        } else if (mode == "declare") {
+            std::cout << "action declare_entering_king\n";
         } else {
             std::cout << "move normal 7 7 7 6 0\n";
         }

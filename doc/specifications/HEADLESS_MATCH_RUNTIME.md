@@ -39,7 +39,9 @@ run_engine_turn validation
 
 `max_engine_attempts_per_turn` is the total number of engine calls permitted for that side on one ply.
 
-Rejected outputs increment the per-side illegal-output counter, but they do not enter `accepted_moves`, do not enter canonical rule history, and never mutate the canonical position.
+Rejected move outputs increment the per-side illegal-output counter, but they do not enter `accepted_moves`, do not enter canonical rule history, and never mutate the canonical position.
+
+Semantic actions are separate from illegal moves. `EngineAction::Resign` ends the game immediately with a resignation loss. `EngineAction::DeclareEnteringKing` invokes the Core declaration adjudicator; a failed declaration is an immediate loss and is not retried.
 
 If the attempt limit is exhausted, the outcome is:
 
@@ -118,11 +120,11 @@ Correct deferred-check adjudication requires canonical history containing the ex
 
 ## Entering-king declaration and mutually agreed impasse
 
-These are player actions/agreements rather than ordinary moves.
+Entering-king declaration is a player action rather than an ordinary move. Engines can now return `EngineAction::DeclareEnteringKing`; the Headless Match Runtime passes the current canonical position to `adjudicate_entering_king_declaration()` and maps the verdict to `GameOutcome`.
 
-The authoritative Core APIs and `GameOutcome` mapping already exist, but the current `Engine::search()` contract returns only `Move`. Therefore the Headless Match Runtime does not silently auto-declare or invent mutual agreement.
+The runtime never auto-declares merely because the position qualifies. Declaration timing remains an AI/player decision.
 
-A later action/protocol extension should expose explicit declaration/agreement actions and call the existing Core adjudicators. See `IMPASSE_ADJUDICATION.md`.
+Mutually agreed impasse is different: it requires agreement by both players, so the Core point adjudicator exists but no automatic agreement is invented by the match runner. An explicit two-party agreement transport/policy remains future work.
 
 ## Ply safety guard
 
@@ -145,9 +147,7 @@ Consumers should use `outcome` for scoring and dataset metadata. `stopped_side` 
 
 `GameEndReason` reserves stable reason values for paths still requiring protocol/runtime actions:
 
-- resignation
 - time forfeit
-- explicit entering-king declaration transport
 - explicit mutual-impasse agreement transport
 
 External process crash/disconnect policy is also still deferred and should not be conflated with an official game loss unless an explicit match policy says so.
