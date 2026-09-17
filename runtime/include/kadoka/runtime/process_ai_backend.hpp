@@ -39,6 +39,10 @@ public:
         const SearchLimits& limits
     ) override;
 
+    [[nodiscard]] MutualImpasseResponse respond_to_mutual_impasse_offer(
+        const Position& position
+    ) override;
+
 private:
     class Impl;
 
