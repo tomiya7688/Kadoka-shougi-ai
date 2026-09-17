@@ -66,8 +66,8 @@ enum class Move500ImpasseStatus : std::uint8_t {
 );
 
 // Objective positional prerequisite for the mutually agreed impasse procedure:
- // at least one king has entered the enemy camp. The subjective "no prospect of
- // mate" condition is represented by both players explicitly agreeing.
+// at least one king has entered the enemy camp. The subjective "no prospect of
+// mate" condition is represented by both players explicitly agreeing.
 [[nodiscard]] bool is_mutual_impasse_agreement_position(const Position& position);
 
 // Point calculation for a mutually agreed impasse procedure. The caller is
