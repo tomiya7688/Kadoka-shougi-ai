@@ -65,7 +65,7 @@ Runtime/tooling policy may later convert some of these into a forfeit, retry, ad
 
 `Impasse` now covers entering-king declaration, mutually agreed point adjudication, and the automatic 500-move impasse rule. Detailed impasse facts should be preserved separately when needed for dataset or tournament diagnostics.
 
-`Resignation` and `TimeForfeit` remain reserved for later protocol/runtime work.
+`Resignation` is now emitted by Headless Match Runtime when an AI returns `EngineAction::Resign`. `TimeForfeit` remains reserved for later clock/runtime work.
 
 ## Current mappings
 
@@ -81,6 +81,7 @@ Runtime/tooling policy may later convert some of these into a forfeit, retry, ad
 | mutually agreed 24-point impasse, both 24+ | replay required | `Impasse` | absent |
 | mutually agreed point adjudication, one side below threshold | opponent win | `Impasse` | present |
 | automatic 500-move impasse | replay required | `Impasse` | absent |
+| engine resignation | opponent win | `Resignation` | present |
 | engine fails retry policy | unresolved | `EngineAttemptLimit` | absent |
 | safety ply guard reached | unresolved | `PlyLimit` | absent |
 | no legal move without checkmate fact | unresolved | `NoLegalMoves` | absent |
