@@ -51,6 +51,7 @@ private:
         std::optional<PlayerTimeControl> control{};
         std::chrono::nanoseconds main_remaining{0};
         std::chrono::nanoseconds byoyomi_used_this_turn{0};
+        std::chrono::nanoseconds elapsed_this_turn{0};
         std::chrono::nanoseconds total_elapsed{0};
     };
 
