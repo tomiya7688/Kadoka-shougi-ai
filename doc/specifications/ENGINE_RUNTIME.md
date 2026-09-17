@@ -109,7 +109,7 @@ Turn Runner
       ↓
 Core legal validation
       ↓
-MoveApplied / IllegalMove / NoLegalMoves
+MoveApplied / IllegalMove / Resigned / EnteringKingDeclaration / NoLegalMoves
 ```
 
 The persistent process protocol accepts exactly one decision record per response:
@@ -140,10 +140,8 @@ Binary protocol formats do not need to be identical between games; the responsib
 
 This layer still does not define:
 
-- timeout/cancellation policy beyond `SearchLimits`
-- external process lifecycle
-- JSON/USI serialization
 - timeout/cancellation result policy beyond `SearchLimits`
+- JSON/USI serialization
 - mutual-impasse agreement signaling between players
 - dataset logging
 
