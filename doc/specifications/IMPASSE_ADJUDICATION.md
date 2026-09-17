@@ -73,7 +73,9 @@ MutualImpasseResult adjudicate_mutual_impasse_points(
 );
 ```
 
-The caller must separately establish that the players agreed to use the procedure and that the position is otherwise an appropriate impasse. The Core function owns only the deterministic point calculation and point-policy result.
+Runtime must establish that both players explicitly agreed to use the procedure. The Core owns the deterministic positional prerequisite and point calculation.
+
+`is_mutual_impasse_agreement_position()` checks the objective Article 9 context that at least one king has entered the opponent camp. The rule's subjective condition that neither player expects to mate the opponent is represented by both AIs explicitly agreeing rather than by a heuristic auto-detector.
 
 ### JSA 24-point policy
 
@@ -129,9 +131,23 @@ GameEndReason::Impasse
 
 ## Action boundary
 
-Entering-king declaration and mutually agreed impasse are player actions/agreements, not ordinary board moves. The current `Engine::search()` contract returns only a `Move`, so the Headless Match Runtime does not automatically invent declaration or agreement actions for an AI.
+Entering-king declaration and mutually agreed impasse are player actions/agreements, not ordinary board moves.
 
-The authoritative adjudication and outcome mapping are already available for a later action/protocol extension. A future engine/protocol action type can add `DeclareEnteringKing` or `AgreeImpasse` without changing the Core rule implementation.
+Entering-king declaration uses `EngineAction::DeclareEnteringKing`.
+
+Mutually agreed impasse uses a two-stage handshake:
+
+```text
+side to move: EngineAction::OfferMutualImpasse
+                    ↓
+Core: entering-king position prerequisite
+                    ↓
+opponent: MutualImpasseResponse::Accept / Decline
+                    ↓ Accept
+Core: adjudicate_mutual_impasse_points()
+```
+
+Runtime never invents mutual agreement and never auto-applies point counting because a position merely looks drawish. Existing engines decline offers by default.
 
 The automatic 500-move rule requires no player action. Headless Runtime applies it only when the selected Runtime rule profile enables it.
 
