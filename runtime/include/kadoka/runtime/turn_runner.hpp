@@ -14,6 +14,7 @@ enum class TurnStatus : std::uint8_t {
     IllegalMove,
     Resigned,
     EnteringKingDeclaration,
+    MutualImpasseOffered,
     NoLegalMoves,
 };
 
