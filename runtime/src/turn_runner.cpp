@@ -80,6 +80,14 @@ TurnResult run_ai_turn(
             decision_time,
         };
     }
+    if (decision.action == EngineAction::OfferMutualImpasse) {
+        return TurnResult{
+            TurnStatus::MutualImpasseOffered,
+            std::move(decision),
+            std::nullopt,
+            decision_time,
+        };
+    }
 
     return validate_and_apply(
         position,
