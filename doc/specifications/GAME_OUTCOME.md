@@ -78,8 +78,8 @@ Runtime/tooling policy may later convert some of these into a forfeit, retry, ad
 | valid entering-king declaration with 31+ points | declarer win | `Impasse` | present |
 | valid entering-king declaration with 24-30 points | replay required | `Impasse` | absent |
 | failed entering-king declaration | opponent win | `Impasse` | present |
-| mutually agreed 24-point impasse, both 24+ | replay required | `Impasse` | absent |
-| mutually agreed point adjudication, one side below threshold | opponent win | `Impasse` | present |
+| explicitly accepted 24-point impasse, both 24+ | replay required | `Impasse` | absent |
+| explicitly accepted point adjudication, one side below threshold | opponent win | `Impasse` | present |
 | automatic 500-move impasse | replay required | `Impasse` | absent |
 | engine resignation | opponent win | `Resignation` | present |
 | official match clock exceeded | opponent win | `TimeForfeit` | present |

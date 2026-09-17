@@ -19,7 +19,7 @@ MatchResult run_headless_match(
 );
 ```
 
-`MatchLimits` contains per-side `SearchLimits`, optional per-side `PlayerTimeControl`, `max_engine_attempts_per_turn`, `max_plies`, and `automatic_impasse_rule`.
+`MatchLimits` contains per-side `SearchLimits`, optional per-side `PlayerTimeControl`, `max_engine_attempts_per_turn`, `max_plies`, `automatic_impasse_rule`, and `mutual_impasse_policy`.
 
 `SearchLimits.time_limit` is an advisory search budget. `PlayerTimeControl` is the official main-time/byoyomi clock that can decide the game. See `MATCH_CLOCK.md`.
 
@@ -144,7 +144,19 @@ Entering-king declaration is a player action rather than an ordinary move. Engin
 
 The runtime never auto-declares merely because the position qualifies. Declaration timing remains an AI/player decision.
 
-Mutually agreed impasse is different: it requires agreement by both players, so the Core point adjudicator exists but no automatic agreement is invented by the match runner. An explicit two-party agreement transport/policy remains future work.
+Mutually agreed impasse requires an explicit two-party handshake:
+
+1. the side to move returns `EngineAction::OfferMutualImpasse`
+2. Runtime confirms that at least one king is in the opponent camp
+3. the opponent receives `respond_to_mutual_impasse_offer(position)`
+4. only `MutualImpasseResponse::Accept` establishes agreement
+5. Runtime applies `limits.mutual_impasse_policy` through the Core point adjudicator
+
+A rejection leaves the board unchanged and returns control to the original side to choose a move. The offer consumes one engine decision call and its thinking time, but it is not counted as an illegal move.
+
+If the objective entering-king position prerequisite is absent, the offer is ignored without consulting the opponent. This prevents start-position or other non-impasse agreements from manufacturing a result.
+
+The default policy is `Jsa24Point`. Tournament environments may select either supported 27-point policy.
 
 ## Ply safety guard
 
@@ -164,10 +176,6 @@ This is a runtime safeguard, not a game-rule draw.
 Consumers should use `outcome` for scoring and dataset metadata. `stopped_side` is diagnostics only.
 
 ## Deferred result sources
-
-`GameEndReason` reserves stable reason values for paths still requiring protocol/runtime actions:
-
-- explicit mutual-impasse agreement transport
 
 External process crash/disconnect policy is also still deferred and should not be conflated with an official game loss unless an explicit match policy says so.
 

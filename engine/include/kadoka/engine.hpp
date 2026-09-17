@@ -19,6 +19,12 @@ enum class EngineAction : std::uint8_t {
     Move,
     Resign,
     DeclareEnteringKing,
+    OfferMutualImpasse,
+};
+
+enum class MutualImpasseResponse : std::uint8_t {
+    Decline,
+    Accept,
 };
 
 struct SearchResult {
@@ -40,6 +46,14 @@ public:
         const Position& position,
         const SearchLimits& limits
     ) = 0;
+
+    // Agreement is intentionally out-of-band from the opponent's normal turn.
+    // Existing engines decline by default and therefore remain compatible.
+    [[nodiscard]] virtual MutualImpasseResponse respond_to_mutual_impasse_offer(
+        const Position&
+    ) {
+        return MutualImpasseResponse::Decline;
+    }
 };
 
 } // namespace kadoka::shogi

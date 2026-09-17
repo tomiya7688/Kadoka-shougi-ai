@@ -29,6 +29,12 @@ public:
         const Position& position,
         const SearchLimits& limits
     ) = 0;
+
+    [[nodiscard]] virtual MutualImpasseResponse respond_to_mutual_impasse_offer(
+        const Position&
+    ) {
+        return MutualImpasseResponse::Decline;
+    }
 };
 
 // Fast adapter for existing in-process Engine implementations.
@@ -47,6 +53,10 @@ public:
         const SearchLimits& limits
     ) override;
 
+    [[nodiscard]] MutualImpasseResponse respond_to_mutual_impasse_offer(
+        const Position& position
+    ) override;
+
 private:
     Engine* engine_;
 };
@@ -57,11 +67,14 @@ private:
 class FunctionAIBackend final : public AIBackend {
 public:
     using DecideFunction = std::function<SearchResult(const Position&, const SearchLimits&)>;
+    using MutualImpasseResponseFunction =
+        std::function<MutualImpasseResponse(const Position&)>;
 
     FunctionAIBackend(
         AIBackendKind kind,
         std::string name,
-        DecideFunction decide
+        DecideFunction decide,
+        MutualImpasseResponseFunction mutual_impasse_response = {}
     );
 
     [[nodiscard]] AIBackendKind kind() const noexcept override { return kind_; }
@@ -72,10 +85,15 @@ public:
         const SearchLimits& limits
     ) override;
 
+    [[nodiscard]] MutualImpasseResponse respond_to_mutual_impasse_offer(
+        const Position& position
+    ) override;
+
 private:
     AIBackendKind kind_;
     std::string name_;
     DecideFunction decide_;
+    MutualImpasseResponseFunction mutual_impasse_response_;
 };
 
 [[nodiscard]] const char* ai_backend_kind_name(AIBackendKind kind) noexcept;

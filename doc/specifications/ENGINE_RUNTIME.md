@@ -32,7 +32,7 @@ TurnResult run_engine_turn(
 );
 ```
 
-The engine receives the immutable current `Position`. Runtime measures `AIBackend::decide()` with `std::chrono::steady_clock` and returns that duration as `TurnResult::decision_time`; Core move generation and validation are outside that player-clock measurement. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign` and `DeclareEnteringKing` are semantic actions with no synthetic square or fake move encoding.
+The engine receives the immutable current `Position`. Runtime measures `AIBackend::decide()` with `std::chrono::steady_clock` and returns that duration as `TurnResult::decision_time`; Core move generation and validation are outside that player-clock measurement. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign`, `DeclareEnteringKing`, and `OfferMutualImpasse` are semantic actions with no synthetic square or fake move encoding.
 
 ### `MoveApplied`
 
@@ -70,6 +70,19 @@ The engine explicitly invoked the entering-king declaration procedure.
 - `next_position` is absent because a declaration is not a board move.
 - match runtime asks the authoritative impasse adjudicator to determine win, replay, or declaration loss.
 - an invalid declaration is a terminal loss, not an illegal-move retry.
+
+### `MutualImpasseOffered`
+
+The side to move proposes mutually agreed impasse.
+
+- `search_result` is present.
+- `next_position` is absent because an offer is not a board move.
+- Headless Runtime checks the objective entering-king position prerequisite before consulting the opponent.
+- the opponent answers through the separate `respond_to_mutual_impasse_offer()` agreement API.
+- rejection returns play to the same side and same canonical position.
+- acceptance sends the position to the Core 24/27-point adjudicator selected by match policy.
+
+Existing engines decline agreement offers by default.
 
 ### `NoLegalMoves`
 
@@ -110,7 +123,7 @@ Turn Runner
       ↓
 Core legal validation
       ↓
-MoveApplied / IllegalMove / Resigned / EnteringKingDeclaration / NoLegalMoves
+MoveApplied / IllegalMove / Resigned / EnteringKingDeclaration / MutualImpasseOffered / NoLegalMoves
 ```
 
 The persistent process protocol accepts exactly one decision record per response:
@@ -120,9 +133,31 @@ move normal <from_file> <from_rank> <to_file> <to_rank> <promote_0_or_1>
 move drop <piece> <to_file> <to_rank>
 action resign
 action declare_entering_king
+action offer_mutual_impasse
 ```
 
-Existing `move` responses remain unchanged. Multiple decision records are rejected. The semantic source of truth remains the normalized `EngineAction` / `TurnStatus`, not transport text.
+Existing `move` responses remain unchanged. Multiple decision records are rejected.
+
+A mutual-impasse offer is answered out-of-band with a separate interaction request:
+
+```text
+request <id>
+interaction mutual_impasse_offer
+sfen <position>
+end
+```
+
+The responder returns exactly one agreement record:
+
+```text
+result <id>
+agreement accept
+end
+```
+
+or `agreement decline`.
+
+The semantic source of truth remains the normalized `EngineAction`, `MutualImpasseResponse`, and `TurnStatus`, not transport text.
 
 ## Sibling-project alignment
 
@@ -143,7 +178,6 @@ This layer still does not define:
 
 - timeout/cancellation result policy beyond `SearchLimits`
 - JSON/USI serialization
-- mutual-impasse agreement signaling between players
 - dataset logging
 
 Those should build on this runtime contract rather than bypass it.

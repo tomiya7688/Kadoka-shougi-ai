@@ -1,5 +1,6 @@
 #pragma once
 
+#include "kadoka/impasse.hpp"
 #include "kadoka/runtime/game_outcome.hpp"
 #include "kadoka/runtime/match_clock.hpp"
 #include "kadoka/runtime/turn_runner.hpp"
@@ -32,6 +33,8 @@ struct MatchLimits {
     // engine-specific environments may disable this and apply their own
     // maximum-move / impasse policy above the runtime.
     AutomaticImpasseRule automatic_impasse_rule{AutomaticImpasseRule::Jsa500Moves};
+    // Used only after an explicit offer is accepted by the opponent.
+    MutualImpassePolicy mutual_impasse_policy{MutualImpassePolicy::Jsa24Point};
 };
 
 struct MatchResult {

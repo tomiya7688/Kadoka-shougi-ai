@@ -32,7 +32,11 @@ int main(int argc, char** argv) {
         );
         ++request_count;
 
+        bool mutual_impasse_offer = false;
         while (std::getline(std::cin, line) && line != "end") {
+            if (line == "interaction mutual_impasse_offer") {
+                mutual_impasse_offer = true;
+            }
         }
 
         if (mode == "exit") {
@@ -43,6 +47,18 @@ int main(int argc, char** argv) {
         }
 
         std::cout << "result " << request_id << '\n';
+        if (mutual_impasse_offer) {
+            if (mode == "accept_impasse") {
+                std::cout << "agreement accept\n";
+            } else if (mode == "malformed_agreement") {
+                std::cout << "agreement maybe\n";
+            } else {
+                std::cout << "agreement decline\n";
+            }
+            std::cout << "end\n" << std::flush;
+            continue;
+        }
+
         if (mode == "malformed") {
             std::cout << "move normal invalid\n";
         } else if (mode == "illegal") {
@@ -51,6 +67,8 @@ int main(int argc, char** argv) {
             std::cout << "action resign\n";
         } else if (mode == "declare") {
             std::cout << "action declare_entering_king\n";
+        } else if (mode == "offer_impasse") {
+            std::cout << "action offer_mutual_impasse\n";
         } else {
             std::cout << "move normal 7 7 7 6 0\n";
         }

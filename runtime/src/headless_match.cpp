@@ -125,6 +125,31 @@ MatchResult run_headless_match(
                 return result;
             }
 
+            if (turn.status == TurnStatus::MutualImpasseOffered) {
+                if (!is_mutual_impasse_agreement_position(result.final_position)) {
+                    continue;
+                }
+
+                Engine& opponent = engine_for(
+                    opposite(side),
+                    black_engine,
+                    white_engine
+                );
+                const MutualImpasseResponse response =
+                    opponent.respond_to_mutual_impasse_offer(result.final_position);
+                if (response == MutualImpasseResponse::Accept) {
+                    const MutualImpasseResult impasse =
+                        adjudicate_mutual_impasse_points(
+                            result.final_position,
+                            limits.mutual_impasse_policy
+                        );
+                    result.outcome = mutual_impasse_outcome(impasse);
+                    result.stopped_side.reset();
+                    return result;
+                }
+                continue;
+            }
+
             if (turn.status == TurnStatus::IllegalMove) {
                 ++illegal_counter_for(side, result);
                 continue;
