@@ -3,6 +3,7 @@
 #include "kadoka/movegen.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <utility>
 
 namespace kadoka::shogi::runtime {
@@ -18,7 +19,8 @@ bool same_move(const Move& lhs, const Move& rhs) {
 TurnResult validate_and_apply(
     const Position& position,
     const std::vector<Move>& legal_moves,
-    SearchResult search_result) {
+    SearchResult search_result,
+    std::chrono::nanoseconds decision_time) {
     const bool legal = std::any_of(
         legal_moves.begin(),
         legal_moves.end(),
@@ -32,6 +34,7 @@ TurnResult validate_and_apply(
             TurnStatus::IllegalMove,
             std::move(search_result),
             std::nullopt,
+            decision_time,
         };
     }
 
@@ -40,6 +43,7 @@ TurnResult validate_and_apply(
         TurnStatus::MoveApplied,
         std::move(search_result),
         next,
+        decision_time,
     };
 }
 
@@ -54,19 +58,35 @@ TurnResult run_ai_turn(
         return TurnResult{TurnStatus::NoLegalMoves, std::nullopt, std::nullopt};
     }
 
+    const auto decision_started = std::chrono::steady_clock::now();
     SearchResult decision = backend.decide(position, limits);
+    const auto decision_time = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now() - decision_started
+    );
+
     if (decision.action == EngineAction::Resign) {
-        return TurnResult{TurnStatus::Resigned, std::move(decision), std::nullopt};
+        return TurnResult{
+            TurnStatus::Resigned,
+            std::move(decision),
+            std::nullopt,
+            decision_time,
+        };
     }
     if (decision.action == EngineAction::DeclareEnteringKing) {
         return TurnResult{
             TurnStatus::EnteringKingDeclaration,
             std::move(decision),
             std::nullopt,
+            decision_time,
         };
     }
 
-    return validate_and_apply(position, legal_moves, std::move(decision));
+    return validate_and_apply(
+        position,
+        legal_moves,
+        std::move(decision),
+        decision_time
+    );
 }
 
 TurnResult run_engine_turn(
