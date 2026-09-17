@@ -1,6 +1,7 @@
 #include "kadoka/runtime/headless_match.hpp"
 
 #include "kadoka/impasse.hpp"
+#include "kadoka/runtime/impasse_outcome.hpp"
 #include "kadoka/repetition.hpp"
 #include "kadoka/terminal.hpp"
 
@@ -85,6 +86,20 @@ MatchResult run_headless_match(
                     result.outcome = make_unresolved_outcome(GameEndReason::NoLegalMoves);
                     result.stopped_side = side;
                 }
+                return result;
+            }
+
+            if (turn.status == TurnStatus::Resigned) {
+                result.outcome = make_win_outcome(opposite(side), GameEndReason::Resignation);
+                result.stopped_side.reset();
+                return result;
+            }
+
+            if (turn.status == TurnStatus::EnteringKingDeclaration) {
+                const EnteringKingDeclarationResult declaration =
+                    adjudicate_entering_king_declaration(result.final_position, side);
+                result.outcome = entering_king_declaration_outcome(declaration, side);
+                result.stopped_side.reset();
                 return result;
             }
 
