@@ -52,7 +52,9 @@ const MatchClock::SideState& MatchClock::side(Color color) const noexcept {
 }
 
 void MatchClock::begin_turn(Color color) noexcept {
-    side(color).byoyomi_used_this_turn = Nanoseconds::zero();
+    SideState& state = side(color);
+    state.byoyomi_used_this_turn = Nanoseconds::zero();
+    state.elapsed_this_turn = Nanoseconds::zero();
 }
 
 SearchLimits MatchClock::effective_search_limits(
@@ -84,9 +86,10 @@ ClockChargeResult MatchClock::charge(
     SideState& state = side(color);
     elapsed = nonnegative(elapsed);
     state.total_elapsed += elapsed;
+    state.elapsed_this_turn += elapsed;
 
     if (!state.control.has_value()) {
-        return ClockChargeResult{false, elapsed};
+        return ClockChargeResult{false, state.elapsed_this_turn};
     }
 
     const Nanoseconds from_main = std::min(state.main_remaining, elapsed);
@@ -98,7 +101,7 @@ ClockChargeResult MatchClock::charge(
         std::chrono::duration_cast<Nanoseconds>(state.control->byoyomi);
     return ClockChargeResult{
         state.byoyomi_used_this_turn > byoyomi,
-        elapsed,
+        state.elapsed_this_turn,
     };
 }
 
