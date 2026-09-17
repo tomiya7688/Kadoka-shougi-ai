@@ -118,6 +118,50 @@ int main(int argc, char** argv) {
 
     {
         const Position position = Position::startpos();
+        PersistentProcessAIBackend backend(make_external_config(helper, "offer_impasse"));
+
+        const TurnResult result = run_ai_turn(backend, position);
+        assert(result.status == TurnStatus::MutualImpasseOffered);
+        assert(result.search_result.has_value());
+        assert(result.search_result->action == EngineAction::OfferMutualImpasse);
+        assert(!result.next_position.has_value());
+    }
+
+    {
+        const Position position = Position::startpos();
+        PersistentProcessAIBackend accept_backend(
+            make_external_config(helper, "accept_impasse")
+        );
+        assert(
+            accept_backend.respond_to_mutual_impasse_offer(position)
+            == MutualImpasseResponse::Accept
+        );
+
+        PersistentProcessAIBackend decline_backend(
+            make_external_config(helper, "decline_impasse")
+        );
+        assert(
+            decline_backend.respond_to_mutual_impasse_offer(position)
+            == MutualImpasseResponse::Decline
+        );
+    }
+
+    {
+        const Position position = Position::startpos();
+        PersistentProcessAIBackend backend(
+            make_external_config(helper, "malformed_agreement")
+        );
+        bool failed = false;
+        try {
+            (void)backend.respond_to_mutual_impasse_offer(position);
+        } catch (const std::runtime_error&) {
+            failed = true;
+        }
+        assert(failed);
+    }
+
+    {
+        const Position position = Position::startpos();
         PersistentProcessAIBackend backend(make_external_config(helper, "malformed"));
         bool failed = false;
         try {
