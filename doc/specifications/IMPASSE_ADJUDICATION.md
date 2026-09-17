@@ -149,3 +149,26 @@ Persist enough information to reproduce an impasse result:
 - canonical history covering move 500 when deferred-check adjudication matters
 
 Do not collapse replay-required impasse into a scored draw.
+
+
+## Runtime declaration action
+
+The Core adjudicator does not choose to declare for an AI. Declaration is a player decision and therefore enters Runtime through the semantic AI action:
+
+```cpp
+SearchResult result;
+result.action = EngineAction::DeclareEnteringKing;
+```
+
+The Headless Match Runtime then calls `adjudicate_entering_king_declaration()` for the side to move and maps the result to `GameOutcome`.
+
+This distinction is intentional:
+
+- the AI decides whether to invoke the declaration procedure
+- the Core decides whether the declaration satisfies the official conditions
+- Runtime never auto-declares merely because a winning declaration is available
+- a failed declaration is immediately adjudicated as a loss, rather than retried as an illegal move
+
+External process/script AIs use `action declare_entering_king`. Native engines use the same `EngineAction` value directly.
+
+Resignation uses the sibling semantic action `EngineAction::Resign`; neither action is encoded as a fake board move.
