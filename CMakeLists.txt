@@ -90,6 +90,10 @@ add_executable(runtime_turn_runner_test tests/runtime_turn_runner_test.cpp)
 target_link_libraries(runtime_turn_runner_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME runtime_turn_runner_test COMMAND runtime_turn_runner_test)
 
+add_executable(semantic_action_test tests/semantic_action_test.cpp)
+target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
+add_test(NAME semantic_action_test COMMAND semantic_action_test)
+
 add_executable(headless_match_test tests/headless_match_test.cpp)
 target_link_libraries(headless_match_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME headless_match_test COMMAND headless_match_test)
