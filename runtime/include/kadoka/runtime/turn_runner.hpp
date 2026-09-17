@@ -11,6 +11,8 @@ namespace kadoka::shogi::runtime {
 enum class TurnStatus : std::uint8_t {
     MoveApplied,
     IllegalMove,
+    Resigned,
+    EnteringKingDeclaration,
     NoLegalMoves,
 };
 
