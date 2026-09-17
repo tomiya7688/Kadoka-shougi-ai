@@ -49,6 +49,36 @@ private:
     std::optional<std::chrono::milliseconds> seen_time_limit_{};
 };
 
+class TimedActionEngine final : public Engine {
+public:
+    TimedActionEngine(EngineAction action, std::chrono::milliseconds delay)
+        : action_(action), delay_(delay) {}
+
+    [[nodiscard]] std::string name() const override {
+        return "timed-action-test-engine";
+    }
+
+    [[nodiscard]] SearchResult search(
+        const Position&,
+        const SearchLimits&
+    ) override {
+        ++calls_;
+        std::this_thread::sleep_for(delay_);
+        SearchResult result;
+        result.action = action_;
+        return result;
+    }
+
+    [[nodiscard]] unsigned calls() const noexcept {
+        return calls_;
+    }
+
+private:
+    EngineAction action_{EngineAction::Move};
+    std::chrono::milliseconds delay_{0};
+    unsigned calls_{0};
+};
+
 } // namespace
 
 int main() {
@@ -108,6 +138,24 @@ int main() {
         assert(*black.seen_time_limit() <= 100ms);
         assert(*black.seen_time_limit() > 0ms);
         assert(result.clock.black_main_remaining == 0ms);
+    }
+
+    {
+        const Position initial = Position::startpos();
+        TimedActionEngine black{EngineAction::Resign, 10ms};
+        TimedActionEngine white{EngineAction::Resign, 0ms};
+
+        MatchLimits limits;
+        limits.black_time_control = PlayerTimeControl{1ms, 0ms};
+
+        const MatchResult result = run_headless_match(black, white, initial, limits);
+
+        assert(result.outcome.result == GameResult::WhiteWin);
+        assert(result.outcome.reason == GameEndReason::TimeForfeit);
+        assert(result.outcome.winner == Color::White);
+        assert(result.outcome.loser == Color::Black);
+        assert(black.calls() == 1);
+        assert(white.calls() == 0);
     }
 
     return 0;
