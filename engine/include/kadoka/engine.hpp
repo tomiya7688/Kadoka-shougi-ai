@@ -15,12 +15,20 @@ struct SearchLimits {
     std::optional<unsigned> depth_limit{};
 };
 
+enum class EngineAction : std::uint8_t {
+    Move,
+    Resign,
+    DeclareEnteringKing,
+};
+
 struct SearchResult {
     Move best_move{};
     std::int32_t score_cp{0};
     std::uint64_t nodes{0};
     unsigned depth{0};
     std::string info{};
+    // Defaults to Move so existing engines remain source-compatible.
+    EngineAction action{EngineAction::Move};
 };
 
 class Engine {
