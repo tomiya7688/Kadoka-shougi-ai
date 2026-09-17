@@ -102,7 +102,7 @@ SearchResult parse_response(
     }
 
     SearchResult result;
-    bool has_move = false;
+    bool has_decision = false;
 
     for (std::size_t index = 1; index < lines.size(); ++index) {
         std::istringstream parser(lines[index]);
@@ -111,8 +111,8 @@ SearchResult parse_response(
         if (kind.empty()) continue;
 
         if (kind == "move") {
-            if (has_move) {
-                throw std::runtime_error("external AI response contains multiple moves");
+            if (has_decision) {
+                throw std::runtime_error("external AI response contains multiple decisions");
             }
 
             std::string move_kind;
@@ -148,7 +148,25 @@ SearchResult parse_response(
             } else {
                 throw std::runtime_error("external AI response contains unknown move kind");
             }
-            has_move = true;
+            result.action = EngineAction::Move;
+            has_decision = true;
+        } else if (kind == "action") {
+            if (has_decision) {
+                throw std::runtime_error("external AI response contains multiple decisions");
+            }
+
+            std::string action;
+            if (!(parser >> action)) {
+                throw std::runtime_error("external AI response contains malformed action");
+            }
+            if (action == "resign") {
+                result.action = EngineAction::Resign;
+            } else if (action == "declare_entering_king") {
+                result.action = EngineAction::DeclareEnteringKing;
+            } else {
+                throw std::runtime_error("external AI response contains unknown action");
+            }
+            has_decision = true;
         } else if (kind == "score_cp") {
             long long value = 0;
             if (!(parser >> value)
@@ -179,8 +197,8 @@ SearchResult parse_response(
         }
     }
 
-    if (!has_move) {
-        throw std::runtime_error("external AI response does not contain move");
+    if (!has_decision) {
+        throw std::runtime_error("external AI response does not contain a decision");
     }
     return result;
 }
