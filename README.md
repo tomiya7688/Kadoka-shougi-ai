@@ -20,13 +20,14 @@ The current core includes board/hand representation, SFEN parsing and serializat
 
 ## Design principles
 
-1. **Correctness before strength.** Search and learning are useless if the game core can produce illegal states.
-2. **Engines are interchangeable.** Every AI should run behind the same match/benchmark interface.
-3. **Time controls are first-class.** Engines should be able to return the best result they currently have when a time limit is used.
-4. **Explainability is useful.** Evaluation-based engines should be able to expose why a position received its score.
-5. **Experiments stay reproducible.** Seeds, engine settings, model versions, and game records should be preservable.
-6. **Obake are allowed to be silly, not corrupt the rules.** Character behavior belongs above the authoritative legal-move layer.
-7. **Implementation tasks should be local.** The repository should make it easy for Codex or a human contributor to identify the target subsystem, acceptance tests, and out-of-scope behavior.
+1. **Standalone shogi core first.** The core must function as a normal shogi application with no AI installed: rules, game progression, adjudication, records, and human-facing play do not depend on AI packages.
+2. **Correctness before strength.** Search and learning are useless if the game core can produce illegal states.
+3. **Players are interchangeable.** Human/native/external/script players use the same game-facing boundary. The game sends ordinary observable state and accepts actions; legal-move lists are not a required AI input.
+4. **Time controls are first-class.** Engines should be able to return the best result they currently have when a time limit is used.
+5. **Explainability is useful.** Evaluation-based engines should be able to expose why a position received its score.
+6. **Experiments stay reproducible.** Seeds, engine settings, model versions, and game records should be preservable.
+7. **Obake are allowed to be silly, not corrupt the rules.** Character behavior belongs above the authoritative legal-move layer.
+8. **Implementation tasks should be local.** The repository should make it easy for Codex or a human contributor to identify the target subsystem, acceptance tests, and out-of-scope behavior.
 
 ## Build
 
