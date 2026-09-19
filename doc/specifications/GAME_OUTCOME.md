@@ -37,6 +37,8 @@ The current game does not produce a winner and the applicable shogi rule require
 
 Ordinary fourfold repetition and replay-result impasse map here. This is intentionally not called `Draw`: under the Japan Shogi Association rules, these cases normally cause a replay and are not treated as a completed scored draw.
 
+`ReplayRequired` is a one-board result. `run_replay_series()` consumes it by restarting from the standard initial position, swapping the two participants' colors, and retaining each replay record until the logical contest is decided or a configured safety bound is reached.
+
 ### `Unresolved`
 
 The runtime stopped without an official shogi winner/draw/replay result.
