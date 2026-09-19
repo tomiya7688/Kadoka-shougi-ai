@@ -2,7 +2,7 @@
 
 ## Goal
 
-Kadoka Shougi AI is a multi-engine shogi laboratory. The shared game core stays independent from individual AI implementations so weak character engines, evaluation engines, learned engines, and heavyweight engines can all be compared under identical rules.
+Kadoka Shougi AI is both a standalone shogi application/core and a multi-engine shogi laboratory. The shared game core must remain fully usable without any AI implementation: human-vs-human play, legal move enforcement, game progression, result adjudication, record/replay, and protocol/front-end use must not require an AI package. AI players are optional consumers of the game boundary, not part of the authority of the game itself.
 
 A second design goal is implementation clarity for Codex and other contributors: a task should have an obvious directory, a narrow dependency surface, and tests that state the acceptance conditions.
 
@@ -22,7 +22,9 @@ Responsibilities:
 - USI move notation helpers
 - position hashing
 
-No engine personality, search policy, UI behavior, or learned-model behavior belongs here.
+No engine personality, search policy, UI behavior, learned-model behavior, model loading, or AI-package management belongs here.
+
+The core may generate legal moves because a complete shogi game needs that capability. This does **not** mean the common game-to-AI API supplies a legal-move list. An AI package that wants legal moves for search is responsible for deriving them from the observed board/game state using its own bundled logic. The core remains the final authority and validates every returned player action before mutating canonical state.
 
 ### `engines/`
 AI implementations behind the common `Engine` interface.
@@ -43,15 +45,17 @@ Planned families:
 Minimal match-time coordination shared by built-in and external AI adapters.
 
 Responsibilities:
-- call an engine through the common interface
-- validate AI output against authoritative core legality
-- return explicit applied / rejected / no-legal-move status
+- connect a player/AI adapter to the game-facing player contract
+- provide ordinary game observations/state needed by a player
+- accept semantic player actions such as move/resign/declaration
+- validate returned actions against authoritative core legality
+- report action results and final game results
 - preserve the current canonical position when an AI returns an illegal move
 
 The runtime must stay small. Training, dataset conversion, model analysis, GUI behavior, and transport-specific process management do not belong in the match hot path.
 
 ### `protocol/`
-Frontends and adapters such as CLI and USI. Protocol code translates external commands into core positions/search limits but does not implement shogi rules.
+Frontends and adapters such as CLI and USI. Protocol code translates external commands into ordinary game observations/actions/results but does not implement shogi rules. AI-specific search features and legal-move candidate lists are not required game-protocol payloads.
 
 Future process/IPC/network adapters should translate their external representation into the common engine/runtime boundary rather than bypassing core validation.
 
@@ -111,13 +115,31 @@ When adding a feature:
 
 A good Codex task should be expressible as: target files/directories, required behavior, acceptance tests, and explicitly out-of-scope behavior.
 
-## Search contract
+## Game-facing player contract
 
-Every engine receives an immutable `Position` and `SearchLimits`, and returns a `SearchResult`.
+The public game/AI boundary is intentionally game-shaped rather than search-engine-shaped.
 
-Time-limited engines should keep a valid current best move so they can terminate cleanly at the requested budget. Engines that support full-search or convergence modes may expose those modes through engine-specific options later without changing the common match interface.
+Conceptually the game provides only what an ordinary shogi player/client can observe: the current board/game state and normal match context. A player returns a semantic action. The game then returns the action result and, when the match ends, the game result.
 
-The engine result is not authoritative game state. Runtime validates the returned move against `generate_legal_moves()` before deriving the next canonical `Position`. See `doc/specifications/ENGINE_RUNTIME.md`.
+```text
+Game observation/state
+        ↓
+Player / AI adapter
+        ↓
+Player action
+        ↓
+Authoritative core validation + state transition
+        ↓
+Action result / game result
+```
+
+The common boundary does **not** require the game to send a precomputed legal-move list, handcrafted evaluation features, search candidates, policy targets, or other AI-specific helper data. AI packages may bundle their own legal-move generation, preprocessing, search, evaluation, and model code so they remain portable to other compatible shogi environments.
+
+The core remains authoritative even when an AI contains its own rules implementation: every returned action is validated by the game before canonical state changes.
+
+The existing C++ `Engine::search(Position, SearchLimits)` interface is an internal native-engine convenience layer and must not be treated as the external/public game protocol. Adapters may translate between the game-facing player contract and an engine-specific internal search API.
+
+See `doc/specifications/ENGINE_RUNTIME.md`.
 
 ## Obake rule
 
@@ -130,7 +152,7 @@ Obake engines may propose silly or illegal intentions for UI/character purposes,
 3. Filter self-check and implement attack/check detection.
 4. Add make/unmake plus position hashing.
 5. Implement pawn-drop mate rejection at the legal-move layer.
-6. Add a validated engine runtime boundary for built-in/external adapters.
+6. Add a validated game-facing player boundary for human/native/external adapters without exposing legal-move lists as a required AI input.
 7. Add repetition/perpetual-check adjudication.
 8. Add USI frontend.
 9. Build the first deliberately weak Obake engine and the first real evaluation engine on the same interface.
