@@ -1,5 +1,6 @@
 #include "kadoka/runtime/replay_series.hpp"
 
+#include <chrono>
 #include <utility>
 
 namespace kadoka::shogi::runtime {
