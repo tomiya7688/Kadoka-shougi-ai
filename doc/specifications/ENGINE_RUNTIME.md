@@ -2,11 +2,11 @@
 
 ## Scope
 
-The runtime layer sits between player implementations (human/native/external/script) and the authoritative shogi core.
+The runtime layer sits between AI engines and the authoritative shogi core.
 
-The public boundary is deliberately game-shaped: the game exposes only information an ordinary player can see or know, the player returns an action, and the game reports the result of that action. When the match ends, the game emits the completed game-history record. The runtime validates move decisions against core legality before deriving the next canonical position. Non-move decisions such as resignation or entering-king declaration are surfaced explicitly and never disguised as board moves.
+Its first responsibility is deliberately small: run one engine decision, validate move decisions against the core's legal-move list, and only then derive the next canonical position. Non-move decisions such as resignation or entering-king declaration are surfaced explicitly and never disguised as board moves.
 
-This boundary must not require AI-only or internal helper data such as a precomputed legal-move list, check flag, repetition history, handcrafted evaluation features, search candidates, policy targets, game ID, or dataset metadata. If an AI needs legal moves, check state, repetition history, or other derived state, it reconstructs and maintains that information itself.
+This is the common path for built-in engines and future external/script/process adapters.
 
 ## Dependency direction
 
@@ -32,9 +32,7 @@ TurnResult run_engine_turn(
 );
 ```
 
-The current C++ helper passes an immutable `Position` to native engines. This is an implementation convenience for in-process engines, not the definition of the external/public game protocol. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign` and `DeclareEnteringKing` are semantic actions with no synthetic square or fake move encoding.
-
-An external AI package may bundle its own internal board, shogi move generator, history tracking, preprocessing, screen-recognition input, and search stack. The game does not need to send legal moves, check status, repetition history, or game bookkeeping IDs to it. Regardless of the AI's internal rules implementation, the core validates the returned action and remains the sole authority over canonical state.
+The engine receives the immutable current `Position`. Runtime measures `AIBackend::decide()` with `std::chrono::steady_clock` and returns that duration as `TurnResult::decision_time`; Core move generation and validation are outside that player-clock measurement. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign`, `DeclareEnteringKing`, and `OfferMutualImpasse` are semantic actions with no synthetic square or fake move encoding.
 
 ### `MoveApplied`
 
@@ -43,6 +41,7 @@ The engine returned a legal move.
 - `search_result` is present.
 - `next_position` is present.
 - the next position is produced only after core validation succeeds.
+- `decision_time` records only the wall time spent in `AIBackend::decide()`.
 
 ### `IllegalMove`
 
@@ -72,6 +71,19 @@ The engine explicitly invoked the entering-king declaration procedure.
 - match runtime asks the authoritative impasse adjudicator to determine win, replay, or declaration loss.
 - an invalid declaration is a terminal loss, not an illegal-move retry.
 
+### `MutualImpasseOffered`
+
+The side to move proposes mutually agreed impasse.
+
+- `search_result` is present.
+- `next_position` is absent because an offer is not a board move.
+- Headless Runtime checks the objective entering-king position prerequisite before consulting the opponent.
+- the opponent answers through the separate `respond_to_mutual_impasse_offer()` agreement API.
+- rejection returns play to the same side and same canonical position.
+- acceptance sends the position to the Core 24/27-point adjudicator selected by match policy.
+
+Existing engines decline agreement offers by default.
+
 ### `NoLegalMoves`
 
 The current position has no legal move.
@@ -96,27 +108,23 @@ The separation is intentional:
 
 ## External AI alignment
 
-External adapters must implement the game-facing player boundary. Transport details such as JSON, process I/O, IPC, network connections, Python, Rust, or Go belong outside the shogi core.
+Future external adapters should still implement or wrap the common `Engine` decision boundary. Transport details such as JSON, process I/O, IPC, network connections, Python, Rust, or Go belong outside the shogi core.
 
 Conceptually:
 
 ```text
-Observable game state / ordinary match context
+Position / limits
       ↓
-External AI Adapter / AI Package
+External AI Adapter
       ↓
-Player action
+Engine::search
       ↓
 Turn Runner
       ↓
 Core legal validation
       ↓
-Action result / game result
+MoveApplied / IllegalMove / Resigned / EnteringKingDeclaration / MutualImpasseOffered / NoLegalMoves
 ```
-
-A transport may encode the visible board state with SFEN or another agreed representation. Public time information may be included when it is part of the ordinary match context (remaining time, byoyomi, move deadline). A transport must not depend on receiving the core's legal-move list, check flag, repetition history, or match/game ID. AI-specific search limits, node limits, evaluation features, candidate lists, and history-derived features belong behind the adapter/package boundary unless a separate optional extension is explicitly defined.
-
-Completed game history is an output of the game/match layer after terminal adjudication. It is not part of per-turn PlayerObservation. Game-history storage may contain bookkeeping metadata such as a game ID, but such metadata is not sent to the player merely because it exists in the record.
 
 The persistent process protocol accepts exactly one decision record per response:
 
@@ -125,17 +133,38 @@ move normal <from_file> <from_rank> <to_file> <to_rank> <promote_0_or_1>
 move drop <piece> <to_file> <to_rank>
 action resign
 action declare_entering_king
+action offer_mutual_impasse
 ```
 
-Existing `move` responses remain unchanged. Multiple decision records are rejected. The semantic source of truth remains the normalized `EngineAction` / `TurnStatus`, not transport text.
+Existing `move` responses remain unchanged. Multiple decision records are rejected.
+
+A mutual-impasse offer is answered out-of-band with a separate interaction request:
+
+```text
+request <id>
+interaction mutual_impasse_offer
+sfen <position>
+end
+```
+
+The responder returns exactly one agreement record:
+
+```text
+result <id>
+agreement accept
+end
+```
+
+or `agreement decline`.
+
+The semantic source of truth remains the normalized `EngineAction`, `MutualImpasseResponse`, and `TurnStatus`, not transport text.
 
 ## Sibling-project alignment
 
 This follows the Kadoka AI family direction shared with Kadoka Othello AI and Kadoka Tetris AI:
 
-- standalone authoritative game core that remains useful with no AI installed
+- minimal authoritative game core
 - AI behind an adapter/interface boundary
-- no required legal-move-list feed from game to AI
 - runtime validation of AI output
 - no direct AI mutation of canonical game state
 - native fast path separate from external transport
@@ -149,7 +178,6 @@ This layer still does not define:
 
 - timeout/cancellation result policy beyond `SearchLimits`
 - JSON/USI serialization
-- mutual-impasse agreement signaling between players
 - dataset logging
 
 Those should build on this runtime contract rather than bypass it.
