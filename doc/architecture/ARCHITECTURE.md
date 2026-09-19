@@ -49,7 +49,7 @@ Minimal match-time coordination shared by built-in and external AI adapters.
 Responsibilities:
 - connect a player/AI adapter to the game-facing player contract
 - provide ordinary game observations/state needed by a player
-- accept semantic player actions such as move/resign/declaration
+- accept ordinary player actions such as move/resign
 - validate returned actions against authoritative core legality
 - report action results and final game results
 - preserve the current canonical position when an AI returns an illegal move
@@ -139,7 +139,7 @@ The common boundary does **not** require the game to send a precomputed legal-mo
 
 The core remains authoritative even when an AI contains its own rules implementation: every returned action is validated by the game before canonical state changes.
 
-When a match ends, the game emits a game-history record describing what actually happened in the match. Match IDs and similar bookkeeping may exist in that output record, but are not player-visible observation fields. AI search logs, candidate evaluations, and training targets are separate analysis/dataset concerns.
+When a match ends, the game emits two JSON history streams keyed by `game_id + ply`: a board-state stream containing the full visible position for that ply, and an auxiliary stream containing actions, action results, visible time information, terminal metadata, and other non-board game facts. Match IDs are output metadata and are not player-visible observation fields. AI search logs, candidate evaluations, and training targets are separate analysis/dataset concerns.
 
 The existing C++ `Engine::search(Position, SearchLimits)` interface is an internal native-engine convenience layer and must not be treated as the external/public game protocol. Adapters may translate between the game-facing player contract and an engine-specific internal search API.
 
