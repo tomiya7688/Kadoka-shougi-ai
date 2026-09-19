@@ -19,9 +19,9 @@ MatchResult run_headless_match(
 );
 ```
 
-`MatchLimits` contains per-side `SearchLimits`, `max_engine_attempts_per_turn`, `max_plies`, and `automatic_impasse_rule`.
+`MatchLimits` contains per-side internal engine limits and optional headless-runner safety limits such as `max_plies`.
 
-The default automatic impasse rule is `AutomaticImpasseRule::Jsa500Moves`, matching the project's normal JSA-rule profile. Tournament/custom environments can select `AutomaticImpasseRule::Disabled` and apply their own maximum-move or impasse policy above this runtime.
+The normal game itself does not impose an illegal-move retry ceiling. Headless/benchmark tooling may expose explicit safety-stop settings to prevent a broken or rule-unaware engine from running forever, but such a stop is tooling policy rather than a shogi rule or player loss.
 
 ## Illegal-output retry
 
@@ -37,20 +37,11 @@ run_engine_turn validation
    └─ illegal -> keep same position and retry
 ```
 
-`max_engine_attempts_per_turn` is the total number of engine calls permitted for that side on one ply.
+Rejected move outputs increment the per-side illegal-output counter, but they do not enter `accepted_moves`, do not enter canonical rule history, never mutate the canonical position, never change side-to-move, and do not end the game.
 
-Rejected move outputs increment the per-side illegal-output counter, but they do not enter `accepted_moves`, do not enter canonical rule history, and never mutate the canonical position.
+`EngineAction::Resign` ends the game immediately with a resignation loss. Ordinary illegal move attempts remain retryable without a game-rule limit.
 
-Semantic actions are separate from illegal moves. `EngineAction::Resign` ends the game immediately with a resignation loss. `EngineAction::DeclareEnteringKing` invokes the Core declaration adjudicator; a failed declaration is an immediate loss and is not retried.
-
-If the attempt limit is exhausted, the outcome is:
-
-```text
-result = Unresolved
-reason = EngineAttemptLimit
-```
-
-`stopped_side` identifies the side whose engine could not continue. This is diagnostic information, not an automatic shogi loss.
+If a headless test/benchmark explicitly configures a safety stop for repeated invalid output, reaching that stop returns an unresolved tooling/runtime result. It is not a shogi loss and is not part of the normal game rules.
 
 ## Checkmate and no-legal-move handling
 
@@ -99,32 +90,11 @@ winner/loser = present
 
 Repetition is checked before automatic impasse after an accepted move, so a continuous-check repetition loss is not hidden by a later result rule.
 
-## Automatic 500-move impasse
+## Real-world adjudication procedures
 
-When `automatic_impasse_rule == AutomaticImpasseRule::Jsa500Moves`, canonical history is passed to `adjudicate_500_move_impasse()`.
+Entering-king declaration and mutually agreed impasse are real-world/tournament procedures and are not required parts of the normal software-game Player API. If a specific tournament or compatibility mode needs them, they belong in an explicit optional policy/profile above the ordinary game interaction contract.
 
-When move 500 completes without check, the runner returns:
-
-```text
-result = ReplayRequired
-reason = Impasse
-```
-
-If move 500 ends in check, the Core keeps the result pending while that checking side continues its sequence. The replay result is emitted when that side first makes a move that does not continue check.
-
-Point totals do not affect the JSA automatic 500-move rule.
-
-When `automatic_impasse_rule == AutomaticImpasseRule::Disabled`, the Headless Runtime does not perform this automatic adjudication. `max_plies` remains only a neutral safety guard; a tournament-specific `%MAX_MOVES`, declaration rule, or other adjudication belongs to the caller/match policy and must be recorded separately.
-
-Correct deferred-check adjudication requires canonical history containing the exact position after move 500 (`ply == 501`). A run started from a later standalone SFEN does not contain enough information to reconstruct whether the move-500 check sequence was continuous, so the runtime does not guess an impasse result in that case.
-
-## Entering-king declaration and mutually agreed impasse
-
-Entering-king declaration is a player action rather than an ordinary move. Engines can now return `EngineAction::DeclareEnteringKing`; the Headless Match Runtime passes the current canonical position to `adjudicate_entering_king_declaration()` and maps the verdict to `GameOutcome`.
-
-The runtime never auto-declares merely because the position qualifies. Declaration timing remains an AI/player decision.
-
-Mutually agreed impasse is different: it requires agreement by both players, so the Core point adjudicator exists but no automatic agreement is invented by the match runner. An explicit two-party agreement transport/policy remains future work.
+The normal software-game loop remains board observation → player action → validation/result, without forcing these real-world procedures into every AI or UI path.
 
 ## Ply safety guard
 
@@ -148,13 +118,12 @@ Consumers should use `outcome` for scoring and dataset metadata. `stopped_side` 
 `GameEndReason` reserves stable reason values for paths still requiring protocol/runtime actions:
 
 - time forfeit
-- explicit mutual-impasse agreement transport
 
 External process crash/disconnect policy is also still deferred and should not be conflated with an official game loss unless an explicit match policy says so.
 
 ## Dataset and league use
 
-League, benchmark, and dataset writers must preserve both `outcome.result` and `outcome.reason`, plus the selected automatic-impasse and 24/27-point policies when relevant.
+League, benchmark, and dataset writers must preserve both `outcome.result` and `outcome.reason`, plus any explicitly selected tournament/compatibility policy when relevant.
 
 This keeps checkmate, repetition replay, impasse replay, runtime failure, timeout, resignation, and tournament-specific maximum-move rules distinguishable.
 
