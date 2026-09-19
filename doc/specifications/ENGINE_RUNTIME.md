@@ -51,9 +51,13 @@ The engine returned a move that is not in the authoritative legal-move set.
 - `search_result` is present so adapters/UI/tooling can inspect the rejected attempt.
 - `next_position` is absent.
 - the input `Position` is unchanged.
-- callers may query the same engine again, switch adapter/engine, or apply character-specific UI behavior without contaminating the canonical game record.
+- the side to move is unchanged.
+- this result is non-terminal: an illegal move alone never causes defeat or game end.
+- callers may query the same player again or let a human retry.
+- GUI/CLI should visibly report that the attempted move was illegal.
+- the rejected attempt may be recorded as a rejected-action event for learning/evaluation, but it is not appended to the canonical legal move sequence.
 
-This is the runtime form of the project rule that Obake/Kadoka-style engines may make rejected attempts while the game itself never accepts an illegal move.
+This is intentional so rule-unaware AIs can be trained and evaluated, and so character engines such as Kadoka can make mistakes and try again while the game itself never accepts an illegal move.
 
 ### `Resigned`
 
@@ -70,7 +74,7 @@ The engine explicitly invoked the entering-king declaration procedure.
 - `search_result` is present.
 - `next_position` is absent because a declaration is not a board move.
 - match runtime asks the authoritative impasse adjudicator to determine win, replay, or declaration loss.
-- an invalid declaration is a terminal loss, not an illegal-move retry.
+- declaration handling follows the authoritative game rules for that semantic action; ordinary illegal move attempts remain non-terminal rejected inputs.
 
 ### `NoLegalMoves`
 
@@ -84,7 +88,7 @@ Game-result adjudication remains a separate responsibility. This status only rep
 
 ## Match-level policy
 
-Retry limits and alternating two engines now live in the headless match runtime built on top of this one-turn API.
+Alternating players and match safety policy live in the headless match runtime built on top of this one-turn API. Ordinary illegal moves are not converted into losses by a retry limit; they leave the board and side-to-move unchanged and return an explicit illegal result.
 
 See `doc/specifications/HEADLESS_MATCH_RUNTIME.md`.
 
