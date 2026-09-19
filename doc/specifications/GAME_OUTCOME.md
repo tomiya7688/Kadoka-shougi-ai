@@ -65,7 +65,7 @@ Runtime/tooling policy may later convert some of these into a forfeit, retry, ad
 
 `Impasse` now covers entering-king declaration, mutually agreed point adjudication, and the automatic 500-move impasse rule. Detailed impasse facts should be preserved separately when needed for dataset or tournament diagnostics.
 
-`Resignation` is now emitted by Headless Match Runtime when an AI returns `EngineAction::Resign`. `TimeForfeit` remains reserved for later clock/runtime work.
+`Resignation` is emitted when an AI returns `EngineAction::Resign`. `TimeForfeit` is emitted by the Headless Match Runtime when a configured official match clock is exceeded.
 
 ## Current mappings
 
@@ -78,10 +78,11 @@ Runtime/tooling policy may later convert some of these into a forfeit, retry, ad
 | valid entering-king declaration with 31+ points | declarer win | `Impasse` | present |
 | valid entering-king declaration with 24-30 points | replay required | `Impasse` | absent |
 | failed entering-king declaration | opponent win | `Impasse` | present |
-| mutually agreed 24-point impasse, both 24+ | replay required | `Impasse` | absent |
-| mutually agreed point adjudication, one side below threshold | opponent win | `Impasse` | present |
+| explicitly accepted 24-point impasse, both 24+ | replay required | `Impasse` | absent |
+| explicitly accepted point adjudication, one side below threshold | opponent win | `Impasse` | present |
 | automatic 500-move impasse | replay required | `Impasse` | absent |
 | engine resignation | opponent win | `Resignation` | present |
+| official match clock exceeded | opponent win | `TimeForfeit` | present |
 | engine fails retry policy | unresolved | `EngineAttemptLimit` | absent |
 | safety ply guard reached | unresolved | `PlyLimit` | absent |
 | no legal move without checkmate fact | unresolved | `NoLegalMoves` | absent |
@@ -150,7 +151,7 @@ Do not reduce all non-wins to a single `draw` flag. In particular:
 - infrastructure stops must remain distinguishable from rule results
 - perpetual-check losses must remain distinguishable from checkmate losses
 - declaration losses should remain distinguishable from checkmate losses through impasse diagnostics
-- future timeout/resignation outcomes must retain their reason
+- timeout and resignation outcomes must retain their reason
 
 When tournament-selectable impasse rules are used, persist the selected policy as match configuration/provenance.
 

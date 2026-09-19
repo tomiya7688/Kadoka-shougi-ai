@@ -62,6 +62,17 @@ std::string build_request(
     return out.str();
 }
 
+std::string build_mutual_impasse_offer_request(
+    std::size_t request_id,
+    const Position& position) {
+    std::ostringstream out;
+    out << "request " << request_id << '\n';
+    out << "interaction mutual_impasse_offer\n";
+    out << "sfen " << position.to_sfen() << '\n';
+    out << "end\n";
+    return out.str();
+}
+
 Square checked_square(int file, int rank) {
     if (file < 1 || file > 9 || rank < 1 || rank > 9) {
         throw std::runtime_error("external AI response contains out-of-range square");
@@ -163,6 +174,8 @@ SearchResult parse_response(
                 result.action = EngineAction::Resign;
             } else if (action == "declare_entering_king") {
                 result.action = EngineAction::DeclareEnteringKing;
+            } else if (action == "offer_mutual_impasse") {
+                result.action = EngineAction::OfferMutualImpasse;
             } else {
                 throw std::runtime_error("external AI response contains unknown action");
             }
@@ -201,6 +214,58 @@ SearchResult parse_response(
         throw std::runtime_error("external AI response does not contain a decision");
     }
     return result;
+}
+
+MutualImpasseResponse parse_mutual_impasse_response(
+    std::size_t expected_request_id,
+    const std::vector<std::string>& lines) {
+    if (lines.empty()) {
+        throw std::runtime_error("external AI returned an empty agreement response");
+    }
+
+    {
+        std::istringstream first(lines.front());
+        std::string kind;
+        std::size_t request_id = 0;
+        if (!(first >> kind >> request_id)
+            || kind != "result"
+            || request_id != expected_request_id) {
+            throw std::runtime_error("external AI agreement response has invalid request id");
+        }
+    }
+
+    bool has_response = false;
+    MutualImpasseResponse response = MutualImpasseResponse::Decline;
+    for (std::size_t index = 1; index < lines.size(); ++index) {
+        std::istringstream parser(lines[index]);
+        std::string kind;
+        parser >> kind;
+        if (kind.empty()) continue;
+
+        if (kind != "agreement" || has_response) {
+            throw std::runtime_error(
+                "external AI agreement response contains invalid record"
+            );
+        }
+
+        std::string value;
+        if (!(parser >> value)) {
+            throw std::runtime_error("external AI agreement response is malformed");
+        }
+        if (value == "accept") {
+            response = MutualImpasseResponse::Accept;
+        } else if (value == "decline") {
+            response = MutualImpasseResponse::Decline;
+        } else {
+            throw std::runtime_error("external AI agreement response has unknown value");
+        }
+        has_response = true;
+    }
+
+    if (!has_response) {
+        throw std::runtime_error("external AI agreement response is missing");
+    }
+    return response;
 }
 
 #ifdef _WIN32
@@ -295,6 +360,16 @@ public:
         const SearchLimits& limits) {
         write_all(build_request(request_id, position, limits));
         return parse_response(request_id, read_response(request_id));
+    }
+
+    MutualImpasseResponse respond_to_mutual_impasse_offer(
+        std::size_t request_id,
+        const Position& position) {
+        write_all(build_mutual_impasse_offer_request(request_id, position));
+        return parse_mutual_impasse_response(
+            request_id,
+            read_response(request_id)
+        );
     }
 
 private:
@@ -635,6 +710,14 @@ SearchResult PersistentProcessAIBackend::decide(
     const Position& position,
     const SearchLimits& limits) {
     return impl_->decide(next_request_id_++, position, limits);
+}
+
+MutualImpasseResponse PersistentProcessAIBackend::respond_to_mutual_impasse_offer(
+    const Position& position) {
+    return impl_->respond_to_mutual_impasse_offer(
+        next_request_id_++,
+        position
+    );
 }
 
 } // namespace kadoka::shogi::runtime

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "kadoka/impasse.hpp"
 #include "kadoka/runtime/game_outcome.hpp"
+#include "kadoka/runtime/match_clock.hpp"
 #include "kadoka/runtime/turn_runner.hpp"
 
 #include <cstdint>
@@ -17,6 +19,10 @@ enum class AutomaticImpasseRule : std::uint8_t {
 struct MatchLimits {
     SearchLimits black_search{};
     SearchLimits white_search{};
+    // Empty means no official match clock for that side. SearchLimits may
+    // still contain an advisory per-search time budget independently.
+    std::optional<PlayerTimeControl> black_time_control{};
+    std::optional<PlayerTimeControl> white_time_control{};
     // Total Engine::search calls allowed for one side on one ply. A value of 1
     // means an illegal output is not retried. A value of 0 stops immediately.
     std::uint32_t max_engine_attempts_per_turn{3};
@@ -27,6 +33,8 @@ struct MatchLimits {
     // engine-specific environments may disable this and apply their own
     // maximum-move / impasse policy above the runtime.
     AutomaticImpasseRule automatic_impasse_rule{AutomaticImpasseRule::Jsa500Moves};
+    // Used only after an explicit offer is accepted by the opponent.
+    MutualImpassePolicy mutual_impasse_policy{MutualImpassePolicy::Jsa24Point};
 };
 
 struct MatchResult {
@@ -35,6 +43,7 @@ struct MatchResult {
     std::vector<Move> accepted_moves{};
     std::uint32_t black_illegal_outputs{0};
     std::uint32_t white_illegal_outputs{0};
+    MatchClockSnapshot clock{};
     // Runtime diagnostic only. Set when execution stops because the side to
     // move could not continue, without implying an official game loss.
     std::optional<Color> stopped_side{};
