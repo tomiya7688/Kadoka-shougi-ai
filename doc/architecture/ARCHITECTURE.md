@@ -147,7 +147,7 @@ See `doc/specifications/ENGINE_RUNTIME.md`.
 
 ## Obake rule
 
-Obake engines may propose silly or illegal intentions for UI/character purposes, but the authoritative game core never accepts an illegal move. Runtime reports the rejected attempt and leaves the canonical position unchanged. UI speech and rejected-attempt logging stay outside the canonical game record.
+Obake engines may propose silly or illegal intentions for UI/character purposes, but the authoritative game core never accepts an illegal move. Runtime reports the rejected attempt, leaves the canonical position and side-to-move unchanged, and does not end the game merely because the attempt was illegal. The GUI/CLI may display the rejection and character behavior may react to it. Rejected attempts are excluded from the canonical legal-move sequence, but may be preserved as rejected-action events in the full game-history record for learning/evaluation.
 
 ## Near-term milestones
 
