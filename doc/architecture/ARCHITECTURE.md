@@ -4,6 +4,8 @@
 
 Kadoka Shougi AI is both a standalone shogi application/core and a multi-engine shogi laboratory. The shared game core must remain fully usable without any AI implementation: human-vs-human play, legal move enforcement, game progression, result adjudication, record/replay, and protocol/front-end use must not require an AI package. AI players are optional consumers of the game boundary, not part of the authority of the game itself.
 
+At the player boundary, the game's job is intentionally narrow: expose information an ordinary player can see or know, accept the player's action, return the result of that action, and emit the completed game history when the match ends. AI-only derived information is not part of this boundary.
+
 A second design goal is implementation clarity for Codex and other contributors: a task should have an obvious directory, a narrow dependency surface, and tests that state the acceptance conditions.
 
 ## Source layout
@@ -133,9 +135,11 @@ Authoritative core validation + state transition
 Action result / game result
 ```
 
-The common boundary does **not** require the game to send a precomputed legal-move list, handcrafted evaluation features, search candidates, policy targets, or other AI-specific helper data. AI packages may bundle their own legal-move generation, preprocessing, search, evaluation, and model code so they remain portable to other compatible shogi environments.
+The common boundary does **not** require the game to send a precomputed legal-move list, check flag, repetition history, handcrafted evaluation features, search candidates, policy targets, game ID, or other AI-specific/internal helper data. AI packages may bundle their own board state, move generation, history reconstruction, preprocessing, search, evaluation, and model code so they remain portable to other compatible shogi environments, including environments observed through screen recognition.
 
 The core remains authoritative even when an AI contains its own rules implementation: every returned action is validated by the game before canonical state changes.
+
+When a match ends, the game emits a game-history record describing what actually happened in the match. Match IDs and similar bookkeeping may exist in that output record, but are not player-visible observation fields. AI search logs, candidate evaluations, and training targets are separate analysis/dataset concerns.
 
 The existing C++ `Engine::search(Position, SearchLimits)` interface is an internal native-engine convenience layer and must not be treated as the external/public game protocol. Adapters may translate between the game-facing player contract and an engine-specific internal search API.
 
