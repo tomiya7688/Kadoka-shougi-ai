@@ -4,9 +4,9 @@
 
 The runtime layer sits between player implementations (human/native/external/script) and the authoritative shogi core.
 
-The public boundary is deliberately game-shaped: the game exposes ordinary observable game state, the player returns an action, and the game reports the action result and eventual game result. The runtime validates move decisions against core legality before deriving the next canonical position. Non-move decisions such as resignation or entering-king declaration are surfaced explicitly and never disguised as board moves.
+The public boundary is deliberately game-shaped: the game exposes only information an ordinary player can see or know, the player returns an action, and the game reports the result of that action. When the match ends, the game emits the completed game-history record. The runtime validates move decisions against core legality before deriving the next canonical position. Non-move decisions such as resignation or entering-king declaration are surfaced explicitly and never disguised as board moves.
 
-This boundary must not require AI-only helper data such as a precomputed legal-move list, handcrafted evaluation features, search candidates, or policy targets.
+This boundary must not require AI-only or internal helper data such as a precomputed legal-move list, check flag, repetition history, handcrafted evaluation features, search candidates, policy targets, game ID, or dataset metadata. If an AI needs legal moves, check state, repetition history, or other derived state, it reconstructs and maintains that information itself.
 
 ## Dependency direction
 
@@ -34,7 +34,7 @@ TurnResult run_engine_turn(
 
 The current C++ helper passes an immutable `Position` to native engines. This is an implementation convenience for in-process engines, not the definition of the external/public game protocol. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign` and `DeclareEnteringKing` are semantic actions with no synthetic square or fake move encoding.
 
-An external AI package may bundle its own shogi move generator and preprocessing. The game does not need to send legal moves to it. Regardless of the AI's internal rules implementation, the core validates the returned action and remains the sole authority over canonical state.
+An external AI package may bundle its own internal board, shogi move generator, history tracking, preprocessing, screen-recognition input, and search stack. The game does not need to send legal moves, check status, repetition history, or game bookkeeping IDs to it. Regardless of the AI's internal rules implementation, the core validates the returned action and remains the sole authority over canonical state.
 
 ### `MoveApplied`
 
@@ -114,7 +114,9 @@ Core legal validation
 Action result / game result
 ```
 
-A transport may encode the board with SFEN or another agreed representation. Time information may be included when it is part of the ordinary match context (remaining time, byoyomi, move deadline). A transport must not depend on receiving the core's legal-move list. AI-specific search limits, node limits, evaluation features, or candidate lists belong behind the adapter/package boundary unless a separate optional extension is explicitly defined.
+A transport may encode the visible board state with SFEN or another agreed representation. Public time information may be included when it is part of the ordinary match context (remaining time, byoyomi, move deadline). A transport must not depend on receiving the core's legal-move list, check flag, repetition history, or match/game ID. AI-specific search limits, node limits, evaluation features, candidate lists, and history-derived features belong behind the adapter/package boundary unless a separate optional extension is explicitly defined.
+
+Completed game history is an output of the game/match layer after terminal adjudication. It is not part of per-turn PlayerObservation. Game-history storage may contain bookkeeping metadata such as a game ID, but such metadata is not sent to the player merely because it exists in the record.
 
 The persistent process protocol accepts exactly one decision record per response:
 
