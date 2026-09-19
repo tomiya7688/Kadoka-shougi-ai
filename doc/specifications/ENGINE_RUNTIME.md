@@ -32,7 +32,7 @@ TurnResult run_engine_turn(
 );
 ```
 
-The current C++ helper passes an immutable `Position` to native engines. This is an implementation convenience for in-process engines, not the definition of the external/public game protocol. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign` and `DeclareEnteringKing` are semantic actions with no synthetic square or fake move encoding.
+The current C++ helper passes an immutable `Position` to native engines. This is an implementation convenience for in-process engines, not the definition of the external/public game protocol. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign` is a semantic action with no synthetic square or fake move encoding. Real-world procedures such as entering-king declaration or mutually agreed impasse are not required parts of the normal game-facing Player API.
 
 An external AI package may bundle its own internal board, shogi move generator, history tracking, preprocessing, screen-recognition input, and search stack. The game does not need to send legal moves, check status, repetition history, or game bookkeeping IDs to it. Regardless of the AI's internal rules implementation, the core validates the returned action and remains the sole authority over canonical state.
 
@@ -66,15 +66,6 @@ The engine explicitly resigned.
 - `search_result` is present.
 - `next_position` is absent.
 - match runtime converts this to a win for the opponent with `GameEndReason::Resignation`.
-
-### `EnteringKingDeclaration`
-
-The engine explicitly invoked the entering-king declaration procedure.
-
-- `search_result` is present.
-- `next_position` is absent because a declaration is not a board move.
-- match runtime asks the authoritative impasse adjudicator to determine win, replay, or declaration loss.
-- declaration handling follows the authoritative game rules for that semantic action; ordinary illegal move attempts remain non-terminal rejected inputs.
 
 ### `NoLegalMoves`
 
@@ -128,7 +119,6 @@ The persistent process protocol accepts exactly one decision record per response
 move normal <from_file> <from_rank> <to_file> <to_rank> <promote_0_or_1>
 move drop <piece> <to_file> <to_rank>
 action resign
-action declare_entering_king
 ```
 
 Existing `move` responses remain unchanged. Multiple decision records are rejected. The semantic source of truth remains the normalized `EngineAction` / `TurnStatus`, not transport text.
