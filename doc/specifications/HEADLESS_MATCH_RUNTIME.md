@@ -6,7 +6,9 @@ The headless match runner executes two `Engine` implementations without a GUI wh
 
 Every AI decision passes through `run_engine_turn()`. Single-position terminal facts, history-dependent repetition facts, and impasse facts come from the Core. Runtime execution failures and tournament policy selection remain Runtime facts.
 
-The final public result is `MatchResult::outcome`, using the common contract in `GAME_OUTCOME.md`.
+The final public result for one board game is `MatchResult::outcome`, using the common contract in `GAME_OUTCOME.md`.
+
+When that outcome is `ReplayRequired`, callers that want the complete logical contest should use the Replay Series Orchestrator in `REPLAY_SERIES.md`. The Headless Match Runtime intentionally stops after one board game and does not swap participants itself.
 
 ## API
 
@@ -130,6 +132,8 @@ External process crash/disconnect policy is also still deferred and should not b
 ## Dataset and league use
 
 League, benchmark, and dataset writers must preserve both `outcome.result` and `outcome.reason`, plus any explicitly selected tournament/compatibility policy when relevant.
+
+For a logical contest that passes through one or more `ReplayRequired` outcomes, preserve the Replay Series records as well as the final contest winner.
 
 This keeps checkmate, repetition replay, impasse replay, runtime failure, timeout, resignation, and tournament-specific maximum-move rules distinguishable.
 
