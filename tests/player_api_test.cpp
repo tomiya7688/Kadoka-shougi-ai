@@ -32,21 +32,21 @@ void assert_invalid(Function&& function) {
 int main() {
     {
         const Move normal = move_from_usi("7g7f");
-        assert(normal.from == Square{7, 7});
-        assert(normal.to == Square{7, 6});
+        assert(normal.from == (Square{7, 7}));
+        assert(normal.to == (Square{7, 6}));
         assert(normal.drop_piece == PieceType::None);
         assert(!normal.promote);
         assert(move_to_usi(normal) == "7g7f");
 
         const Move promoted = move_from_usi("2b3c+");
-        assert(promoted.from == Square{2, 2});
-        assert(promoted.to == Square{3, 3});
+        assert(promoted.from == (Square{2, 2}));
+        assert(promoted.to == (Square{3, 3}));
         assert(promoted.promote);
         assert(move_to_usi(promoted) == "2b3c+");
 
         const Move drop = move_from_usi("P*7f");
         assert(!drop.from.has_value());
-        assert(drop.to == Square{7, 6});
+        assert(drop.to == (Square{7, 6}));
         assert(drop.drop_piece == PieceType::Pawn);
         assert(!drop.promote);
         assert(move_to_usi(drop) == "P*7f");
