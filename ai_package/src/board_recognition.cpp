@@ -92,10 +92,16 @@ std::string low_confidence_message(
 ObservationPipelineResult pipeline_failure(
     ObservationPipelineStatus status,
     std::string message,
+    ObservationCaptureFailure capture_failure =
+        ObservationCaptureFailure::None,
+    BoardRecognitionFailure recognition_failure =
+        BoardRecognitionFailure::None,
     RecognitionConfidence confidence = {},
     std::optional<ObservedGameState> state = std::nullopt) {
     return ObservationPipelineResult{
         status,
+        capture_failure,
+        recognition_failure,
         std::move(state),
         std::move(confidence),
         std::move(message),
@@ -173,12 +179,14 @@ ObservationPipelineResult observe_into(
     } catch (const std::exception& error) {
         return pipeline_failure(
             ObservationPipelineStatus::CaptureFailed,
-            std::string("observation capture threw: ") + error.what()
+            std::string("observation capture threw: ") + error.what(),
+            ObservationCaptureFailure::Other
         );
     } catch (...) {
         return pipeline_failure(
             ObservationPipelineStatus::CaptureFailed,
-            "observation capture threw unknown exception"
+            "observation capture threw unknown exception",
+            ObservationCaptureFailure::Other
         );
     }
 
@@ -187,13 +195,15 @@ ObservationPipelineResult observe_into(
             ObservationPipelineStatus::CaptureFailed,
             capture.message.empty()
                 ? "observation capture failed"
-                : capture.message
+                : capture.message,
+            capture.failure
         );
     }
     if (!is_valid_observation_frame(*capture.frame)) {
         return pipeline_failure(
             ObservationPipelineStatus::CaptureFailed,
-            "observation source returned invalid frame"
+            "observation source returned invalid frame",
+            ObservationCaptureFailure::InvalidFrame
         );
     }
 
@@ -203,12 +213,16 @@ ObservationPipelineResult observe_into(
     } catch (const std::exception& error) {
         return pipeline_failure(
             ObservationPipelineStatus::RecognitionFailed,
-            std::string("board recognition threw: ") + error.what()
+            std::string("board recognition threw: ") + error.what(),
+            ObservationCaptureFailure::None,
+            BoardRecognitionFailure::Other
         );
     } catch (...) {
         return pipeline_failure(
             ObservationPipelineStatus::RecognitionFailed,
-            "board recognition threw unknown exception"
+            "board recognition threw unknown exception",
+            ObservationCaptureFailure::None,
+            BoardRecognitionFailure::Other
         );
     }
 
@@ -218,6 +232,8 @@ ObservationPipelineResult observe_into(
             recognized.message.empty()
                 ? "board recognition failed"
                 : recognized.message,
+            ObservationCaptureFailure::None,
+            recognized.failure,
             recognized.confidence,
             recognized.state
         );
@@ -226,6 +242,8 @@ ObservationPipelineResult observe_into(
         return pipeline_failure(
             ObservationPipelineStatus::RecognitionFailed,
             "board recognition returned invalid confidence",
+            ObservationCaptureFailure::None,
+            BoardRecognitionFailure::InvalidState,
             recognized.confidence,
             recognized.state
         );
@@ -238,6 +256,8 @@ ObservationPipelineResult observe_into(
             ObservationPipelineStatus::RecognitionFailed,
             std::string("recognized game state is invalid: ")
                 + error.what(),
+            ObservationCaptureFailure::None,
+            BoardRecognitionFailure::InvalidState,
             recognized.confidence,
             recognized.state
         );
@@ -249,6 +269,8 @@ ObservationPipelineResult observe_into(
         return pipeline_failure(
             ObservationPipelineStatus::LowConfidence,
             low_message,
+            ObservationCaptureFailure::None,
+            BoardRecognitionFailure::None,
             recognized.confidence,
             recognized.state
         );
@@ -261,6 +283,8 @@ ObservationPipelineResult observe_into(
             ObservationPipelineStatus::ConversionFailed,
             std::string("internal board conversion failed: ")
                 + error.what(),
+            ObservationCaptureFailure::None,
+            BoardRecognitionFailure::None,
             recognized.confidence,
             recognized.state
         );
@@ -268,6 +292,8 @@ ObservationPipelineResult observe_into(
         return pipeline_failure(
             ObservationPipelineStatus::ConversionFailed,
             "internal board conversion failed with unknown exception",
+            ObservationCaptureFailure::None,
+            BoardRecognitionFailure::None,
             recognized.confidence,
             recognized.state
         );
@@ -275,6 +301,8 @@ ObservationPipelineResult observe_into(
 
     return ObservationPipelineResult{
         ObservationPipelineStatus::Converted,
+        ObservationCaptureFailure::None,
+        BoardRecognitionFailure::None,
         std::move(recognized.state),
         recognized.confidence,
         {},
