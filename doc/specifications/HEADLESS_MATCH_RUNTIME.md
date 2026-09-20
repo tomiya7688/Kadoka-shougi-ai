@@ -19,7 +19,7 @@ MatchResult run_headless_match(
 );
 ```
 
-`MatchLimits` contains per-side internal engine limits and optional headless-runner safety limits such as `max_plies`.
+`MatchLimits` contains per-side internal engine limits, optional `PlayerTimeControl`, optional headless-runner safety limits, and optional tournament/compatibility impasse policy.
 
 The normal game itself does not impose an illegal-move retry ceiling. Headless/benchmark tooling may expose explicit safety-stop settings to prevent a broken or rule-unaware engine from running forever, but such a stop is tooling policy rather than a shogi rule or player loss.
 
@@ -42,6 +42,14 @@ Rejected move outputs increment the per-side illegal-output counter, but they do
 `EngineAction::Resign` ends the game immediately with a resignation loss. Ordinary illegal move attempts remain retryable without a game-rule limit.
 
 If a headless test/benchmark explicitly configures a safety stop for repeated invalid output, reaching that stop returns an unresolved tooling/runtime result. It is not a shogi loss and is not part of the normal game rules.
+
+## Match clock and time forfeit
+
+When a side has `PlayerTimeControl`, Runtime measures only time spent inside the AI backend decision boundary. Core legality generation, canonical state transition, repetition checking, and adjudication are not charged as player thinking time.
+
+Before each engine call, the remaining official allowance clamps any advisory engine time budget. If measured decision time exceeds remaining main time plus byoyomi, the opponent wins with `GameEndReason::TimeForfeit`.
+
+Illegal/rejected attempts consume the same turn clock. A late semantic action cannot override a time forfeit. `MatchResult::clock` exposes remaining main time and total measured decision time. See `MATCH_CLOCK.md`.
 
 ## Checkmate and no-legal-move handling
 
@@ -92,9 +100,11 @@ Repetition is checked before automatic impasse after an accepted move, so a cont
 
 ## Real-world adjudication procedures
 
-Entering-king declaration and mutually agreed impasse are real-world/tournament procedures and are not required parts of the normal software-game Player API. If a specific tournament or compatibility mode needs them, they belong in an explicit optional policy/profile above the ordinary game interaction contract.
+Entering-king declaration and mutually agreed impasse are real-world/tournament procedures and are not required parts of the normal software-game Player API. The Headless Runtime nevertheless supports them as optional internal/tournament capabilities so rule-complete automated matches can use the authoritative Core adjudicators.
 
-The normal software-game loop remains board observation → player action → validation/result, without forcing these real-world procedures into every AI or UI path.
+`EngineAction::DeclareEnteringKing` invokes Core declaration adjudication. `EngineAction::OfferMutualImpasse` may trigger an explicit opponent acceptance/decline handshake; only acceptance invokes the selected 24/27-point Core policy. Existing engines may decline by default.
+
+The normal public Player API remains board observation → player action → validation/result and does not require these procedures. The automatic JSA 500-move impasse rule is likewise a selectable Runtime rule profile rather than information injected into PlayerObservation.
 
 ## Ply safety guard
 
@@ -114,10 +124,6 @@ This is a runtime safeguard, not a game-rule draw.
 Consumers should use `outcome` for scoring and dataset metadata. `stopped_side` is diagnostics only.
 
 ## Deferred result sources
-
-`GameEndReason` reserves stable reason values for paths still requiring protocol/runtime actions:
-
-- time forfeit
 
 External process crash/disconnect policy is also still deferred and should not be conflated with an official game loss unless an explicit match policy says so.
 
