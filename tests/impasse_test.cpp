@@ -7,6 +7,15 @@ using namespace kadoka::shogi;
 
 int main() {
     {
+        assert(!is_mutual_impasse_agreement_position(Position::startpos()));
+
+        const Position entered = Position::from_sfen(
+            "4K4/9/9/9/9/9/9/9/4k4 b - 1"
+        );
+        assert(is_mutual_impasse_agreement_position(entered));
+    }
+
+    {
         const Position position = Position::from_sfen(
             "9/PPPPPPPPP/G3K4/9/9/9/9/9/4k4 b 2R2BP 1"
         );

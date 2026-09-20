@@ -155,6 +155,11 @@ EnteringKingDeclarationResult adjudicate_entering_king_declaration(
     return result;
 }
 
+bool is_mutual_impasse_agreement_position(const Position& position) {
+    return analyze_impasse(position, Color::Black).king_in_enemy_camp
+        || analyze_impasse(position, Color::White).king_in_enemy_camp;
+}
+
 MutualImpasseResult adjudicate_mutual_impasse_points(
     const Position& position,
     MutualImpassePolicy policy) {

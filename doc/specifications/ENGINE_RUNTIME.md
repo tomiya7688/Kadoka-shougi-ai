@@ -32,7 +32,7 @@ TurnResult run_engine_turn(
 );
 ```
 
-The current C++ helper passes an immutable `Position` to native engines. This is an implementation convenience for in-process engines, not the definition of the external/public game protocol. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Move actions are checked against the authoritative legal-move set. `Resign` is a semantic action with no synthetic square or fake move encoding. Real-world procedures such as entering-king declaration or mutually agreed impasse are not required parts of the normal game-facing Player API.
+The current C++ helper passes an immutable `Position` to native engines. This is an implementation convenience for in-process engines, not the definition of the external/public game protocol. `SearchResult::action` defaults to `EngineAction::Move`, preserving existing engines. Runtime measures `AIBackend::decide()` with `std::chrono::steady_clock` and returns that duration as `TurnResult::decision_time`; Core move generation and validation are outside that player-clock measurement. Move actions are checked against the authoritative legal-move set. `Resign` is part of the normal game-facing semantic action set. Internal/tournament Runtime extensions may additionally use `DeclareEnteringKing` and `OfferMutualImpasse`, but these real-world procedures are not required parts of the normal public Player API.
 
 An external AI package may bundle its own internal board, shogi move generator, history tracking, preprocessing, screen-recognition input, and search stack. The game does not need to send legal moves, check status, repetition history, or game bookkeeping IDs to it. Regardless of the AI's internal rules implementation, the core validates the returned action and remains the sole authority over canonical state.
 
@@ -43,6 +43,7 @@ The engine returned a legal move.
 - `search_result` is present.
 - `next_position` is present.
 - the next position is produced only after core validation succeeds.
+- `decision_time` records only the wall time spent in `AIBackend::decide()`.
 
 ### `IllegalMove`
 
@@ -66,6 +67,15 @@ The engine explicitly resigned.
 - `search_result` is present.
 - `next_position` is absent.
 - match runtime converts this to a win for the opponent with `GameEndReason::Resignation`.
+
+### Optional tournament/compatibility actions
+
+The internal Engine/Runtime contract may represent real-world procedures without encoding them as fake moves:
+
+- `DeclareEnteringKing`: Runtime delegates declaration adjudication to the authoritative Core.
+- `OfferMutualImpasse`: Runtime may perform an explicit two-party agreement handshake and then delegate point adjudication to Core.
+
+These actions are optional Runtime capabilities. They are deliberately not required fields/actions in the normal JSON Player API defined by Issue #84.
 
 ### `NoLegalMoves`
 
@@ -119,9 +129,24 @@ The persistent process protocol accepts exactly one decision record per response
 move normal <from_file> <from_rank> <to_file> <to_rank> <promote_0_or_1>
 move drop <piece> <to_file> <to_rank>
 action resign
+action declare_entering_king
+action offer_mutual_impasse
 ```
 
-Existing `move` responses remain unchanged. Multiple decision records are rejected. The semantic source of truth remains the normalized `EngineAction` / `TurnStatus`, not transport text.
+Existing `move` responses remain unchanged. Multiple decision records are rejected. `declare_entering_king` and `offer_mutual_impasse` are internal/compatibility transport extensions, not requirements of the normal game-facing Player JSON API.
+
+A mutual-impasse offer may be answered out-of-band with a separate compatibility interaction:
+
+```text
+request <id>
+interaction mutual_impasse_offer
+sfen <position>
+end
+```
+
+The responder returns exactly one agreement record, `agreement accept` or `agreement decline`.
+
+The semantic source of truth remains the normalized Runtime action/result types, not transport text.
 
 ## Sibling-project alignment
 
@@ -143,7 +168,6 @@ This layer still does not define:
 
 - timeout/cancellation result policy beyond `SearchLimits`
 - JSON/USI serialization
-- mutual-impasse agreement signaling between players
 - dataset logging
 
 Those should build on this runtime contract rather than bypass it.
