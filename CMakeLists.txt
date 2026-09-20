@@ -37,6 +37,7 @@ target_include_directories(kadoka_shogi_core
 
 add_library(kadoka_shogi_runtime
     runtime/src/ai_backend.cpp
+    runtime/src/game_history.cpp
     runtime/src/headless_match.cpp
     runtime/src/player_api.cpp
     runtime/src/process_ai_backend.cpp
@@ -94,6 +95,10 @@ add_test(NAME runtime_turn_runner_test COMMAND runtime_turn_runner_test)
 add_executable(player_api_test tests/player_api_test.cpp)
 target_link_libraries(player_api_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME player_api_test COMMAND player_api_test)
+
+add_executable(game_history_test tests/game_history_test.cpp)
+target_link_libraries(game_history_test PRIVATE kadoka_shogi_runtime)
+add_test(NAME game_history_test COMMAND game_history_test)
 
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
