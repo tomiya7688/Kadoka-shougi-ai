@@ -57,6 +57,23 @@ target_link_libraries(kadoka_shogi_runtime
         kadoka_shogi_core
 )
 
+add_library(kadoka_shogi_ai_package
+    ai_package/src/json_player_observation_parser.cpp
+    ai_package/src/observation.cpp
+)
+
+add_dependencies(kadoka_shogi_ai_package kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_ai_package
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/ai_package/include
+)
+
+target_link_libraries(kadoka_shogi_ai_package
+    PUBLIC
+        kadoka_shogi_runtime
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -96,6 +113,19 @@ add_test(NAME runtime_turn_runner_test COMMAND runtime_turn_runner_test)
 add_executable(player_api_test tests/player_api_test.cpp)
 target_link_libraries(player_api_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME player_api_test COMMAND player_api_test)
+
+add_executable(
+    ai_package_json_observation_parser_test
+    tests/ai_package_json_observation_parser_test.cpp
+)
+target_link_libraries(
+    ai_package_json_observation_parser_test
+    PRIVATE kadoka_shogi_ai_package
+)
+add_test(
+    NAME ai_package_json_observation_parser_test
+    COMMAND ai_package_json_observation_parser_test
+)
 
 add_executable(game_history_test tests/game_history_test.cpp)
 target_link_libraries(game_history_test PRIVATE kadoka_shogi_runtime)
