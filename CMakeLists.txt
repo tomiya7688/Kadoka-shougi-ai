@@ -80,6 +80,28 @@ add_executable(kadoka_shogi
 
 target_link_libraries(kadoka_shogi PRIVATE kadoka_shogi_core)
 
+add_executable(kadoka_wire_compat
+    tools/wire_compat/main.cpp
+)
+
+target_link_libraries(
+    kadoka_wire_compat
+    PRIVATE
+        kadoka_shogi_ai_package
+)
+
+install(
+    TARGETS
+        kadoka_shogi
+        kadoka_wire_compat
+    RUNTIME DESTINATION bin
+)
+
+install(
+    DIRECTORY tests/fixtures/wire_v1/
+    DESTINATION share/kadoka/wire_v1
+)
+
 enable_testing()
 
 add_executable(core_smoke_test tests/core_smoke_test.cpp)
