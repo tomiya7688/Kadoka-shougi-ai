@@ -6,7 +6,9 @@
 #include <chrono>
 #include <cctype>
 #include <cstdint>
+#include <istream>
 #include <limits>
+#include <ostream>
 #include <map>
 #include <random>
 #include <stdexcept>
@@ -1076,6 +1078,70 @@ std::vector<GameAuxRecord> deserialize_game_aux_jsonl(
     std::vector<GameAuxRecord> records;
     for (const std::string_view line : jsonl_lines(jsonl)) {
         records.push_back(deserialize_game_aux_record(line));
+    }
+    return records;
+}
+
+void write_board_state_jsonl(
+    std::ostream& output,
+    std::span<const BoardStateRecord> records) {
+    output << serialize_board_state_jsonl(records);
+    if (!output) {
+        throw std::runtime_error("failed to write BoardState JSONL");
+    }
+}
+
+std::vector<BoardStateRecord> read_board_state_jsonl(
+    std::istream& input) {
+    std::vector<BoardStateRecord> records;
+    std::string line;
+    while (std::getline(input, line)) {
+        const bool only_ws = std::all_of(
+            line.begin(),
+            line.end(),
+            [](char ch) {
+                return std::isspace(
+                    static_cast<unsigned char>(ch)
+                ) != 0;
+            }
+        );
+        if (line.empty() || only_ws) continue;
+        records.push_back(deserialize_board_state_record(line));
+    }
+    if (!input.eof() && input.fail()) {
+        throw std::runtime_error("failed to read BoardState JSONL");
+    }
+    return records;
+}
+
+void write_game_aux_jsonl(
+    std::ostream& output,
+    std::span<const GameAuxRecord> records) {
+    output << serialize_game_aux_jsonl(records);
+    if (!output) {
+        throw std::runtime_error("failed to write GameAux JSONL");
+    }
+}
+
+std::vector<GameAuxRecord> read_game_aux_jsonl(
+    std::istream& input) {
+    std::vector<GameAuxRecord> records;
+    std::string line;
+    while (std::getline(input, line)) {
+        const bool only_ws = std::all_of(
+            line.begin(),
+            line.end(),
+            [](char ch) {
+                return std::isspace(
+                    static_cast<unsigned char>(ch)
+                ) != 0;
+            }
+        );
+        if (line.empty() || only_ws) continue;
+        records.push_back(deserialize_game_aux_record(line));
+    }
+    if (!input.eof() && input.fail()) {
+        throw std::runtime_error("failed to read GameAux JSONL");
     }
     return records;
 }
