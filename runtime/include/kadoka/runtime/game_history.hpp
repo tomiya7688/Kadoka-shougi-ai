@@ -132,6 +132,7 @@ private:
     std::uint64_t ply_{0};
     std::uint64_t next_event_index_{0};
     bool terminal_recorded_{false};
+    bool terminal_pending_{false};
     std::vector<BoardStateRecord> board_states_{};
     std::vector<GameAuxRecord> events_{};
 };
