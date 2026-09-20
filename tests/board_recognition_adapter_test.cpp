@@ -466,6 +466,10 @@ int main() {
             result.status
             == ObservationPipelineStatus::RecognitionFailed
         );
+        assert(
+            result.recognition_failure
+            == BoardRecognitionFailure::InvalidState
+        );
         assert(converter.calls == 0);
     }
 
@@ -485,6 +489,10 @@ int main() {
         assert(
             result.status
             == ObservationPipelineStatus::RecognitionFailed
+        );
+        assert(
+            result.recognition_failure
+            == BoardRecognitionFailure::InvalidState
         );
         assert(converter.calls == 0);
     }
