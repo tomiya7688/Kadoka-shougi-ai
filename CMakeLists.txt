@@ -38,6 +38,7 @@ target_include_directories(kadoka_shogi_core
 add_library(kadoka_shogi_runtime
     runtime/src/ai_backend.cpp
     runtime/src/headless_match.cpp
+    runtime/src/match_clock.cpp
     runtime/src/process_ai_backend.cpp
     runtime/src/turn_runner.cpp
 )
@@ -97,6 +98,14 @@ add_test(NAME semantic_action_test COMMAND semantic_action_test)
 add_executable(headless_match_test tests/headless_match_test.cpp)
 target_link_libraries(headless_match_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME headless_match_test COMMAND headless_match_test)
+
+add_executable(match_clock_test tests/match_clock_test.cpp)
+target_link_libraries(match_clock_test PRIVATE kadoka_shogi_runtime)
+add_test(NAME match_clock_test COMMAND match_clock_test)
+
+add_executable(time_forfeit_test tests/time_forfeit_test.cpp)
+target_link_libraries(time_forfeit_test PRIVATE kadoka_shogi_runtime)
+add_test(NAME time_forfeit_test COMMAND time_forfeit_test)
 
 add_executable(impasse_outcome_test tests/impasse_outcome_test.cpp)
 target_link_libraries(impasse_outcome_test PRIVATE kadoka_shogi_runtime)
