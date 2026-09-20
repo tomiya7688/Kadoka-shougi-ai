@@ -145,10 +145,11 @@ Still policy-specific and deferred:
 - adjournments and pauses
 - arbiter clock corrections
 - transport failure vs timeout classification
-- replay-game clock inheritance after repetition/impasse
 - GUI clock presentation
 
-Those should build on the clock state rather than altering Core game rules.
+Replay-game clock handling is implemented one layer above the board-game clock by the Replay Series Orchestrator. Because the official rules leave replay time controls to each event, the Series exposes explicit `ResetConfigured` and `CarryRemainingMain` policies. See `REPLAY_SERIES.md`.
+
+The remaining policies should build on the clock state rather than altering Core game rules.
 
 ## Rule reference
 
