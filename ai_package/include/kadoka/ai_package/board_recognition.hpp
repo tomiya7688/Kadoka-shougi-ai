@@ -117,6 +117,12 @@ struct ObservationPipelineResult {
     ObservationPipelineStatus status{
         ObservationPipelineStatus::CaptureFailed
     };
+    ObservationCaptureFailure capture_failure{
+        ObservationCaptureFailure::None
+    };
+    BoardRecognitionFailure recognition_failure{
+        BoardRecognitionFailure::None
+    };
     std::optional<ObservedGameState> state{};
     RecognitionConfidence confidence{};
     std::string message{};
