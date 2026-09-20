@@ -43,6 +43,17 @@ Planned families:
 - `obake_kadoka`
 - `obake_maru`
 
+### `ai_package/`
+Reusable AI-package integration code that sits outside the authoritative game/runtime layers.
+
+Responsibilities:
+- parse supported public game observations into package-normalized state
+- define conversion boundaries from observed state into an AI-specific internal board
+- provide reference adapters that can be bundled with models/engines
+- allow API and future screen-recognition inputs to converge before search
+
+AI Package code may depend on Runtime/Core contracts. Runtime/Core must not depend on AI Package code. JSON, image recognition, or other observation transport must not become the mandatory internal search representation.
+
 ### `runtime/`
 Minimal match-time coordination shared by built-in and external AI adapters.
 
@@ -84,7 +95,7 @@ Add new subdirectories instead of accumulating unrelated documents at the root o
 Keep dependencies simple and one-way where practical:
 
 ```text
-                 engines
+          engines / ai_package
                     ↓
 engine/core ← runtime ← protocol / headless tools
      ↑          ↑
