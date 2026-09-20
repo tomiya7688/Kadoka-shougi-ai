@@ -39,5 +39,11 @@ jobs:
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
 
-      - name: CLI smoke
-        run: ./build/kadoka_shogi
+      - name: Install distribution candidate
+        run: cmake --install build --config Release --prefix build/stage
+
+      - name: Installed wire compatibility
+        run: ./build/stage/bin/kadoka_wire_compat ./build/stage/share/kadoka/wire_v1
+
+      - name: Installed CLI smoke
+        run: ./build/stage/bin/kadoka_shogi

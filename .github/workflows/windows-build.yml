@@ -31,14 +31,22 @@ jobs:
         shell: cmd
         run: build.bat
 
-      - name: CLI smoke
+      - name: Install distribution candidate
         shell: cmd
-        run: build\Release\kadoka_shogi.exe
+        run: cmake --install build --config Release --prefix build\stage
 
-      - name: Upload developer executable
+      - name: Installed wire compatibility
+        shell: cmd
+        run: build\stage\bin\kadoka_wire_compat.exe build\stage\share\kadoka\wire_v1
+
+      - name: Installed CLI smoke
+        shell: cmd
+        run: build\stage\bin\kadoka_shogi.exe
+
+      - name: Upload developer distribution candidate
         uses: actions/upload-artifact@v4
         with:
           name: KadokaShougiAI-windows-build
-          path: build/Release/kadoka_shogi.exe
+          path: build/stage
           if-no-files-found: error
           retention-days: 14
