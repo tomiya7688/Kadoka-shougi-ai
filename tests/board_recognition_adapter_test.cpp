@@ -315,6 +315,10 @@ int main() {
             == ObservationPipelineStatus::CaptureFailed
         );
         assert(!result.converted());
+        assert(
+            result.capture_failure
+            == ObservationCaptureFailure::PermissionDenied
+        );
         assert(recognition.calls == 0);
         assert(converter.calls == 0);
         assert(
@@ -343,6 +347,10 @@ int main() {
             result.status
             == ObservationPipelineStatus::CaptureFailed
         );
+        assert(
+            result.capture_failure
+            == ObservationCaptureFailure::InvalidFrame
+        );
         assert(recognition.calls == 0);
         assert(converter.calls == 0);
     }
@@ -360,6 +368,10 @@ int main() {
         assert(
             result.status
             == ObservationPipelineStatus::CaptureFailed
+        );
+        assert(
+            result.capture_failure
+            == ObservationCaptureFailure::Other
         );
         assert(recognition.calls == 0);
         assert(converter.calls == 0);
@@ -384,6 +396,10 @@ int main() {
             result.status
             == ObservationPipelineStatus::RecognitionFailed
         );
+        assert(
+            result.recognition_failure
+            == BoardRecognitionFailure::BoardNotFound
+        );
         assert(result.message == "board not found");
         assert(converter.calls == 0);
     }
@@ -401,6 +417,10 @@ int main() {
         assert(
             result.status
             == ObservationPipelineStatus::RecognitionFailed
+        );
+        assert(
+            result.recognition_failure
+            == BoardRecognitionFailure::Other
         );
         assert(converter.calls == 0);
     }
@@ -421,6 +441,10 @@ int main() {
         assert(
             result.status
             == ObservationPipelineStatus::RecognitionFailed
+        );
+        assert(
+            result.recognition_failure
+            == BoardRecognitionFailure::InvalidState
         );
         assert(converter.calls == 0);
     }
