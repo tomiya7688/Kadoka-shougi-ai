@@ -96,12 +96,13 @@ struct RecognitionAcceptancePolicy {
     // may choose different confidence requirements.
     double minimum_overall_confidence{0.0};
 
-    // When true, an adapter must explicitly report confidence for the
-    // corresponding recognized component.
-    bool require_board_confidence{false};
-    bool require_hands_confidence{false};
-    bool require_side_to_move_confidence{false};
-    bool require_clock_confidence{false};
+    // A component threshold means that component confidence is required and
+    // must meet the configured value. nullopt means the caller does not
+    // require a confidence score for that component.
+    std::optional<double> minimum_board_confidence{};
+    std::optional<double> minimum_hands_confidence{};
+    std::optional<double> minimum_side_to_move_confidence{};
+    std::optional<double> minimum_clock_confidence{};
 };
 
 enum class ObservationPipelineStatus : std::uint8_t {
