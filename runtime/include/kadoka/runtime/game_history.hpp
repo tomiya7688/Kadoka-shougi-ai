@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstdint>
+#include <iosfwd>
 #include <optional>
 #include <span>
 #include <string>
@@ -89,6 +90,22 @@ struct GameAuxRecord {
 );
 [[nodiscard]] std::vector<GameAuxRecord> deserialize_game_aux_jsonl(
     std::string_view jsonl
+);
+
+void write_board_state_jsonl(
+    std::ostream& output,
+    std::span<const BoardStateRecord> records
+);
+[[nodiscard]] std::vector<BoardStateRecord> read_board_state_jsonl(
+    std::istream& input
+);
+
+void write_game_aux_jsonl(
+    std::ostream& output,
+    std::span<const GameAuxRecord> records
+);
+[[nodiscard]] std::vector<GameAuxRecord> read_game_aux_jsonl(
+    std::istream& input
 );
 
 class GameHistoryRecorder {
