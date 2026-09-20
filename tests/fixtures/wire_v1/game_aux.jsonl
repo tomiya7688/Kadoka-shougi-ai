@@ -1,0 +1,4 @@
+{"schema":"kadoka.game_aux","version":1,"game_id":"00000000000000000000000000","ply":0,"event_index":0,"event_type":"action","actor":"black","action":{"type":"move","move":"7g7e"},"result":{"status":"illegal","reason":"illegal_move"},"terminal":null}
+{"schema":"kadoka.game_aux","version":1,"game_id":"00000000000000000000000000","ply":0,"event_index":1,"event_type":"action","actor":"black","action":{"type":"move","move":"7g7f"},"result":{"status":"accepted","reason":null},"terminal":null}
+{"schema":"kadoka.game_aux","version":1,"game_id":"00000000000000000000000000","ply":1,"event_index":2,"event_type":"action","actor":"white","action":{"type":"resign"},"result":{"status":"accepted","reason":null},"terminal":null}
+{"schema":"kadoka.game_aux","version":1,"game_id":"00000000000000000000000000","ply":1,"event_index":3,"event_type":"terminal","actor":null,"action":null,"result":null,"terminal":{"result":"black_win","reason":"resignation"}}
