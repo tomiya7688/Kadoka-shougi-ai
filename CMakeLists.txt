@@ -58,6 +58,7 @@ target_link_libraries(kadoka_shogi_runtime
 )
 
 add_library(kadoka_shogi_ai_package
+    ai_package/src/board_recognition.cpp
     ai_package/src/json_player_observation_parser.cpp
     ai_package/src/observation.cpp
 )
@@ -147,6 +148,19 @@ target_link_libraries(
 add_test(
     NAME ai_package_json_observation_parser_test
     COMMAND ai_package_json_observation_parser_test
+)
+
+add_executable(
+    board_recognition_adapter_test
+    tests/board_recognition_adapter_test.cpp
+)
+target_link_libraries(
+    board_recognition_adapter_test
+    PRIVATE kadoka_shogi_ai_package
+)
+add_test(
+    NAME board_recognition_adapter_test
+    COMMAND board_recognition_adapter_test
 )
 
 add_executable(game_history_test tests/game_history_test.cpp)

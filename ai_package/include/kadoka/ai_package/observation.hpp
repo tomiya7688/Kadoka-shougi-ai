@@ -14,6 +14,8 @@ struct ObservedGameState {
     runtime::PlayerClock clock{};
 };
 
+void validate_observed_game_state(const ObservedGameState& state);
+
 // AI-package boundary used after an external observation has been normalized.
 // Concrete engines can translate ObservedGameState into their own high-speed
 // board representation. Screen-recognition adapters can target this same
