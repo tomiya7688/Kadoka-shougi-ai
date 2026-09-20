@@ -1,0 +1,2 @@
+tests/fixtures/wire_v1/*.json text eol=lf
+tests/fixtures/wire_v1/*.jsonl text eol=lf

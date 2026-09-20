@@ -1,0 +1,1 @@
+{"schema":"kadoka.player_observation","version":2,"board":{"sfen":"lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"},"side_to_move":"black","clock":{"black":{"main_ms":60000,"byoyomi_ms":30000,"increment_ms":0},"white":{"main_ms":59000,"byoyomi_ms":30000,"increment_ms":0},"per_move_limit_ms":null}}
