@@ -283,6 +283,16 @@ enum class ObservationPipelineStatus {
 };
 ```
 
+pipeline resultはgeneric statusに加えて:
+
+- `capture_failure`
+- `recognition_failure`
+
+も保持する。したがって `CaptureFailed` の中でも
+`PermissionDenied` と `Unavailable` を区別でき、
+`RecognitionFailed` の中でも `BoardNotFound`、
+`MissingSideToMove`、`InvalidState` 等を区別できる。
+
 この区別によりUIやautomationは:
 
 - capture permissionを再要求する
