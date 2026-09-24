@@ -76,7 +76,8 @@ int main() {
         assert(sink.records().size() == 2);
 
         const ParsedRecord& first = sink.records()[0];
-        assert(first.game_id == kGameId);
+        assert(first.game_id.has_value());
+        assert(*first.game_id == kGameId);
         assert(first.ply == 0);
         assert(first.side_to_move == Color::Black);
         assert(first.clock.black_main_ms == 60000);
@@ -127,7 +128,8 @@ int main() {
         );
 
         const ParsedRecord& second = sink.records()[1];
-        assert(second.game_id == kGameId);
+        assert(second.game_id.has_value());
+        assert(*second.game_id == kGameId);
         assert(second.ply == 1);
         assert(second.side_to_move == Color::White);
         assert(second.clock.black_main_ms == 59000);
