@@ -75,6 +75,24 @@ target_link_libraries(kadoka_shogi_ai_package
         kadoka_shogi_runtime
 )
 
+add_library(kadoka_shogi_training_parser
+    tools/training_parser/src/core_history_parser.cpp
+    tools/training_parser/src/parser.cpp
+    tools/training_parser/src/sfen_lines_parser.cpp
+)
+
+add_dependencies(kadoka_shogi_training_parser kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_training_parser
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/training_parser/include
+)
+
+target_link_libraries(kadoka_shogi_training_parser
+    PUBLIC
+        kadoka_shogi_runtime
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -166,6 +184,13 @@ add_test(
 add_executable(game_history_test tests/game_history_test.cpp)
 target_link_libraries(game_history_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME game_history_test COMMAND game_history_test)
+
+add_executable(training_parser_test tests/training_parser_test.cpp)
+target_link_libraries(
+    training_parser_test
+    PRIVATE kadoka_shogi_training_parser
+)
+add_test(NAME training_parser_test COMMAND training_parser_test)
 
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
