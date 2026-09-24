@@ -240,7 +240,15 @@ private:
 struct OpenPair {
     std::ifstream board{};
     std::ifstream aux{};
-    std::array<ParserSource, 2> sources{};
+    std::string board_name{};
+    std::string aux_name{};
+
+    [[nodiscard]] std::array<ParserSource, 2> sources() {
+        return {
+            ParserSource{board_name, &board},
+            ParserSource{aux_name, &aux},
+        };
+    }
 };
 
 std::optional<OpenPair> open_pair(
@@ -279,16 +287,8 @@ std::optional<OpenPair> open_pair(
         return std::nullopt;
     }
 
-    opened.sources = {
-        ParserSource{
-            group.board->relative_path,
-            &opened.board,
-        },
-        ParserSource{
-            group.aux->relative_path,
-            &opened.aux,
-        },
-    };
+    opened.board_name = group.board->relative_path;
+    opened.aux_name = group.aux->relative_path;
     return std::optional<OpenPair>{std::move(opened)};
 }
 
@@ -598,8 +598,10 @@ ImportSummary RecursiveTrainingImporter::import_folder(
         if (!preflight.has_value()) continue;
 
         PreflightSink preflight_sink{sink};
+        std::array<ParserSource, 2> preflight_sources =
+            preflight->sources();
         const ParseSummary preflight_summary = core_parser->parse(
-            preflight->sources,
+            preflight_sources,
             preflight_sink
         );
         if (!preflight_summary.completed
@@ -619,8 +621,10 @@ ImportSummary RecursiveTrainingImporter::import_folder(
         if (!actual.has_value()) continue;
 
         ForwardCountingSink forward_sink{sink};
+        std::array<ParserSource, 2> actual_sources =
+            actual->sources();
         const ParseSummary parse_summary = core_parser->parse(
-            actual->sources,
+            actual_sources,
             forward_sink
         );
         if (!parse_summary.completed
