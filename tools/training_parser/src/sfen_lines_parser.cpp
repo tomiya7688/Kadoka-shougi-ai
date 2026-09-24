@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <istream>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
