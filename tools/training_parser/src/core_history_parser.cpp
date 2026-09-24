@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <exception>
 #include <istream>
 #include <optional>
 #include <stdexcept>
