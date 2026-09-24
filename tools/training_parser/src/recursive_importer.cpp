@@ -4,11 +4,13 @@
 #include "kadoka/runtime/game_history.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <optional>
+#include <stdexcept>
 #include <set>
 #include <string>
 #include <string_view>
@@ -287,7 +289,7 @@ std::optional<OpenPair> open_pair(
             &opened.aux,
         },
     };
-    return opened;
+    return std::optional<OpenPair>{std::move(opened)};
 }
 
 void report_parser_failure(
