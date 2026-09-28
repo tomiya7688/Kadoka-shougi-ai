@@ -17,6 +17,8 @@ namespace {
 
 constexpr std::string_view kStartSfen =
     "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1";
+constexpr std::string_view kMirroredStartSfen =
+    "lnsgkgsnl/1b5r1/ppppppppp/9/9/9/PPPPPPPPP/1R5B1/LNSGKGSNL b - 1";
 ParsedRecord action_record(
     std::string sfen,
     Color side,
@@ -120,7 +122,7 @@ int main() {
 
         assert(output.records().size() == 2);
         assert(output.records()[0].sfen == kStartSfen);
-        assert(output.records()[1].sfen == kStartSfen);
+        assert(output.records()[1].sfen == kMirroredStartSfen);
         assert(
             runtime::move_to_usi(
                 *output.records()[0].events[0].action->move
