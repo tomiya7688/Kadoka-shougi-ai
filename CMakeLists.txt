@@ -77,6 +77,7 @@ target_link_libraries(kadoka_shogi_ai_package
 
 add_library(kadoka_shogi_training_parser
     tools/training_parser/src/core_history_parser.cpp
+    tools/training_parser/src/dataset_splitter.cpp
     tools/training_parser/src/parser.cpp
     tools/training_parser/src/preprocessing_pipeline.cpp
     tools/training_parser/src/recursive_importer.cpp
@@ -219,6 +220,10 @@ add_test(
     NAME preprocessing_pipeline_test
     COMMAND preprocessing_pipeline_test
 )
+
+add_executable(dataset_splitter_test tests/dataset_splitter_test.cpp)
+target_link_libraries(dataset_splitter_test PRIVATE kadoka_shogi_training_parser)
+add_test(NAME dataset_splitter_test COMMAND dataset_splitter_test)
 
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
