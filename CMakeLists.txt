@@ -208,6 +208,17 @@ add_test(
     COMMAND recursive_training_importer_test
 )
 
+add_library(kadoka_shogi_trainer
+    tools/trainer/src/reference_trainer.cpp
+)
+
+add_dependencies(kadoka_shogi_trainer kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_trainer
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/trainer/include
+)
+
 add_executable(
     preprocessing_pipeline_test
     tests/preprocessing_pipeline_test.cpp
@@ -224,6 +235,10 @@ add_test(
 add_executable(dataset_splitter_test tests/dataset_splitter_test.cpp)
 target_link_libraries(dataset_splitter_test PRIVATE kadoka_shogi_training_parser)
 add_test(NAME dataset_splitter_test COMMAND dataset_splitter_test)
+
+add_executable(trainer_api_test tests/trainer_api_test.cpp)
+target_link_libraries(trainer_api_test PRIVATE kadoka_shogi_trainer)
+add_test(NAME trainer_api_test COMMAND trainer_api_test)
 
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
