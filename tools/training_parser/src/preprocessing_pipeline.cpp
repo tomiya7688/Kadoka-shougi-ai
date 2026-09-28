@@ -219,7 +219,13 @@ std::string append_field(std::string_view field) {
 }
 
 std::string record_key(const ParsedRecord& record) {
-    std::string key = append_field(record.sfen);
+    std::string canonical_sfen = record.sfen;
+    try {
+        canonical_sfen = Position::from_sfen(record.sfen).to_sfen();
+    } catch (const std::invalid_argument&) {
+        // Keep malformed records distinct; validation stages can reject them.
+    }
+    std::string key = append_field(canonical_sfen);
     const auto append_clock = [&key](
         const std::optional<std::int64_t>& value) {
         key += value.has_value() ? std::to_string(*value) : "-";
