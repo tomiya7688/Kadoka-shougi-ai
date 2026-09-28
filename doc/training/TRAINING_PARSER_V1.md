@@ -324,7 +324,7 @@ Parser Registry / Parser (#11)
       ↓
 ParsedRecord stream
       ↓
-Preprocess / Split
+Preprocess (`PREPROCESSING_PIPELINE_V1.md`) / Split
       ↓
 Trainer
 ```

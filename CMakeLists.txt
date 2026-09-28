@@ -78,6 +78,7 @@ target_link_libraries(kadoka_shogi_ai_package
 add_library(kadoka_shogi_training_parser
     tools/training_parser/src/core_history_parser.cpp
     tools/training_parser/src/parser.cpp
+    tools/training_parser/src/preprocessing_pipeline.cpp
     tools/training_parser/src/recursive_importer.cpp
     tools/training_parser/src/sfen_lines_parser.cpp
 )
@@ -204,6 +205,19 @@ target_link_libraries(
 add_test(
     NAME recursive_training_importer_test
     COMMAND recursive_training_importer_test
+)
+
+add_executable(
+    preprocessing_pipeline_test
+    tests/preprocessing_pipeline_test.cpp
+)
+target_link_libraries(
+    preprocessing_pipeline_test
+    PRIVATE kadoka_shogi_training_parser
+)
+add_test(
+    NAME preprocessing_pipeline_test
+    COMMAND preprocessing_pipeline_test
 )
 
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
