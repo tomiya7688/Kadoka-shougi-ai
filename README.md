@@ -84,6 +84,7 @@ Repository-level information stays in this README. Detailed documentation should
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
 - [Training preprocessing pipeline](doc/training/PREPROCESSING_PIPELINE_V1.md)
 - [Dataset splitter v1](doc/training/DATASET_SPLITTER_V1.md)
+- [Trainer API v1](doc/training/TRAINER_API_V1.md)
 - [Diagram area](doc/diagrams/README.md)
 
 ## Initial engine families
