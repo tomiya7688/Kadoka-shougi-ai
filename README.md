@@ -82,6 +82,7 @@ Repository-level information stays in this README. Detailed documentation should
 - [Sibling project alignment](doc/architecture/SIBLING_PROJECT_ALIGNMENT.md)
 - [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
+- [Move Selector v1](doc/training/MOVE_SELECTOR_V1.md)
 - [Diagram area](doc/diagrams/README.md)
 
 ## Initial engine families

@@ -206,6 +206,21 @@ add_test(
     COMMAND recursive_training_importer_test
 )
 
+add_library(kadoka_shogi_move_selector
+    tools/move_selector/src/move_selector.cpp
+)
+
+add_dependencies(kadoka_shogi_move_selector kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_move_selector
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/move_selector/include
+)
+
+add_executable(move_selector_test tests/move_selector_test.cpp)
+target_link_libraries(move_selector_test PRIVATE kadoka_shogi_move_selector)
+add_test(NAME move_selector_test COMMAND move_selector_test)
+
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME semantic_action_test COMMAND semantic_action_test)
