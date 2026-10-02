@@ -8,6 +8,34 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+option(
+    KADOKA_ENABLE_SANITIZERS
+    "Enable AddressSanitizer, UndefinedBehaviorSanitizer, and libstdc++ checks"
+    OFF
+)
+
+if(KADOKA_ENABLE_SANITIZERS)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang"
+        AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_compile_options(
+            -fsanitize=address,undefined
+            -fno-omit-frame-pointer
+            -fno-sanitize-recover=all
+            -D_GLIBCXX_ASSERTIONS
+            -D_GLIBCXX_DEBUG
+        )
+        add_link_options(
+            -fsanitize=address,undefined
+            -fno-omit-frame-pointer
+            -fno-sanitize-recover=all
+        )
+    else()
+        message(FATAL_ERROR
+            "KADOKA_ENABLE_SANITIZERS requires GCC or Clang on Linux"
+        )
+    endif()
+endif()
+
 add_custom_target(kadoka_rule_check
     COMMAND
         ${Python3_EXECUTABLE}

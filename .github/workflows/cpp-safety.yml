@@ -1,0 +1,85 @@
+name: C++ Safety
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpp-safety-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sanitizers:
+    name: Sanitizers (${{ matrix.compiler }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure sanitizer build
+        run: >-
+          cmake -S . -B build-safety
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+          -DKADOKA_ENABLE_SANITIZERS=ON
+
+      - name: Build
+        run: cmake --build build-safety --parallel 2
+
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --test-dir build-safety --output-on-failure
+
+  codeql:
+    name: CodeQL C++ analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: c-cpp
+          build-mode: manual
+
+      - name: Configure CodeQL build
+        run: cmake -S . -B build-codeql -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build analyzed targets
+        run: cmake --build build-codeql --parallel 2
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:c-cpp
