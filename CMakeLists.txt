@@ -206,6 +206,21 @@ add_test(
     COMMAND recursive_training_importer_test
 )
 
+add_library(kadoka_shogi_pure_tree
+    tools/pure_tree/src/pure_tree.cpp
+)
+
+add_dependencies(kadoka_shogi_pure_tree kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_pure_tree
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/pure_tree/include
+)
+
+add_executable(pure_tree_test tests/pure_tree_test.cpp)
+target_link_libraries(pure_tree_test PRIVATE kadoka_shogi_pure_tree)
+add_test(NAME pure_tree_test COMMAND pure_tree_test)
+
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME semantic_action_test COMMAND semantic_action_test)
