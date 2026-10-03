@@ -83,6 +83,7 @@ Repository-level information stays in this README. Detailed documentation should
 - [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
 - [Pure Tree v1](doc/ai/tree/PURE_TREE_V1.md)
+- [Tree Search Strategies v1](doc/ai/tree/TREE_SEARCH_STRATEGIES_V1.md)
 - [Diagram area](doc/diagrams/README.md)
 
 ## Initial engine families

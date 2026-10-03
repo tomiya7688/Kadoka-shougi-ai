@@ -12,6 +12,12 @@ namespace kadoka::shogi::tree {
 
 inline constexpr std::uint32_t kPureTreeSchemaVersion = 1;
 
+enum class TreeOutcome : std::uint8_t {
+    Win,
+    Draw,
+    Loss,
+};
+
 struct PureTreeNode {
     std::string id{};
     std::string position_identity{};
@@ -42,6 +48,16 @@ public:
     void add_node(PureTreeNode node);
     void set_root(std::string_view node_id);
     void add_edge(PureTreeEdge edge);
+    void record_node_visit(
+        std::string_view node_id,
+        TreeOutcome outcome,
+        double value
+    );
+    void record_edge_visit(
+        std::string_view edge_id,
+        TreeOutcome outcome,
+        double value
+    );
 
     [[nodiscard]] const std::optional<std::string>& root_node_id()
         const noexcept { return root_node_id_; }

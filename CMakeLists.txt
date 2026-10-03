@@ -217,9 +217,29 @@ target_include_directories(kadoka_shogi_pure_tree
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/pure_tree/include
 )
 
+add_library(kadoka_shogi_tuned_tree
+    tools/tuned_tree/src/tree_search_strategy.cpp
+)
+
+add_dependencies(kadoka_shogi_tuned_tree kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_tuned_tree
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/tuned_tree/include
+)
+
+target_link_libraries(kadoka_shogi_tuned_tree
+    PUBLIC
+        kadoka_shogi_pure_tree
+)
+
 add_executable(pure_tree_test tests/pure_tree_test.cpp)
 target_link_libraries(pure_tree_test PRIVATE kadoka_shogi_pure_tree)
 add_test(NAME pure_tree_test COMMAND pure_tree_test)
+
+add_executable(tree_search_strategy_test tests/tree_search_strategy_test.cpp)
+target_link_libraries(tree_search_strategy_test PRIVATE kadoka_shogi_tuned_tree)
+add_test(NAME tree_search_strategy_test COMMAND tree_search_strategy_test)
 
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
