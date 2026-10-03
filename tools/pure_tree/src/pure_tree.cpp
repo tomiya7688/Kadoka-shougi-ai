@@ -44,6 +44,44 @@ void validate_stats(
     }
 }
 
+void record_stats(
+    std::uint64_t& visits,
+    std::uint64_t& wins,
+    std::uint64_t& losses,
+    std::uint64_t& draws,
+    double& mean_value,
+    TreeOutcome outcome,
+    double value) {
+    validate_stats(visits, wins, losses, draws, mean_value);
+    if (!std::isfinite(value) || value < -1.0 || value > 1.0) {
+        throw std::invalid_argument("visit value must be finite and in [-1, 1]");
+    }
+    if (visits == std::numeric_limits<std::uint64_t>::max()) {
+        throw std::overflow_error("visit count overflow");
+    }
+    std::uint64_t* outcome_count = nullptr;
+    switch (outcome) {
+    case TreeOutcome::Win: outcome_count = &wins; break;
+    case TreeOutcome::Draw: outcome_count = &draws; break;
+    case TreeOutcome::Loss: outcome_count = &losses; break;
+    }
+    if (outcome_count == nullptr
+        || *outcome_count == std::numeric_limits<std::uint64_t>::max()) {
+        throw std::overflow_error("outcome count overflow or invalid outcome");
+    }
+    const long double updated_mean = (
+        static_cast<long double>(mean_value) * static_cast<long double>(visits)
+        + static_cast<long double>(value)
+    ) / static_cast<long double>(visits + 1);
+    const double next_mean = static_cast<double>(updated_mean);
+    if (!std::isfinite(next_mean)) {
+        throw std::overflow_error("mean value update overflow");
+    }
+    ++visits;
+    ++*outcome_count;
+    mean_value = next_mean;
+}
+
 std::string escape_field(std::string_view value) {
     std::string result;
     for (const unsigned char ch : value) {
@@ -259,6 +297,44 @@ void PureTree::add_edge(PureTreeEdge edge) {
         throw std::invalid_argument("duplicate move from parent node");
     }
     edges_.push_back(std::move(edge));
+}
+
+void PureTree::record_node_visit(
+    std::string_view node_id,
+    TreeOutcome outcome,
+    double value) {
+    const auto found = std::find_if(nodes_.begin(), nodes_.end(), [node_id](const auto& node) {
+        return node.id == node_id;
+    });
+    if (found == nodes_.end()) throw std::out_of_range("unknown node id");
+    record_stats(
+        found->visits,
+        found->wins,
+        found->losses,
+        found->draws,
+        found->mean_value,
+        outcome,
+        value
+    );
+}
+
+void PureTree::record_edge_visit(
+    std::string_view edge_id,
+    TreeOutcome outcome,
+    double value) {
+    const auto found = std::find_if(edges_.begin(), edges_.end(), [edge_id](const auto& edge) {
+        return edge.id == edge_id;
+    });
+    if (found == edges_.end()) throw std::out_of_range("unknown edge id");
+    record_stats(
+        found->visits,
+        found->wins,
+        found->losses,
+        found->draws,
+        found->mean_value,
+        outcome,
+        value
+    );
 }
 
 void validate_pure_tree(const PureTree& tree) {
