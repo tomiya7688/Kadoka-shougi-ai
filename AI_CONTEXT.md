@@ -20,11 +20,13 @@ This is the compact entrypoint for AI-assisted work. Do not preload the whole re
 
 ## Start Here
 
-1. Read the current task.
-2. Choose the matching route in `doc/architecture/CONTEXT_ROUTING.md`.
-3. Read target source and matching tests first.
-4. Read detailed specs only when the affected contract requires them.
-5. Stop broad exploration when Goal / Required / Acceptance and validation are clear.
+1. Read the current task and reduce it to Goal, Required changes and Acceptance evidence.
+2. Choose one matching route in `doc/architecture/CONTEXT_ROUTING.md`.
+3. Search for the named files/symbols, then read only the relevant declarations, implementation and matching tests.
+4. Read detailed specs only when the affected contract requires them; follow direct dependencies only when their behavior is unclear.
+5. Stop broad exploration once Goal / Required / Acceptance and the validation route are clear. Resume only to resolve a concrete uncertainty.
+
+For continuation work, inspect the current branch/status and a compact diff or remote change summary first. Preserve unrelated working-tree changes and read only the delta relevant to this task.
 
 ## Important Invariants
 

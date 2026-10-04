@@ -2,6 +2,18 @@
 
 Use the smallest route that matches the task. Expand only when a shared/public contract or uncertain dependency requires it.
 
+## Task Context Procedure
+
+Build a small working set for each task instead of rereading the repository:
+
+1. Capture Goal, Required changes and Acceptance evidence from the task.
+2. For continuation work, inspect branch/status and a compact local or remote delta; skip unrelated changes.
+3. Search names and symbols first. Read the target declaration/implementation and its closest matching tests.
+4. Follow callers, dependencies and detailed specs only to answer a specific contract question.
+5. Select validation from the route below, then stop when the acceptance evidence is covered.
+
+A route is a pointer, not a summary of behavior. Verify decisions against source, tests and specifications. Do not create a generated symbol index or add a new analyzer for this repository unless repeated lookup cost demonstrates that it will repay its maintenance cost.
+
 ## core-state
 
 Board, hands, SFEN, make/unmake, hashing and canonical position state.
