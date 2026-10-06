@@ -149,6 +149,7 @@ private:
         }
         JsonValue result;
         result.kind = kind;
+        result.scalar = literal;
         return result;
     }
 
@@ -456,6 +457,63 @@ void append_json_string(std::string& output, std::string_view value) {
 }
 
 // {
+ //   責務: [append_json_value: JSON値をcompactなcanonical表現で出力する]
+ //   処理: [object keyを辞書順、arrayを入力順、stringを規定escapeで出力する]
+ //   引数: [output: 出力先 / value: JSON値]
+ //   戻り値: [void]
+ // }
+void append_json_value(std::string& output, const JsonValue& value) {
+    switch (value.kind) {
+    case JsonKind::Null:
+    case JsonKind::Boolean:
+    case JsonKind::Number:
+        output += value.scalar;
+        return;
+    case JsonKind::String:
+        append_json_string(output, value.scalar);
+        return;
+    case JsonKind::Object: {
+        output.push_back('{');
+        bool first = true;
+        for (const auto& [key, item] : value.object) {
+            if (!first) output.push_back(',');
+            first = false;
+            append_json_string(output, key);
+            output.push_back(':');
+            append_json_value(output, item);
+        }
+        output.push_back('}');
+        return;
+    }
+    case JsonKind::Array: {
+        output.push_back('[');
+        for (std::size_t index = 0; index < value.array.size(); ++index) {
+            if (index != 0) output.push_back(',');
+            append_json_value(output, value.array[index]);
+        }
+        output.push_back(']');
+        return;
+    }
+    }
+}
+
+// {
+ //   責務: [canonicalize_effective_config: 有効設定JSONをcanonical objectへ変換する]
+ //   処理: [objectとしてparseし、compactな辞書順表現へ再出力する]
+ //   引数: [json: 有効設定JSON]
+ //   戻り値: [canonical JSON。不正またはobject以外ならinvalid_argument]
+ // }
+std::string canonicalize_effective_config(std::string_view json) {
+    const JsonValue value = JsonParser(json).parse();
+    if (value.kind != JsonKind::Object) {
+        throw std::invalid_argument("effective_config must be a JSON object");
+    }
+    std::string canonical;
+    append_json_value(canonical, value);
+    return canonical;
+}
+
+// {
 //   責務: [append_number: doubleをlocale非依存のJSON numberとして追加する]
 //   処理: [to_charsで変換する]
 //   引数: [output: 出力先 / value: 数値]
@@ -521,12 +579,17 @@ void validate_training_recipe(const OfficialTrainingRecipe& recipe) {
     if (recipe.datasets.empty()) throw std::invalid_argument("training recipe requires at least one dataset");
     require_nonempty(recipe.architecture_id, "architecture_id");
     require_nonempty(recipe.architecture_version, "architecture_version");
+    require_nonempty(recipe.effective_config_json, "effective_config_json");
+    if (canonicalize_effective_config(recipe.effective_config_json) != recipe.effective_config_json) {
+        throw std::invalid_argument("effective_config must use canonical JSON encoding");
+    }
     require_nonempty(recipe.config_hash, "config_hash");
 
     std::vector<std::string_view> ids;
     ids.reserve(recipe.datasets.size());
     for (const auto& dataset : recipe.datasets) {
         require_nonempty(dataset.dataset_id, "dataset_id");
+        require_nonempty(dataset.dataset_revision, "dataset_revision");
         if (!std::isfinite(dataset.weight) || dataset.weight <= 0.0) {
             throw std::invalid_argument("dataset weight must be finite and greater than zero");
         }
@@ -553,14 +616,21 @@ void validate_training_recipe(const OfficialTrainingRecipe& recipe) {
 
 void validate_training_recipe(
     const OfficialTrainingRecipe& recipe,
-    std::span<const std::string> registered_dataset_ids
+    std::span<const DatasetRegistryReference> registered_datasets
 ) {
     validate_training_recipe(recipe);
     for (const auto& dataset : recipe.datasets) {
-        const bool found = std::find(
-            registered_dataset_ids.begin(), registered_dataset_ids.end(), dataset.dataset_id
-        ) != registered_dataset_ids.end();
-        if (!found) throw std::invalid_argument("unknown dataset reference: " + dataset.dataset_id);
+        const bool found = std::any_of(
+            registered_datasets.begin(), registered_datasets.end(), [&dataset](const auto& registered) {
+                return registered.dataset_id == dataset.dataset_id
+                    && registered.dataset_revision == dataset.dataset_revision;
+            }
+        );
+        if (!found) {
+            throw std::invalid_argument(
+                "unknown dataset revision: " + dataset.dataset_id + "@" + dataset.dataset_revision
+            );
+        }
     }
 }
 
@@ -577,6 +647,8 @@ std::string serialize_training_recipe(const OfficialTrainingRecipe& recipe) {
         if (index != 0) output.push_back(',');
         output += "{\"dataset_id\":";
         append_json_string(output, datasets[index].dataset_id);
+        output += ",\"dataset_revision\":";
+        append_json_string(output, datasets[index].dataset_revision);
         output += ",\"weight\":";
         append_number(output, datasets[index].weight);
         output.push_back('}');
@@ -593,6 +665,8 @@ std::string serialize_training_recipe(const OfficialTrainingRecipe& recipe) {
     append_json_string(output, recipe.architecture_id);
     output += ",\"architecture_version\":";
     append_json_string(output, recipe.architecture_version);
+    output += ",\"effective_config\":";
+    output += recipe.effective_config_json;
     output += ",\"config_hash\":";
     append_json_string(output, recipe.config_hash);
     output += ",\"champion_generation\":" + std::to_string(recipe.champion_generation);
@@ -619,6 +693,9 @@ OfficialTrainingRecipe deserialize_training_recipe(std::string_view json) {
     for (const auto& item : datasets.array) {
         DatasetRecipeWeight dataset;
         dataset.dataset_id = require_string(require_field(item, "dataset_id"), "dataset_id");
+        dataset.dataset_revision = require_string(
+            require_field(item, "dataset_revision"), "dataset_revision"
+        );
         dataset.weight = require_number(require_field(item, "weight"), "weight");
         recipe.datasets.push_back(std::move(dataset));
     }
@@ -632,6 +709,9 @@ OfficialTrainingRecipe deserialize_training_recipe(std::string_view json) {
     recipe.architecture_version = require_string(
         require_field(root, "architecture_version"), "architecture_version"
     );
+    std::string canonical_effective_config;
+    append_json_value(canonical_effective_config, require_field(root, "effective_config"));
+    recipe.effective_config_json = std::move(canonical_effective_config);
     recipe.config_hash = require_string(require_field(root, "config_hash"), "config_hash");
     recipe.champion_generation = require_unsigned_integer(
         require_field(root, "champion_generation"), "champion_generation"
