@@ -726,10 +726,10 @@ OfficialTrainingRecipe deserialize_training_recipe(std::string_view json) {
 
 OfficialTrainingRecipe deserialize_training_recipe(
     std::string_view json,
-    std::span<const std::string> registered_dataset_ids
+    std::span<const DatasetRegistryReference> registered_datasets
 ) {
     OfficialTrainingRecipe recipe = deserialize_training_recipe(json);
-    validate_training_recipe(recipe, registered_dataset_ids);
+    validate_training_recipe(recipe, registered_datasets);
     return recipe;
 }
 
