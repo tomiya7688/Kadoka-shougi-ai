@@ -46,8 +46,8 @@ OfficialTrainingRecipe sample_recipe() {
     recipe.source_weights = {0.1, 0.0, 0.2, 0.7};
     recipe.architecture_id = "policy-value-v1";
     recipe.architecture_version = "1";
-    recipe.effective_config_json = "{}";
-    recipe.config_hash = "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a";
+    recipe.effective_config_json = "{\"batch_size\":32,\"learning_rate\":0.01,\"optimizer\":\"adam\"}";
+    recipe.config_hash = "sha256:2212b4020bc7b36774309460140f000ce55fc9b7b004c1e968185579c9b355c6";
     recipe.champion_generation = 3;
     recipe.autotune_config_id = "autotune-7";
     recipe.evaluation_result_id = "evaluation-9";
@@ -109,6 +109,11 @@ int main() {
     {
         auto recipe = sample_recipe();
         assert_invalid([&] { validate_training_recipe(recipe, std::span<const DatasetRegistryReference>{}); });
+        const std::array<DatasetRegistryReference, 2> wrong_revisions{{
+            {"dataset-a", "old-revision"},
+            {"dataset-b", "old-revision"}
+        }};
+        assert_invalid([&] { validate_training_recipe(recipe, wrong_revisions); });
         assert_invalid([&] {
             static_cast<void>(deserialize_training_recipe(
                 serialize_training_recipe(recipe), std::span<const DatasetRegistryReference>{}
@@ -129,6 +134,12 @@ int main() {
     {
         auto recipe = sample_recipe();
         recipe.effective_config_json = "{ \"b\": 1, \"a\": 2 }";
+        assert_invalid([&] { validate_training_recipe(recipe); });
+    }
+
+    {
+        auto recipe = sample_recipe();
+        recipe.config_hash = "sha256:not-a-digest";
         assert_invalid([&] { validate_training_recipe(recipe); });
     }
 
