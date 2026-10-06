@@ -14,6 +14,12 @@ using namespace kadoka::shogi::training;
 
 namespace {
 
+// {
+//   責務: [assert_invalid: 不正入力を渡した処理がinvalid_argumentを送出することを検証する]
+//   処理: [処理を実行し、例外を捕捉してassertする]
+//   引数: [function: 実行する処理]
+//   戻り値: [なし]
+// }
 template <class Function>
 void assert_invalid(Function&& function) {
     bool failed = false;
@@ -25,6 +31,12 @@ void assert_invalid(Function&& function) {
     assert(failed);
 }
 
+// {
+//   責務: [sample_recipe: 検証に使う有効なrecipeを作る]
+//   処理: [代表的なdataset、source重み、model参照を設定する]
+//   引数: [なし]
+//   戻り値: [OfficialTrainingRecipe]
+// }
 OfficialTrainingRecipe sample_recipe() {
     OfficialTrainingRecipe recipe;
     recipe.datasets = {{"dataset-b", 0.25}, {"dataset-a", 1.5}};
@@ -40,8 +52,15 @@ OfficialTrainingRecipe sample_recipe() {
 
 } // namespace
 
+// {
+//   責務: [main: training recipe契約の代表ケースと異常系を検証する]
+//   処理: [往復変換、正規化、任意値、重複、不正重み、registry参照、JSON構文とversionを確認する]
+//   引数: [なし]
+//   戻り値: [int: 成功時0]
+// }
 int main() {
     const std::array<std::string, 2> registered{"dataset-a", "dataset-b"};
+    // Round-trip a valid recipe and check the canonical JSON representation.
     {
         const auto recipe = sample_recipe();
         validate_training_recipe(recipe, registered);
@@ -54,6 +73,7 @@ int main() {
         assert(decoded.autotune_config_id == recipe.autotune_config_id);
     }
 
+    // Dataset ordering in the input must not affect serialized bytes.
     {
         auto first = sample_recipe();
         auto second = first;
@@ -61,6 +81,7 @@ int main() {
         assert(serialize_training_recipe(first) == serialize_training_recipe(second));
     }
 
+    // Optional references round-trip as JSON null.
     {
         auto recipe = sample_recipe();
         recipe.autotune_config_id.reset();
@@ -70,12 +91,14 @@ int main() {
         assert(!decoded.evaluation_result_id.has_value());
     }
 
+    // Duplicate dataset IDs are invalid even when each weight is valid.
     {
         auto recipe = sample_recipe();
         recipe.datasets.push_back({"dataset-a", 1.0});
         assert_invalid([&] { validate_training_recipe(recipe); });
     }
 
+    // Registry-aware validation rejects absent dataset references.
     {
         auto recipe = sample_recipe();
         assert_invalid([&] { validate_training_recipe(recipe, std::span<const std::string>{}); });
@@ -86,6 +109,7 @@ int main() {
         });
     }
 
+    // Dataset weights must be finite and strictly positive.
     {
         auto recipe = sample_recipe();
         recipe.datasets.front().weight = 0.0;
@@ -94,6 +118,7 @@ int main() {
         assert_invalid([&] { validate_training_recipe(recipe); });
     }
 
+    // Source weights must stay in range and sum to one.
     {
         auto recipe = sample_recipe();
         recipe.source_weights.self = 0.8;
@@ -102,6 +127,7 @@ int main() {
         assert_invalid([&] { validate_training_recipe(recipe); });
     }
 
+    // Malformed JSON, numbers, and unsupported versions fail closed.
     {
         const auto recipe = sample_recipe();
         const std::string serialized = serialize_training_recipe(recipe);
@@ -124,6 +150,7 @@ int main() {
         });
     }
 
+    // Escaped quotes, newlines, and UTF-8 survive serialization.
     {
         auto recipe = sample_recipe();
         recipe.datasets.front().dataset_id = "quoted\"id\n雪";
