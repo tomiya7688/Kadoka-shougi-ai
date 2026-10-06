@@ -41,7 +41,7 @@ struct TrainingSourceWeights {
 
 // {
 //   責務: [OfficialTrainingRecipe: 再現可能な学習recipeのversion付き項目を保持する]
-//   フィールド: [schema_version / datasets / source_weights / architecture_idとversion / config_hash / generation / effective_config_json: 再現可能な有効設定JSON / config_hash / generation / 任意の調整・評価参照]
+//   フィールド: [schema_version / datasets / source_weights / architecture_idとversion / effective_config_json: 再現可能な有効設定JSON / config_hash / generation / 任意の調整・評価参照]
 // }
 struct OfficialTrainingRecipe {
     std::uint32_t schema_version{1};
@@ -99,12 +99,12 @@ void validate_training_recipe(
 // {
 //   責務: [deserialize_training_recipe: JSONからrecipeを復元しdataset参照を照合する]
 //   処理: [JSON解析、recipe検証、registry照合]
-//   引数: [json: 読み込むJSON / registered_dataset_ids: 利用可能ID一覧]
+//   引数: [json: 読み込むJSON / registered_datasets: 利用可能IDとrevision一覧]
 //   戻り値: [復元したrecipe。不正または未登録ならinvalid_argumentを送出する]
 // }
 [[nodiscard]] OfficialTrainingRecipe deserialize_training_recipe(
     std::string_view json,
-    std::span<const std::string> registered_dataset_ids
+    std::span<const DatasetRegistryReference> registered_datasets
 );
 
 } // namespace kadoka::shogi::training
