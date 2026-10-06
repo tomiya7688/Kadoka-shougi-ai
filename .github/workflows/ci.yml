@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -31,7 +33,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes clang-format clang-tidy
 
       - name: Check C++ formatting
-        run: git ls-files -z '*.cpp' '*.hpp' '*.h' | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: git diff --name-only "$BASE_SHA...$GITHUB_SHA" -- '*.cpp' '*.hpp' '*.h' | xargs --no-run-if-empty clang-format --dry-run --Werror
 
       - name: Validate family model metadata
         run: python tools/family_metadata/script/validate_metadata.py --game shogi models/examples/family_metadata.json
