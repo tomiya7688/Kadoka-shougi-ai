@@ -39,11 +39,15 @@ void assert_invalid(Function&& function) {
 // }
 OfficialTrainingRecipe sample_recipe() {
     OfficialTrainingRecipe recipe;
-    recipe.datasets = {{"dataset-b", 0.25}, {"dataset-a", 1.5}};
+    recipe.datasets = {
+        {"dataset-b", "revision-b", 0.25},
+        {"dataset-a", "revision-a", 1.5}
+    };
     recipe.source_weights = {0.1, 0.0, 0.2, 0.7};
     recipe.architecture_id = "policy-value-v1";
     recipe.architecture_version = "1";
-    recipe.config_hash = "sha256:abc123";
+    recipe.effective_config_json = "{}";
+    recipe.config_hash = "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a";
     recipe.champion_generation = 3;
     recipe.autotune_config_id = "autotune-7";
     recipe.evaluation_result_id = "evaluation-9";
@@ -59,7 +63,10 @@ OfficialTrainingRecipe sample_recipe() {
 //   戻り値: [int: 成功時0]
 // }
 int main() {
-    const std::array<std::string, 2> registered{"dataset-a", "dataset-b"};
+    const std::array<DatasetRegistryReference, 2> registered{{
+        {"dataset-a", "revision-a"},
+        {"dataset-b", "revision-b"}
+    }};
     // Round-trip a valid recipe and check the canonical JSON representation.
     {
         const auto recipe = sample_recipe();
@@ -94,14 +101,14 @@ int main() {
     // Duplicate dataset IDs are invalid even when each weight is valid.
     {
         auto recipe = sample_recipe();
-        recipe.datasets.push_back({"dataset-a", 1.0});
+        recipe.datasets.push_back({"dataset-a", "revision-a", 1.0});
         assert_invalid([&] { validate_training_recipe(recipe); });
     }
 
     // Registry-aware validation rejects absent dataset references.
     {
         auto recipe = sample_recipe();
-        assert_invalid([&] { validate_training_recipe(recipe, std::span<const std::string>{}); });
+        assert_invalid([&] { validate_training_recipe(recipe, std::span<const DatasetRegistryReference>{}); });
         assert_invalid([&] {
             static_cast<void>(deserialize_training_recipe(
                 serialize_training_recipe(recipe), std::span<const std::string>{}
@@ -119,6 +126,12 @@ int main() {
     }
 
     // Source weights must stay in range and sum to one.
+    {
+        auto recipe = sample_recipe();
+        recipe.effective_config_json = "{ \"b\": 1, \"a\": 2 }";
+        assert_invalid([&] { validate_training_recipe(recipe); });
+    }
+
     {
         auto recipe = sample_recipe();
         recipe.source_weights.self = 0.8;
@@ -154,7 +167,10 @@ int main() {
     {
         auto recipe = sample_recipe();
         recipe.datasets.front().dataset_id = "quoted\"id\n雪";
-        const std::vector<std::string> special_ids{"quoted\"id\n雪", "dataset-a"};
+        const std::vector<DatasetRegistryReference> special_ids{
+            {"quoted\"id\n雪", "revision-b"},
+            {"dataset-a", "revision-a"}
+        };
         validate_training_recipe(recipe, special_ids);
         const auto decoded = deserialize_training_recipe(serialize_training_recipe(recipe));
         assert(decoded.datasets.front().dataset_id == "dataset-a");
