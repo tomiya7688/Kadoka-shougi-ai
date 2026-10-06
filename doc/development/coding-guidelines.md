@@ -200,13 +200,14 @@ The CI-equivalent quality gate on Ubuntu uses these commands from the repository
 
 ```bash
 sudo apt-get update && sudo apt-get install --yes clang-format clang-tidy
-git diff --name-only "$BASE_SHA...$GITHUB_SHA" -- '*.cpp' '*.hpp' '*.h' | xargs --no-run-if-empty clang-format --dry-run --Werror
+BASE_SHA="$(git merge-base origin/main HEAD)"
+git diff --name-only "$BASE_SHA...HEAD" -- '*.cpp' '*.hpp' '*.h' | xargs --no-run-if-empty clang-format --dry-run --Werror
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_CXX_CLANG_TIDY=clang-tidy
 cmake --build build --config Release --parallel 2
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-The CI format check covers C++ source and header files changed in the pull request. CMake runs clang-tidy as each target is compiled; the normal CTest suite remains the test gate.
+The format check covers C++ source and header files changed since the branch point. CMake runs clang-tidy as each target is compiled; the normal CTest suite remains the test gate.
 
 ## 13. Hot-path review rule
 
