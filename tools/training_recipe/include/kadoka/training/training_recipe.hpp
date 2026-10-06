@@ -10,12 +10,22 @@
 namespace kadoka::shogi::training {
 
 // {
-//   責務: [DatasetRecipeWeight: 学習recipeに使うdatasetと重みを表す]
-//   フィールド: [dataset_id: dataset識別子 / weight: 学習重み]
+//   責務: [DatasetRecipeWeight: 学習recipeに使うdataset revisionと重みを表す]
+//   フィールド: [dataset_id: dataset識別子 / dataset_revision: 固定されたrevision / weight: 学習重み]
 // }
 struct DatasetRecipeWeight {
     std::string dataset_id{};
+    std::string dataset_revision{};
     double weight{1.0};
+};
+
+// {
+//   責務: [DatasetRegistryReference: registry内の固定dataset revisionを識別する]
+//   フィールド: [dataset_id: dataset識別子 / dataset_revision: 不変revision識別子]
+// }
+struct DatasetRegistryReference {
+    std::string dataset_id{};
+    std::string dataset_revision{};
 };
 
 // {
@@ -31,7 +41,7 @@ struct TrainingSourceWeights {
 
 // {
 //   責務: [OfficialTrainingRecipe: 再現可能な学習recipeのversion付き項目を保持する]
-//   フィールド: [schema_version / datasets / source_weights / architecture_idとversion / config_hash / generation / 任意の調整・評価参照]
+//   フィールド: [schema_version / datasets / source_weights / architecture_idとversion / config_hash / generation / effective_config_json: 再現可能な有効設定JSON / config_hash / generation / 任意の調整・評価参照]
 // }
 struct OfficialTrainingRecipe {
     std::uint32_t schema_version{1};
@@ -39,13 +49,13 @@ struct OfficialTrainingRecipe {
     TrainingSourceWeights source_weights{};
     std::string architecture_id{};
     std::string architecture_version{};
+    std::string effective_config_json{};
     std::string config_hash{};
     std::uint64_t champion_generation{0};
     std::optional<std::string> autotune_config_id{};
     std::optional<std::string> evaluation_result_id{};
 };
 
-// Throws std::invalid_argument when a field, weight, or schema invariant fails.
 // {
 //   責務: [validate_training_recipe: recipeのschemaと値を検証する]
 //   処理: [必須値、重み、重複dataset、schema版を確認する]
@@ -54,16 +64,15 @@ struct OfficialTrainingRecipe {
 // }
 void validate_training_recipe(const OfficialTrainingRecipe& recipe);
 
-// Additionally checks each dataset reference against the supplied registry view.
 // {
-//   責務: [validate_training_recipe: recipeを検証しdataset参照を照合する]
-//   処理: [recipe検証後、各IDをregistry viewと照合する]
-//   引数: [recipe: 検証対象 / registered_dataset_ids: 利用可能ID一覧]
+//   責務: [validate_training_recipe: recipeを検証しIDとrevisionを照合する]
+//   処理: [recipe検証後、各IDをregistry viewのIDとrevisionに照合する]
+//   引数: [recipe: 検証対象 / registered_datasets: 利用可能なIDとrevision一覧]
 //   戻り値: [void。不正または未登録ならinvalid_argumentを送出する]
 // }
 void validate_training_recipe(
     const OfficialTrainingRecipe& recipe,
-    std::span<const std::string> registered_dataset_ids
+    std::span<const DatasetRegistryReference> registered_datasets
 );
 
 // {
