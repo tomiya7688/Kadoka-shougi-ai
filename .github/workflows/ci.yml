@@ -27,11 +27,17 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install C++ quality tools
+        run: sudo apt-get update && sudo apt-get install --yes clang-format clang-tidy
+
+      - name: Check C++ formatting
+        run: git ls-files -z '*.cpp' '*.hpp' '*.h' | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
+
       - name: Validate family model metadata
         run: python tools/family_metadata/script/validate_metadata.py --game shogi models/examples/family_metadata.json
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_CXX_CLANG_TIDY=clang-tidy
 
       - name: Build
         run: cmake --build build --config Release --parallel 2
