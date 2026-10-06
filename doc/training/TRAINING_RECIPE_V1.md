@@ -37,7 +37,7 @@ The v1 document is UTF-8 JSON with these fields:
 - `source_weights` records the configured proportions for `self`, `external`, `league`, and `human`. All four keys are required.
 - `architecture_id` and `architecture_version` identify the model architecture.
 - `effective_config` is the canonical, effective architecture/training configuration object stored in the manifest. It contains the values needed to reproduce the generation.
-- `config_hash` is `sha256:` followed by the lowercase SHA-256 digest of the UTF-8 bytes of canonical `effective_config`.
+- `config_hash` is `sha256:` followed by the lowercase SHA-256 digest of the UTF-8 bytes of canonical `effective_config`. The producer computes the digest; this library validates its spelling and preserves both values so a consumer can verify them.
 - `champion_generation` is an unsigned 64-bit integer in the inclusive range `0` to `18446744073709551615`. Fractions, exponents, negative values, and values above the bound are rejected.
 - `autotune_config_id` and `evaluation_result_id` are nullable references. When present, they identify the exact configuration and result used for this generation.
 
@@ -48,7 +48,8 @@ A recipe is valid only when:
 - required strings and references are non-empty;
 - dataset IDs are unique and every `(dataset_id, dataset_revision)` pair exists in the supplied Dataset Registry view;
 - each revision is pinned and each dataset weight is finite and greater than zero;
-- `effective_config` is a canonical JSON object and `config_hash` matches its canonical UTF-8 bytes;
+- `effective_config` is a canonical JSON object;
+- `config_hash` has the `sha256:` prefix and exactly 64 lowercase hexadecimal digits. The producer is responsible for computing the digest, which consumers can verify from the stored configuration;
 - each source weight is finite and in `[0, 1]`, and the four source weights sum to one within `1e-9`;
 - `champion_generation` is an unsigned 64-bit integer in the documented range; fractions, exponents, negatives, and overflow are rejected;
 - the schema version is supported.
