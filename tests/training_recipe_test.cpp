@@ -151,6 +151,29 @@ int main() {
         assert_invalid([&] { validate_training_recipe(recipe); });
     }
 
+    // Generation accepts the full uint64 range and rejects non-integer or overflowing JSON numbers.
+    {
+        auto recipe = sample_recipe();
+        recipe.champion_generation = std::numeric_limits<std::uint64_t>::max();
+        const auto decoded = deserialize_training_recipe(serialize_training_recipe(recipe));
+        assert(decoded.champion_generation == std::numeric_limits<std::uint64_t>::max());
+
+        const std::string serialized = serialize_training_recipe(sample_recipe());
+        for (const std::string invalid_generation : {
+                 "1.5",
+                 "-1",
+                 "1e3",
+                 "18446744073709551616"
+             }) {
+            std::string invalid = serialized;
+            const std::string field = "\\"champion_generation\\":3";
+            const auto value = invalid.find(field);
+            assert(value != std::string::npos);
+            invalid.replace(value, field.size(), "\\"champion_generation\\":" + invalid_generation);
+            assert_invalid([&] { static_cast<void>(deserialize_training_recipe(invalid)); });
+        }
+    }
+
     // Malformed JSON, numbers, and unsupported versions fail closed.
     {
         const auto recipe = sample_recipe();
