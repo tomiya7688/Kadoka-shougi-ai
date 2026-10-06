@@ -18,6 +18,10 @@ namespace {
 
 enum class JsonKind { Null, Boolean, Number, String, Object, Array };
 
+// {
+//   責務: [JsonValue: JSON tokenを型と値に分けて保持する]
+//   フィールド: [kind: JSON型 / scalar: scalar値 / object: keyと値 / array: 要素]
+// }
 struct JsonValue {
     JsonKind kind{JsonKind::Null};
     std::string scalar{};
@@ -25,10 +29,26 @@ struct JsonValue {
     std::vector<JsonValue> array{};
 };
 
+// {
+//   責務: [JsonParser: JSON文字列をrecipe用の値木へ解析する]
+//   フィールド: [input_: 入力view / position_: 読み取り位置]
+// }
 class JsonParser {
 public:
+// {
+//   責務: [JsonParser: 入力JSONを解析対象として受け取る]
+//   処理: [入力viewを保存する]
+//   引数: [input: 読み取るJSON]
+//   戻り値: [なし]
+// }
     explicit JsonParser(std::string_view input) : input_(input) {}
 
+// {
+//   責務: [parse: JSON全体を一つの値として解析する]
+//   処理: [空白を除去し、値を解析し、末尾の余分な文字を拒否する]
+//   引数: [なし]
+//   戻り値: [JsonValue。不正入力はinvalid_argument]
+// }
     JsonValue parse() {
         skip_space();
         JsonValue result = parse_value();
@@ -38,10 +58,22 @@ public:
     }
 
 private:
+// {
+//   責務: [fail: 解析失敗を統一した例外として通知する]
+//   処理: [recipe JSONの文脈を付けて例外を送出する]
+//   引数: [message: 失敗理由]
+//   戻り値: [戻らない]
+// }
     [[noreturn]] static void fail(const char* message) {
         throw std::invalid_argument(std::string("training recipe JSON: ") + message);
     }
 
+// {
+//   責務: [skip_space: JSONで許可される空白を読み飛ばす]
+//   処理: [空白が続く範囲まで位置を進める]
+//   引数: [なし]
+//   戻り値: [なし]
+// }
     void skip_space() {
         while (position_ < input_.size()) {
             const char ch = input_[position_];
@@ -50,11 +82,23 @@ private:
         }
     }
 
+// {
+//   責務: [take: 次の入力文字を読み取る]
+//   処理: [末尾を確認して1文字進める]
+//   引数: [なし]
+//   戻り値: [読み取ったchar。末尾ならinvalid_argument]
+// }
     char take() {
         if (position_ >= input_.size()) fail("unexpected end of input");
         return input_[position_++];
     }
 
+// {
+//   責務: [consume: 次の文字が指定文字なら消費する]
+//   処理: [一致時だけ位置を進める]
+//   引数: [expected: 期待する文字]
+//   戻り値: [一致したか]
+// }
     bool consume(char expected) {
         if (position_ < input_.size() && input_[position_] == expected) {
             ++position_;
@@ -63,10 +107,22 @@ private:
         return false;
     }
 
+// {
+//   責務: [expect: 次の入力文字が指定値か確認する]
+//   処理: [consume失敗時は解析エラーにする]
+//   引数: [expected: 期待する文字]
+//   戻り値: [なし。不一致ならinvalid_argument]
+// }
     void expect(char expected) {
         if (!consume(expected)) fail("unexpected token");
     }
 
+// {
+//   責務: [parse_value: 次のJSON値を型に応じて解析する]
+//   処理: [先頭文字からstring/object/array/literal/numberへ分岐する]
+//   引数: [なし]
+//   戻り値: [JsonValue。不正入力ならinvalid_argument]
+// }
     JsonValue parse_value() {
         skip_space();
         if (position_ >= input_.size()) fail("missing value");
@@ -81,6 +137,12 @@ private:
         fail("invalid value");
     }
 
+// {
+//   責務: [parse_literal: JSON固定literalを読み取る]
+//   処理: [各文字を照合して指定型を返す]
+//   引数: [literal: 期待する語 / kind: 結果型]
+//   戻り値: [JsonValue。不一致ならinvalid_argument]
+// }
     JsonValue parse_literal(const char* literal, JsonKind kind) {
         for (const char* cursor = literal; *cursor != '\0'; ++cursor) {
             if (take() != *cursor) fail("invalid literal");
@@ -90,6 +152,12 @@ private:
         return result;
     }
 
+// {
+//   責務: [append_utf8: Unicode code pointをUTF-8へ追加する]
+//   処理: [値の範囲に応じた1〜4 byteを出力する]
+//   引数: [output: 出力先 / codepoint: 追加値]
+//   戻り値: [なし]
+// }
     static void append_utf8(std::string& output, std::uint32_t codepoint) {
         if (codepoint <= 0x7fU) {
             output.push_back(static_cast<char>(codepoint));
@@ -108,6 +176,12 @@ private:
         }
     }
 
+// {
+//   責務: [parse_hex_quad: 4桁のUnicode escapeを整数として読む]
+//   処理: [各hex桁を検証しながら累積する]
+//   引数: [なし]
+//   戻り値: [code point。不正桁ならinvalid_argument]
+// }
     std::uint32_t parse_hex_quad() {
         std::uint32_t value = 0;
         for (int index = 0; index < 4; ++index) {
@@ -121,6 +195,12 @@ private:
         return value;
     }
 
+// {
+//   責務: [parse_string: JSON文字列をdecodeする]
+//   処理: [escapeを処理しUnicodeをUTF-8へ変換する]
+//   引数: [なし]
+//   戻り値: [string。不正escapeならinvalid_argument]
+// }
     std::string parse_string() {
         expect('"');
         std::string result;
@@ -142,6 +222,7 @@ private:
             case 'r': result.push_back('\r'); break;
             case 't': result.push_back('\t'); break;
             case 'u': {
+                // A high surrogate is valid only with a following low surrogate.
                 std::uint32_t codepoint = parse_hex_quad();
                 if (codepoint >= 0xd800U && codepoint <= 0xdbffU) {
                     if (take() != '\\' || take() != 'u') fail("invalid surrogate pair");
@@ -159,6 +240,12 @@ private:
         }
     }
 
+// {
+//   責務: [parse_string_value: 文字列をJSON値として包む]
+//   処理: [文字列をString型へ格納する]
+//   引数: [なし]
+//   戻り値: [String型JsonValue]
+// }
     JsonValue parse_string_value() {
         JsonValue result;
         result.kind = JsonKind::String;
@@ -166,6 +253,12 @@ private:
         return result;
     }
 
+// {
+//   責務: [parse_number: JSON number tokenを文法検証して読む]
+//   処理: [符号、小数部、指数部を走査する]
+//   引数: [なし]
+//   戻り値: [元表記を保持したNumber型JsonValue]
+// }
     JsonValue parse_number() {
         const std::size_t start = position_;
         consume('-');
@@ -198,6 +291,12 @@ private:
         return result;
     }
 
+// {
+//   責務: [parse_object: JSON objectを重複key検査付きで解析する]
+//   処理: [key/value組を読み構文と重複を検査する]
+//   引数: [なし]
+//   戻り値: [Object型JsonValue]
+// }
     JsonValue parse_object() {
         expect('{');
         JsonValue result;
@@ -207,6 +306,7 @@ private:
         while (true) {
             skip_space();
             if (position_ >= input_.size() || input_[position_] != '"') fail("object key must be a string");
+            // Duplicate JSON keys are rejected instead of silently shadowed.
             std::string key = parse_string();
             skip_space();
             expect(':');
@@ -220,6 +320,12 @@ private:
         }
     }
 
+// {
+//   責務: [parse_array: JSON arrayを順序を保って解析する]
+//   処理: [値を閉じ括弧まで順に読む]
+//   引数: [なし]
+//   戻り値: [Array型JsonValue]
+// }
     JsonValue parse_array() {
         expect('[');
         JsonValue result;
@@ -238,6 +344,12 @@ private:
     std::size_t position_{0};
 };
 
+// {
+//   責務: [require_field: objectから必須fieldを取得する]
+//   処理: [object型とfield存在を確認する]
+//   引数: [object: 親値 / name: field名]
+//   戻り値: [fieldへの参照。不正時invalid_argument]
+// }
 const JsonValue& require_field(const JsonValue& object, const char* name) {
     if (object.kind != JsonKind::Object) throw std::invalid_argument("training recipe must be a JSON object");
     const auto found = object.object.find(name);
@@ -247,6 +359,12 @@ const JsonValue& require_field(const JsonValue& object, const char* name) {
     return found->second;
 }
 
+// {
+//   責務: [require_string: JSON値がstringであることを確認する]
+//   処理: [型を確認してscalarを返す]
+//   引数: [value: JSON値 / name: field名]
+//   戻り値: [string。不一致ならinvalid_argument]
+// }
 std::string require_string(const JsonValue& value, const char* name) {
     if (value.kind != JsonKind::String) {
         throw std::invalid_argument(std::string("training recipe field must be a string: ") + name);
@@ -254,6 +372,12 @@ std::string require_string(const JsonValue& value, const char* name) {
     return value.scalar;
 }
 
+// {
+//   責務: [require_number: JSON値をdoubleとして検証・変換する]
+//   処理: [number型と完全な数値変換を確認する]
+//   引数: [value: JSON値 / name: field名]
+//   戻り値: [double。不正ならinvalid_argument]
+// }
 double require_number(const JsonValue& value, const char* name) {
     if (value.kind != JsonKind::Number) {
         throw std::invalid_argument(std::string("training recipe field must be a number: ") + name);
@@ -269,6 +393,12 @@ double require_number(const JsonValue& value, const char* name) {
     return result;
 }
 
+// {
+//   責務: [require_unsigned_integer: JSON値をuint64整数として検証・変換する]
+//   処理: [小数、指数、負数を拒否し範囲内へ変換する]
+//   引数: [value: JSON値 / name: field名]
+//   戻り値: [uint64_t。不正や範囲外ならinvalid_argument]
+// }
 std::uint64_t require_unsigned_integer(const JsonValue& value, const char* name) {
     if (value.kind != JsonKind::Number || value.scalar.find_first_of(".eE-") != std::string::npos) {
         throw std::invalid_argument(std::string("training recipe field must be an unsigned integer: ") + name);
@@ -283,11 +413,23 @@ std::uint64_t require_unsigned_integer(const JsonValue& value, const char* name)
     return result;
 }
 
+// {
+//   責務: [optional_string: nullまたはstringのoptional値を読む]
+//   処理: [nullを空値、それ以外をstring検証する]
+//   引数: [value: JSON値 / name: field名]
+//   戻り値: [optional string。不正型ならinvalid_argument]
+// }
 std::optional<std::string> optional_string(const JsonValue& value, const char* name) {
     if (value.kind == JsonKind::Null) return std::nullopt;
     return require_string(value, name);
 }
 
+// {
+//   責務: [append_json_string: 文字列をJSON stringとして出力へ追加する]
+//   処理: [quoteと制御文字をescapeする]
+//   引数: [output: 出力先 / value: 元文字列]
+//   戻り値: [なし]
+// }
 void append_json_string(std::string& output, std::string_view value) {
     constexpr char hex[] = "0123456789abcdef";
     output.push_back('"');
@@ -313,6 +455,12 @@ void append_json_string(std::string& output, std::string_view value) {
     output.push_back('"');
 }
 
+// {
+//   責務: [append_number: doubleをlocale非依存のJSON numberとして追加する]
+//   処理: [to_charsで変換する]
+//   引数: [output: 出力先 / value: 数値]
+//   戻り値: [なし。変換失敗ならinvalid_argument]
+// }
 void append_number(std::string& output, double value) {
     std::array<char, 64> buffer{};
     const auto formatted = std::to_chars(
@@ -322,22 +470,46 @@ void append_number(std::string& output, double value) {
     output.append(buffer.data(), formatted.ptr);
 }
 
+// {
+//   責務: [blank: 文字列が空または空白だけか判定する]
+//   処理: [空白以外の文字の有無を確認する]
+//   引数: [text: 判定対象]
+//   戻り値: [空白だけならtrue]
+// }
 bool blank(std::string_view text) {
     return text.empty() || std::all_of(text.begin(), text.end(), [](unsigned char ch) {
         return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
     });
 }
 
+// {
+//   責務: [require_nonempty: 必須文字列が空でないことを確認する]
+//   処理: [空ならfield名付き例外を送出する]
+//   引数: [value: 検証値 / field: 項目名]
+//   戻り値: [なし]
+// }
 void require_nonempty(const std::string& value, const char* field) {
     if (blank(value)) throw std::invalid_argument(std::string("training recipe field is empty: ") + field);
 }
 
+// {
+//   責務: [validate_weight: 重みが有限かつ許容範囲内か確認する]
+//   処理: [[0, 1]範囲と有限性を検証する]
+//   引数: [weight: 重み / field: 項目名]
+//   戻り値: [なし。不正ならinvalid_argument]
+// }
 void validate_weight(double weight, const char* field) {
     if (!std::isfinite(weight) || weight < 0.0 || weight > 1.0) {
         throw std::invalid_argument(std::string("training recipe weight must be finite and in [0, 1]: ") + field);
     }
 }
 
+// {
+//   責務: [parse_source_weight: source_weightsから指定重みを読む]
+//   処理: [fieldを取得してnumber検証する]
+//   引数: [source: source object / name: 重みfield]
+//   戻り値: [double。不正ならinvalid_argument]
+// }
 double parse_source_weight(const JsonValue& source, const char* name) {
     return require_number(require_field(source, name), name);
 }
@@ -360,6 +532,7 @@ void validate_training_recipe(const OfficialTrainingRecipe& recipe) {
         }
         ids.push_back(dataset.dataset_id);
     }
+    // Sorting makes duplicate detection independent of dataset input order.
     std::sort(ids.begin(), ids.end());
     if (std::adjacent_find(ids.begin(), ids.end()) != ids.end()) {
         throw std::invalid_argument("duplicate dataset id in training recipe");
@@ -393,6 +566,7 @@ void validate_training_recipe(
 
 std::string serialize_training_recipe(const OfficialTrainingRecipe& recipe) {
     validate_training_recipe(recipe);
+    // Canonical dataset order keeps equivalent recipes byte-for-byte stable.
     std::vector<DatasetRecipeWeight> datasets = recipe.datasets;
     std::sort(datasets.begin(), datasets.end(), [](const auto& lhs, const auto& rhs) {
         return lhs.dataset_id < rhs.dataset_id;
