@@ -457,11 +457,11 @@ void append_json_string(std::string& output, std::string_view value) {
 }
 
 // {
- //   責務: [append_json_value: JSON値をcompactなcanonical表現で出力する]
- //   処理: [object keyを辞書順、arrayを入力順、stringを規定escapeで出力する]
- //   引数: [output: 出力先 / value: JSON値]
- //   戻り値: [void]
- // }
+//   責務: [append_json_value: JSON値をcompactなcanonical表現で出力する]
+//   処理: [object keyを辞書順、arrayを入力順、stringを規定escapeで出力する]
+//   引数: [output: 出力先 / value: JSON値]
+//   戻り値: [void]
+// }
 void append_json_value(std::string& output, const JsonValue& value) {
     switch (value.kind) {
     case JsonKind::Null:
@@ -498,11 +498,11 @@ void append_json_value(std::string& output, const JsonValue& value) {
 }
 
 // {
- //   責務: [canonicalize_effective_config: 有効設定JSONをcanonical objectへ変換する]
- //   処理: [objectとしてparseし、compactな辞書順表現へ再出力する]
- //   引数: [json: 有効設定JSON]
- //   戻り値: [canonical JSON。不正またはobject以外ならinvalid_argument]
- // }
+//   責務: [canonicalize_effective_config: 有効設定JSONをcanonical objectへ変換する]
+//   処理: [objectとしてparseし、compactな辞書順表現へ再出力する]
+//   引数: [json: 有効設定JSON]
+//   戻り値: [canonical JSON。不正またはobject以外ならinvalid_argument]
+// }
 std::string canonicalize_effective_config(std::string_view json) {
     const JsonValue value = JsonParser(json).parse();
     if (value.kind != JsonKind::Object) {
@@ -511,6 +511,19 @@ std::string canonicalize_effective_config(std::string_view json) {
     std::string canonical;
     append_json_value(canonical, value);
     return canonical;
+}
+
+// {
+//   責務: [valid_config_hash: SHA-256文字列の書式を検証する]
+//   処理: [prefix、長さ、小文字hex文字を確認する]
+//   引数: [value: hash文字列]
+//   戻り値: [正しい形式ならtrue]
+// }
+bool valid_config_hash(std::string_view value) {
+    if (value.size() != 71 || value.substr(0, 7) != "sha256:") return false;
+    return std::all_of(value.begin() + 7, value.end(), [](char ch) {
+        return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f');
+    });
 }
 
 // {
@@ -584,6 +597,9 @@ void validate_training_recipe(const OfficialTrainingRecipe& recipe) {
         throw std::invalid_argument("effective_config must use canonical JSON encoding");
     }
     require_nonempty(recipe.config_hash, "config_hash");
+    if (!valid_config_hash(recipe.config_hash)) {
+        throw std::invalid_argument("config_hash must be sha256: followed by 64 lowercase hex digits");
+    }
 
     std::vector<std::string_view> ids;
     ids.reserve(recipe.datasets.size());
