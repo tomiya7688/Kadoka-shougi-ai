@@ -166,10 +166,10 @@ int main() {
                  "18446744073709551616"
              }) {
             std::string invalid = serialized;
-            const std::string field = "\\"champion_generation\\":3";
+            const std::string field = "\"champion_generation\":3";
             const auto value = invalid.find(field);
             assert(value != std::string::npos);
-            invalid.replace(value, field.size(), "\\"champion_generation\\":" + invalid_generation);
+            invalid.replace(value, field.size(), "\"champion_generation\":" + invalid_generation);
             assert_invalid([&] { static_cast<void>(deserialize_training_recipe(invalid)); });
         }
     }
