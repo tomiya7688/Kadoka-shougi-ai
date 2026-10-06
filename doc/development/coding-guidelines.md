@@ -165,7 +165,44 @@ Prefer compact SFEN positions that isolate one rule. Important shogi-specific ca
 
 Keep rule fixes separate from AI-strength tuning when possible. A rules regression should be reviewable without also evaluating evaluation weights or search heuristics.
 
-## 11. Formatting
+## 11. Structured comments
+
+New or changed C++ class/struct and function/method declarations must have a
+JSON-like comment block immediately before the declaration. Use the semantic
+keys from the
+[JSON-like Comment Outs specification](https://github.com/tomiya7688/Json-like-comment-outs/blob/main/docs/jp/SPECIFICATION.md)
+in the language the team reads most easily.
+
+- Classes and structs must describe their responsibility and principal fields.
+- Functions and methods must describe responsibility, action, parameters, and return value.
+- Comments inside implementations remain ordinary comments. Use them to explain intent,
+  non-obvious algorithms, and non-obvious local state rather than restating each line.
+- Keep the comment accurate when the declaration or behavior changes.
+
+C++ example:
+
+```cpp
+// {
+//   責務: [TrainingRecipe: 学習recipeと検証対象の項目を保持する]
+//   フィールド: [datasets: 使用datasetと重み / config_hash: 学習設定の識別子]
+// }
+struct TrainingRecipe {
+    // ...
+};
+
+// {
+//   責務: [validate_recipe: 学習recipeの制約を検証する]
+//   処理: [1: 必須値と重みを確認する]
+//   引数: [recipe: 検証対象]
+//   戻り値: [void: 不正ならinvalid_argumentを送出する]
+// }
+void validate_recipe(const TrainingRecipe& recipe);
+```
+
+A code change that adds or changes declarations without these blocks is returned
+for correction.
+
+## 12. Formatting
 
 `.clang-format` is the repository formatting source of truth.
 
@@ -177,7 +214,7 @@ clang-format -i engine/src/*.cpp engine/include/kadoka/*.hpp tests/*.cpp protoco
 
 Format touched C/C++ files before opening a PR. Avoid large format-only rewrites mixed with functional changes.
 
-## 12. Static analysis
+## 13. Static analysis
 
 `.clang-tidy` defines the baseline static-analysis policy.
 
@@ -209,7 +246,7 @@ ctest --test-dir build -C Release --output-on-failure
 
 The format check covers C++ source and header files changed since the branch point. CMake runs clang-tidy as each target is compiled; the normal CTest suite remains the test gate.
 
-## 13. Hot-path review rule
+## 14. Hot-path review rule
 
 Before adding a layer, allocation, virtual dispatch, lock, container conversion, or string operation to a frequently executed engine path, ask whether the operation is required by the component contract.
 
