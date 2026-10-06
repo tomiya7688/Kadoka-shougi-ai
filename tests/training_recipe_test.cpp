@@ -111,7 +111,7 @@ int main() {
         assert_invalid([&] { validate_training_recipe(recipe, std::span<const DatasetRegistryReference>{}); });
         assert_invalid([&] {
             static_cast<void>(deserialize_training_recipe(
-                serialize_training_recipe(recipe), std::span<const std::string>{}
+                serialize_training_recipe(recipe), std::span<const DatasetRegistryReference>{}
             ));
         });
     }
