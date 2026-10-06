@@ -196,6 +196,18 @@ cmake --build build
 
 Static-analysis fixes should remain understandable and should not introduce abstraction or allocations into hot paths merely to silence a warning. Suppressions must be local and justified.
 
+The CI-equivalent quality gate on Ubuntu uses these commands from the repository root:
+
+```bash
+sudo apt-get update && sudo apt-get install --yes clang-format clang-tidy
+git ls-files -z '*.cpp' '*.hpp' '*.h' | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+cmake --build build --config Release --parallel 2
+ctest --test-dir build -C Release --output-on-failure
+```
+
+The format check covers tracked C++ source and header files. CMake runs clang-tidy as each target is compiled; the normal CTest suite remains the test gate.
+
 ## 13. Hot-path review rule
 
 Before adding a layer, allocation, virtual dispatch, lock, container conversion, or string operation to a frequently executed engine path, ask whether the operation is required by the component contract.
