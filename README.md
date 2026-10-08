@@ -77,6 +77,9 @@ Repository-level information stays in this README. Detailed documentation should
 
 ## Documentation
 
+このプロジェクトの設計・仕様・開発文書は日本語版を正本とします。英語版は補助翻訳です。
+
+- [文書言語方針](doc/architecture/DOCUMENTATION_POLICY.md)
 - [Architecture](doc/architecture/ARCHITECTURE.md)
 - [Context routing](doc/architecture/CONTEXT_ROUTING.md)
 - [Sibling project alignment](doc/architecture/SIBLING_PROJECT_ALIGNMENT.md)
