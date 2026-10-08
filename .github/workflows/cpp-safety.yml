@@ -1,4 +1,12 @@
-name: C++ Safety
+# {
+#   責務: [C++安全性ワークフロー: sanitizer検査とCodeQL解析を実行する]
+#   処理: [
+#     1: pull request、mainへのpush、手動実行を受け付ける
+#     2: GCCとClangで全CTestをsanitizer付きで実行する
+#     3: CodeQLでC++コードを解析する
+#   ]
+# }
+name: C++ 安全性チェック
 
 on:
   pull_request:
@@ -15,6 +23,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # {
+  #   責務: [sanitizers: GCCとClangでメモリ安全性と未定義動作を検査する]
+  #   処理: [
+  #     1: 各コンパイラの環境を準備する
+  #     2: sanitizerを有効にして構成・ビルドする
+  #     3: CTest全件を実行する
+  #   ]
+  # }
   sanitizers:
     name: Sanitizers (${{ matrix.compiler }})
     runs-on: ubuntu-latest
@@ -25,32 +41,40 @@ jobs:
         compiler: [g++, clang++]
 
     steps:
-      - name: Check out repository
+      - name: リポジトリを取得する
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Python 3.11を準備する
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Configure sanitizer build
+      - name: sanitizerを有効にして構成する
         run: >-
           cmake -S . -B build-safety
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
           -DKADOKA_ENABLE_SANITIZERS=ON
 
-      - name: Build
+      - name: ビルドする
         run: cmake --build build-safety --parallel 2
 
-      - name: Test
+      - name: CTestを実行する
         env:
           ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: ctest --test-dir build-safety --output-on-failure
 
+  # {
+  #   責務: [codeql: C++コードの静的解析を実行する]
+  #   処理: [
+  #     1: CodeQLにC/C++言語を指定する
+  #     2: CMakeのビルドを解析する
+  #     3: 検出結果をGitHub code scanningへ送信する
+  #   ]
+  # }
   codeql:
-    name: CodeQL C++ analysis
+    name: CodeQL C++解析
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -59,27 +83,27 @@ jobs:
       security-events: write
 
     steps:
-      - name: Check out repository
+      - name: リポジトリを取得する
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Python 3.11を準備する
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Initialize CodeQL
+      - name: CodeQLを初期化する
         uses: github/codeql-action/init@v4
         with:
           languages: c-cpp
           build-mode: manual
 
-      - name: Configure CodeQL build
+      - name: CodeQL用のビルドを構成する
         run: cmake -S . -B build-codeql -DCMAKE_BUILD_TYPE=Release
 
-      - name: Build analyzed targets
+      - name: 解析対象をビルドする
         run: cmake --build build-codeql --parallel 2
 
-      - name: Analyze
+      - name: CodeQL解析を実行する
         uses: github/codeql-action/analyze@v4
         with:
           category: /language:c-cpp
