@@ -94,6 +94,18 @@ target_link_libraries(kadoka_shogi_training_parser
         kadoka_shogi_runtime
 )
 
+add_library(kadoka_shogi_training_recipe
+    tools/training_recipe/src/training_recipe.cpp
+)
+
+add_dependencies(kadoka_shogi_training_recipe kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_training_recipe
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/training_recipe/include
+)
+
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -192,6 +204,10 @@ target_link_libraries(
     PRIVATE kadoka_shogi_training_parser
 )
 add_test(NAME training_parser_test COMMAND training_parser_test)
+
+add_executable(training_recipe_test tests/training_recipe_test.cpp)
+target_link_libraries(training_recipe_test PRIVATE kadoka_shogi_training_recipe)
+add_test(NAME training_recipe_test COMMAND training_recipe_test)
 
 add_executable(
     recursive_training_importer_test
