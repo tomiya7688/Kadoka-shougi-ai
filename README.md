@@ -80,6 +80,7 @@ Repository-level information stays in this README. Detailed documentation should
 - [Architecture](doc/architecture/ARCHITECTURE.md)
 - [Context routing](doc/architecture/CONTEXT_ROUTING.md)
 - [Sibling project alignment](doc/architecture/SIBLING_PROJECT_ALIGNMENT.md)
+- [手法移植の出典・ライセンス記録](doc/architecture/METHOD_PORTING_PROVENANCE.md)
 - [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
 - [Diagram area](doc/diagrams/README.md)
