@@ -8,13 +8,24 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+# {
+#   責務: [KADOKA_ENABLE_SANITIZERS: Linux上のGCCまたはClangで安全性検査を有効にする]
+#   処理: [
+#     1: ASanとUBSanをコンパイル・リンクへ設定する
+#     2: libstdc++のassertionとchecked iteratorを有効にする
+#     3: 対応しない環境で有効化された場合は構成を失敗させる
+#   ]
+#   引数: [KADOKA_ENABLE_SANITIZERS: 検査を有効にするかどうか]
+#   戻り値: [なし: CMakeのコンパイル設定とリンク設定を変更する]
+# }
 option(
     KADOKA_ENABLE_SANITIZERS
-    "Enable AddressSanitizer, UndefinedBehaviorSanitizer, and libstdc++ checks"
+    "Linux上のGCCまたはClangでsanitizer検査を有効にする"
     OFF
 )
 
 if(KADOKA_ENABLE_SANITIZERS)
+    # 未定義動作とメモリ破壊を検出できるLinux環境に限定する。
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang"
         AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_compile_options(
@@ -30,8 +41,9 @@ if(KADOKA_ENABLE_SANITIZERS)
             -fno-sanitize-recover=all
         )
     else()
+        # 対応環境を誤認したまま検査なしで続行しない。
         message(FATAL_ERROR
-            "KADOKA_ENABLE_SANITIZERS requires GCC or Clang on Linux"
+            "KADOKA_ENABLE_SANITIZERS はLinux上のGCCまたはClangが必要です"
         )
     endif()
 endif()
