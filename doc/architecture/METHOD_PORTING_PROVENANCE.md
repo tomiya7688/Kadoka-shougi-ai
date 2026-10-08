@@ -53,7 +53,7 @@
 
 | 項目 | 記録 |
 | --- | --- |
-| 記録日・記録者 | 2026-10-09 / Kadoka Shougi AI |
+| 記録日・記録者 | 2026-10-09 / 記入例（実記録では担当者を記載） |
 | 判断状態 | 保留 |
 | 移植元プロジェクト | [Kadoka Shougi AI](https://github.com/tomiya7688/Kadoka-shougi-ai) |
 | 出典 | [PR #23: Add validated engine runtime boundary](https://github.com/tomiya7688/Kadoka-shougi-ai/pull/23) |
@@ -63,7 +63,7 @@
 | 対象プロジェクト・ゲーム | Kadoka Othello AI / Othello。Tetrisへの適用は別途評価 |
 | 対象側追跡Issue | [Othello Issue #13](https://github.com/tomiya7688/Kadoka-othello-AI/issues/13) |
 | ライセンス対象 | Shougi PR #23のコードと文書。第三者素材の有無は移植時に再確認 |
-| ライセンス・根拠 | MIT。Shougi repositoryの`LICENSE`を確認 |
+| ライセンス・根拠 | MIT。[Shougi repositoryの`LICENSE`](https://github.com/tomiya7688/Kadoka-shougi-ai/blob/c098c909a09438b19055a66e26f13113561eef46/LICENSE)を確認 |
 | 必要な帰属・通知・再配布条件 | MITの著作権表示と許諾表示を保持する。移植先で再配布条件を確認 |
 | 適用可能性 | AI出力をCoreが検証する責務分担は検討可能。Shogiの合法手・盤面処理は移植しない |
 | 期待する効果 | Core以外がcanonical stateを変更しない境界。移植先での効果は未測定 |
