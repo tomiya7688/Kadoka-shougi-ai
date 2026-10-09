@@ -17,7 +17,7 @@ namespace kadoka::shogi::ai_package {
 }
 */
 class PathHistory {
-public:
+  public:
     /*
     {
       責務: [~PathHistory: 派生履歴を基底型経由で安全に破棄する]
@@ -81,12 +81,9 @@ public:
       エラー: [空の着手または局面ならstd::invalid_argument]
     }
     */
-    virtual void record(
-        std::string move_usi,
-        std::string resulting_position_sfen
-    ) = 0;
+    virtual void record(std::string move_usi, std::string resulting_position_sfen) = 0;
 
-protected:
+  protected:
     /*
     {
       責務: [PathHistory: 履歴形式の共通局面・着手状態を初期化する]
@@ -109,7 +106,7 @@ protected:
 }
 */
 class FullMovePathHistory final : public PathHistory {
-public:
+  public:
     /*
     {
       責務: [FullMovePathHistory: 初期局面を指定して全手履歴を作る]
@@ -146,10 +143,7 @@ public:
       戻り値: []
     }
     */
-    void record(
-        std::string move_usi,
-        std::string resulting_position_sfen
-    ) override;
+    void record(std::string move_usi, std::string resulting_position_sfen) override;
 };
 
 /*
@@ -160,7 +154,7 @@ public:
 }
 */
 class LastNMovePathHistory final : public PathHistory {
-public:
+  public:
     /*
     {
       責務: [LastNMovePathHistory: 保持上限と初期局面を指定して履歴を作る]
@@ -169,10 +163,7 @@ public:
       戻り値: []
     }
     */
-    LastNMovePathHistory(
-        std::size_t capacity,
-        std::string initial_position_sfen
-    );
+    LastNMovePathHistory(std::size_t capacity, std::string initial_position_sfen);
 
     /*
     {
@@ -209,12 +200,9 @@ public:
       戻り値: []
     }
     */
-    void record(
-        std::string move_usi,
-        std::string resulting_position_sfen
-    ) override;
+    void record(std::string move_usi, std::string resulting_position_sfen) override;
 
-private:
+  private:
     std::size_t capacity_{0};
 };
 
@@ -227,9 +215,7 @@ private:
   エラー: [破損・未知version・未知形式ならstd::invalid_argument]
 }
 */
-[[nodiscard]] FullMovePathHistory deserialize_full_move_path_history(
-    std::string_view serialized
-);
+[[nodiscard]] FullMovePathHistory deserialize_full_move_path_history(std::string_view serialized);
 
 /*
 {
@@ -240,9 +226,7 @@ private:
   エラー: [破損・未知version・未知形式ならstd::invalid_argument]
 }
 */
-[[nodiscard]] std::unique_ptr<PathHistory> deserialize_path_history(
-    std::string_view serialized
-);
+[[nodiscard]] std::unique_ptr<PathHistory> deserialize_path_history(std::string_view serialized);
 
 } // namespace kadoka::shogi::ai_package
 
