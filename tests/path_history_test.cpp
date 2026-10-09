@@ -66,4 +66,3 @@ int main() {
     assert_invalid([&] { (void)deserialize_path_history(full.serialize() + "trailing"); });
     assert_invalid([&] { (void)deserialize_path_history(std::string{"KPH\0", 4}); });
 }
-
