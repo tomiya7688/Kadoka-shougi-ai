@@ -312,4 +312,3 @@ std::unique_ptr<PathHistory> deserialize_path_history(std::string_view serialize
 }
 
 } // namespace kadoka::shogi::ai_package
-
