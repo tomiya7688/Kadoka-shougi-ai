@@ -41,8 +41,7 @@ std::uint64_t read_u64(std::string_view input, std::size_t& offset) {
     }
     std::uint64_t value = 0;
     for (int byte = 0; byte < 8; ++byte) {
-        value = (value << 8)
-            | static_cast<unsigned char>(input[offset++]);
+        value = (value << 8) | static_cast<unsigned char>(input[offset++]);
     }
     return value;
 }
@@ -88,11 +87,7 @@ std::string read_string(std::string_view input, std::size_t& offset) {
   戻り値: []
 }
 */
-void append_header(
-    std::string& output,
-    std::uint64_t kind,
-    std::uint64_t capacity
-) {
+void append_header(std::string& output, std::uint64_t kind, std::uint64_t capacity) {
     output.append(kMagic);
     append_u64(output, kVersion);
     append_u64(output, kind);
@@ -108,14 +103,8 @@ void append_header(
   エラー: [未知形式・version・破損headerならstd::invalid_argument]
 }
 */
-void validate_header(
-    std::string_view input,
-    std::size_t& offset,
-    std::uint64_t& kind,
-    std::uint64_t& capacity
-) {
-    if (input.size() < kMagic.size()
-        || input.substr(0, kMagic.size()) != kMagic) {
+void validate_header(std::string_view input, std::size_t& offset, std::uint64_t& kind, std::uint64_t& capacity) {
+    if (input.size() < kMagic.size() || input.substr(0, kMagic.size()) != kMagic) {
         throw std::invalid_argument("invalid path-history magic");
     }
     offset = kMagic.size();
@@ -144,11 +133,7 @@ void validate_header(
   戻り値: []
 }
 */
-void append_payload(
-    std::string& output,
-    std::string_view current_sfen,
-    const std::vector<std::string>& moves
-) {
+void append_payload(std::string& output, std::string_view current_sfen, const std::vector<std::string>& moves) {
     append_string(output, current_sfen);
     append_u64(output, static_cast<std::uint64_t>(moves.size()));
     for (const std::string& move : moves) {
@@ -165,10 +150,7 @@ void append_payload(
   エラー: [過大な個数または空着手ならstd::invalid_argument]
 }
 */
-std::vector<std::string> read_moves(
-    std::string_view input,
-    std::size_t& offset
-) {
+std::vector<std::string> read_moves(std::string_view input, std::size_t& offset) {
     const std::uint64_t count = read_u64(input, offset);
     if (count > (input.size() - offset) / 8) {
         throw std::invalid_argument("invalid path-history move count");
@@ -202,8 +184,7 @@ void ensure_complete(std::string_view input, std::size_t offset) {
 
 } // namespace
 
-PathHistory::PathHistory(std::string initial_position_sfen)
-    : current_position_sfen_(std::move(initial_position_sfen)) {
+PathHistory::PathHistory(std::string initial_position_sfen) : current_position_sfen_(std::move(initial_position_sfen)) {
     if (current_position_sfen_.empty()) {
         throw std::invalid_argument("initial position SFEN must not be empty");
     }
@@ -236,10 +217,7 @@ std::string FullMovePathHistory::serialize() const {
     return output;
 }
 
-void FullMovePathHistory::record(
-    std::string move_usi,
-    std::string resulting_position_sfen
-) {
+void FullMovePathHistory::record(std::string move_usi, std::string resulting_position_sfen) {
     if (move_usi.empty() || resulting_position_sfen.empty()) {
         throw std::invalid_argument("move and resulting SFEN must not be empty");
     }
@@ -247,10 +225,7 @@ void FullMovePathHistory::record(
     current_position_sfen_ = std::move(resulting_position_sfen);
 }
 
-LastNMovePathHistory::LastNMovePathHistory(
-    std::size_t capacity,
-    std::string initial_position_sfen
-)
+LastNMovePathHistory::LastNMovePathHistory(std::size_t capacity, std::string initial_position_sfen)
     : PathHistory(std::move(initial_position_sfen)), capacity_(capacity) {}
 
 std::string_view LastNMovePathHistory::format_id() const noexcept {
@@ -269,10 +244,7 @@ std::string LastNMovePathHistory::serialize() const {
     return output;
 }
 
-void LastNMovePathHistory::record(
-    std::string move_usi,
-    std::string resulting_position_sfen
-) {
+void LastNMovePathHistory::record(std::string move_usi, std::string resulting_position_sfen) {
     if (move_usi.empty() || resulting_position_sfen.empty()) {
         throw std::invalid_argument("move and resulting SFEN must not be empty");
     }
@@ -287,9 +259,7 @@ void LastNMovePathHistory::record(
     }
 }
 
-FullMovePathHistory deserialize_full_move_path_history(
-    std::string_view serialized
-) {
+FullMovePathHistory deserialize_full_move_path_history(std::string_view serialized) {
     std::size_t offset = 0;
     std::uint64_t kind = 0;
     std::uint64_t capacity = 0;
@@ -311,9 +281,7 @@ FullMovePathHistory deserialize_full_move_path_history(
     return history;
 }
 
-std::unique_ptr<PathHistory> deserialize_path_history(
-    std::string_view serialized
-) {
+std::unique_ptr<PathHistory> deserialize_path_history(std::string_view serialized) {
     std::size_t offset = 0;
     std::uint64_t kind = 0;
     std::uint64_t capacity = 0;
@@ -326,9 +294,7 @@ std::unique_ptr<PathHistory> deserialize_path_history(
     ensure_complete(serialized, offset);
 
     if (kind == kFullMoveKind) {
-        auto history = std::make_unique<FullMovePathHistory>(
-            std::move(current_sfen)
-        );
+        auto history = std::make_unique<FullMovePathHistory>(std::move(current_sfen));
         for (std::string& move : moves) {
             history->record(std::move(move), history->current_position_sfen());
         }
@@ -338,10 +304,7 @@ std::unique_ptr<PathHistory> deserialize_path_history(
     if (moves.size() > capacity) {
         throw std::invalid_argument("path-history exceeds its configured capacity");
     }
-    auto history = std::make_unique<LastNMovePathHistory>(
-        static_cast<std::size_t>(capacity),
-        std::move(current_sfen)
-    );
+    auto history = std::make_unique<LastNMovePathHistory>(static_cast<std::size_t>(capacity), std::move(current_sfen));
     for (std::string& move : moves) {
         history->record(std::move(move), history->current_position_sfen());
     }
