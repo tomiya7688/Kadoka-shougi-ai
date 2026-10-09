@@ -45,7 +45,7 @@ Tests ──→ 検証対象の各層
 
 | 境界 | 現行の主な位置 | 状態・注意 |
 | --- | --- | --- |
-| Core state / rules | [engine/include/kadoka/position.hpp](../../engine/include/kadoka/position.hpp)、[engine/include/kadoka/movegen.hpp](../../engine/include/kadoka/movegen.hpp)、[engine/include/kadoka/repetition.hpp](../../engine/include/kadoka/repetition.hpp) | canonical positionと規則判定を所有 |
+| Core state / rules | [engine/include/kadoka/position.hpp](../../engine/include/kadoka/position.hpp)、[engine/include/kadoka/movegen.hpp](../../engine/include/kadoka/movegen.hpp) | canonical positionと規則判定を所有 |
 | Engine API | [engine/include/kadoka/engine.hpp](../../engine/include/kadoka/engine.hpp) | Engine、SearchLimits、SearchResultを定義。提案のみを返す |
 | Runtime backend / turn | [runtime/include/kadoka/runtime/ai_backend.hpp](../../runtime/include/kadoka/runtime/ai_backend.hpp)、[runtime/include/kadoka/runtime/turn_runner.hpp](../../runtime/include/kadoka/runtime/turn_runner.hpp) | native/共通backend境界と合法手検証を提供 |
 | Native adapter | NativeEngineBackend（ai_backend.hpp） | 既存のin-process Engineを共通Runtime経路へ接続 |
