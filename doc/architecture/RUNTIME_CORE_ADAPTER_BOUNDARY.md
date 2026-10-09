@@ -18,11 +18,11 @@
 矢印は「左側が右側を利用できる」ことを示します。
 
 ~~~text
-Protocol / UI ───────→ Runtime ───────→ Core
-        │                  ↑
-        └──→ Adapter ──────┘
-               │
-               └──────────→ Engine API / AI実装 ──→ Core
+Protocol / UI ──→ Runtime ──→ Core
+                    ↑
+Native / Process Adapter
+       ├──→ Runtime backend契約
+       └──→ Engine API / AI実装 ──→ Core
 
 Creator / Training / Analysis ──→ Core
 Creator / Training / Analysis ──→ Runtime（self-play / headless評価時のみ）
@@ -56,7 +56,7 @@ Tests ──→ 検証対象の各層
 | Protocol / CLI | [protocol/cli/main.cpp](../../protocol/cli/main.cpp) | 現行mainはbootstrap表示。完成したGUI/対局画面の存在を示さない |
 | Metadata / tools | [doc/specifications/AI_MODEL_METADATA.md](../specifications/AI_MODEL_METADATA.md)、tools/family_metadata/、tools/context_route.py | metadata検証や開発補助。Runtime/Coreはtoolingへ依存しない |
 
-現行Runtimeはadapter境界も同じruntime/内に持ち、独立したtop-level adapters/ directoryをまだ持ちません。実装配置の変更は可能ですが、依存方向とCoreの権威は維持してください。
+現行Runtimeはbackend契約とnative/process実装を同じruntime/内に持ち、独立したtop-level adapters/ directoryをまだ持ちません。また、現在のツリーにはEngine APIはありますが、engines/配下の具体的なEngineファミリーはまだありません。実装配置の変更は可能ですが、依存方向とCoreの権威は維持してください。
 
 ## 実行経路
 
