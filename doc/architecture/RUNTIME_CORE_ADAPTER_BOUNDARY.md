@@ -18,11 +18,10 @@
 矢印は「左側が右側を利用できる」ことを示します。
 
 ~~~text
-Protocol / UI ──→ Runtime ──→ Core
-                    ↑
-Native / Process Adapter
-       ├──→ Runtime backend契約
-       └──→ Engine API / AI実装 ──→ Core
+Protocol / UI ───────────────→ Runtime ──→ Core
+AI Package / Observation Adapter ──→ Runtime
+Native / Process Adapter ─────────→ Runtime backend契約
+Native / Process Adapter ─────────→ Engine API / AI実装 ──→ Core
 
 Creator / Training / Analysis ──→ Core
 Creator / Training / Analysis ──→ Runtime（self-play / headless評価時のみ）
@@ -34,7 +33,8 @@ Tests ──→ 検証対象の各層
 | --- | --- | --- |
 | Core（engine/） | standard library、Core内の型・規則 | Runtime、具体的AI、Protocol/UI、学習・データ変換、process/network transport |
 | Engine API / AI実装 | CoreのPosition・合法手等、必要なモデル/inference code | GUI実装、Creator画面、対局履歴保存先、具体的transport process管理 |
-| Runtime（runtime/） | CoreとEngine API、Runtime内部のclock・history・backend境界 | UI、Protocol固有処理、Creator/Training/Analysis、ファイル形式ごとの学習ロジック |
+| Runtime（runtime/） | CoreとEngine API、Runtime内部のclock・history・backend境界 | UI、Protocol固有処理、AI Package、Creator/Training/Analysis、ファイル形式ごとの学習ロジック |
+| AI Package（ai_package/） | RuntimeのPlayer契約、Coreの公開型。観測形式からAI内部状態への変換 | Runtime/CoreからAI Packageへの逆依存、canonical stateの直接更新 |
 | Adapter / Transport | Runtimeのbackend/Player契約、Engine API、必要なtransport library | Core状態の直接書換え、Coreの合法性を迂回する経路 |
 | Protocol / UI | RuntimeのPlayer/Match API、表示に必要なCore read-only情報 | 自前の合法判定を最終権威にする処理、AI実装内への直接依存 |
 | Creator / Training / Analysis | Core/Runtimeの公開API、Dataset/Model/Training契約 | Runtime/Coreから上位toolingへの逆依存 |
@@ -54,9 +54,11 @@ Tests ──→ 検証対象の各層
 | Player API | [runtime/include/kadoka/runtime/player_api.hpp](../../runtime/include/kadoka/runtime/player_api.hpp) | 観測、行動、結果の変換と検証境界 |
 | Headless match | [runtime/include/kadoka/runtime/headless_match.hpp](../../runtime/include/kadoka/runtime/headless_match.hpp) | GUIなし対局とmatch-level policyを調整 |
 | Protocol / CLI | [protocol/cli/main.cpp](../../protocol/cli/main.cpp) | 現行mainはbootstrap表示。完成したGUI/対局画面の存在を示さない |
-| Metadata / tools | [doc/specifications/AI_MODEL_METADATA.md](../specifications/AI_MODEL_METADATA.md)、tools/family_metadata/、tools/context_route.py | metadata検証や開発補助。Runtime/Coreはtoolingへ依存しない |
+| AI Package / observation | [ai_package/include/kadoka/ai_package/board_recognition.hpp](../../ai_package/include/kadoka/ai_package/board_recognition.hpp)、[json_player_observation_parser.hpp](../../ai_package/include/kadoka/ai_package/json_player_observation_parser.hpp) | 現行CMake target kadoka_shogi_ai_packageはRuntimeに依存。逆方向は不可 |
+| Training Parser | [tools/training_parser/include/kadoka/training/parser.hpp](../../tools/training_parser/include/kadoka/training/parser.hpp) | 現行CMake target kadoka_shogi_training_parserはRuntimeに依存し、学習用入力を処理 |
+| Metadata / developer tools | [doc/specifications/AI_MODEL_METADATA.md](../specifications/AI_MODEL_METADATA.md)、tools/family_metadata/、tools/context_route.py | metadata検証や開発補助。Runtime/Coreはtoolingへ依存しない |
 
-現行Runtimeはbackend契約とnative/process実装を同じruntime/内に持ち、独立したtop-level adapters/ directoryをまだ持ちません。また、現在のツリーにはEngine APIはありますが、engines/配下の具体的なEngineファミリーはまだありません。実装配置の変更は可能ですが、依存方向とCoreの権威は維持してください。
+現行Runtimeはbackend契約とnative/process実装を同じruntime/ CMake targetに持ち、独立したtop-level adapters/ targetはありません。AI PackageとTraining Parserは別targetでRuntimeに依存します。CMakeに具体的なEngineファミリーtargetは定義されていません。実装配置の変更は可能ですが、依存方向とCoreの権威は維持してください。
 
 ## 実行経路
 
