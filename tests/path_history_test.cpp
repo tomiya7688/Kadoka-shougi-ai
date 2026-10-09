@@ -8,15 +8,11 @@ using namespace kadoka::shogi::ai_package;
 
 namespace {
 
-constexpr const char* kStartSfen =
-    "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1";
-constexpr const char* kAfterFirstMove =
-    "lnsgkgsnl/1r5b1/ppppppppp/9/9/2P6/PP1PPPPPP/1B5R1/LNSGKGSNL w - 2";
-constexpr const char* kAfterSecondMove =
-    "lnsgkgsnl/1r5b1/ppppppppp/9/2p6/2P6/PP1PPPPPP/1B5R1/LNSGKGSNL b - 3";
+constexpr const char* kStartSfen = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1";
+constexpr const char* kAfterFirstMove = "lnsgkgsnl/1r5b1/ppppppppp/9/9/2P6/PP1PPPPPP/1B5R1/LNSGKGSNL w - 2";
+constexpr const char* kAfterSecondMove = "lnsgkgsnl/1r5b1/ppppppppp/9/2p6/2P6/PP1PPPPPP/1B5R1/LNSGKGSNL b - 3";
 
-template <class Callback>
-void assert_invalid(Callback&& callback) {
+template <class Callback> void assert_invalid(Callback&& callback) {
     bool rejected = false;
     try {
         callback();
@@ -34,8 +30,7 @@ int main() {
     full.record("7g7f", kAfterFirstMove);
     full.record("3c3d", kAfterSecondMove);
 
-    const FullMovePathHistory restored_full =
-        deserialize_full_move_path_history(full.serialize());
+    const FullMovePathHistory restored_full = deserialize_full_move_path_history(full.serialize());
     assert(restored_full.current_position_sfen() == kAfterSecondMove);
     assert((restored_full.moves_usi() == std::vector<std::string>{"7g7f", "3c3d"}));
     assert(restored_full.identity() == full.identity());
@@ -54,9 +49,7 @@ int main() {
     assert((recent.moves_usi() == std::vector<std::string>{"3c3d", "8h2b+"}));
 
     const auto restored_recent = deserialize_path_history(recent.serialize());
-    const auto* typed_recent = dynamic_cast<const LastNMovePathHistory*>(
-        restored_recent.get()
-    );
+    const auto* typed_recent = dynamic_cast<const LastNMovePathHistory*>(restored_recent.get());
     assert(typed_recent != nullptr);
     assert(typed_recent->capacity() == 2);
     assert(typed_recent->current_position_sfen() == kAfterSecondMove);
@@ -70,11 +63,7 @@ int main() {
 
     assert_invalid([&] { full.record("", kAfterFirstMove); });
     assert_invalid([&] { full.record("7g7f", ""); });
-    assert_invalid([&] {
-        (void)deserialize_path_history(full.serialize() + "trailing");
-    });
-    assert_invalid([&] {
-        (void)deserialize_path_history(std::string{"KPH\0", 4});
-    });
+    assert_invalid([&] { (void)deserialize_path_history(full.serialize() + "trailing"); });
+    assert_invalid([&] { (void)deserialize_path_history(std::string{"KPH\0", 4}); });
 }
 
