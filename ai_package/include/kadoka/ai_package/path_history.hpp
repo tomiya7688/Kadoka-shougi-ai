@@ -229,4 +229,3 @@ class LastNMovePathHistory final : public PathHistory {
 [[nodiscard]] std::unique_ptr<PathHistory> deserialize_path_history(std::string_view serialized);
 
 } // namespace kadoka::shogi::ai_package
-
