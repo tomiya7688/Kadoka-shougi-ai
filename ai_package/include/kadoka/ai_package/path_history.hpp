@@ -208,7 +208,7 @@ class LastNMovePathHistory final : public PathHistory {
 
 /*
 {
-  責務: [deserialize_path_history: version付き履歴を対応する具象型へ復元する]
+  責務: [deserialize_full_move_path_history: 保存データから全手履歴を復元する]
   処理: [1: magicとversionを確認する 2: 長さ付き項目を読み形式別に復元する]
   引数: [serialized: 保存済みバイト列]
   戻り値: [復元した履歴]
