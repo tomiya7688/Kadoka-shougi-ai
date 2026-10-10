@@ -14,9 +14,19 @@ inline constexpr std::uint32_t kPureTreeSchemaVersion = 1;
 
 /*
 {
-  責務: [ PureTreeNode: 永続木の局面ノードと探索統計を保持する ]
-  フィールド: [ id: ノード識別子; position_identity: 局面識別子; path_identity: 経路識別子; visits: 訪問回数; wins:
-勝数; losses: 敗数; draws: 引分数; mean_value: 平均評価値 ]
+  責務: [
+    PureTreeNode: 永続木の局面ノードと探索統計を保持する
+  ]
+  フィールド: [
+    id: ノード識別子
+    position_identity: 局面識別子
+    path_identity: 経路識別子
+    visits: 訪問回数
+    wins: 勝数
+    losses: 敗数
+    draws: 引分数
+    mean_value: 平均評価値
+  ]
 }
 */
 struct PureTreeNode {
@@ -32,9 +42,20 @@ struct PureTreeNode {
 
 /*
 {
-  責務: [ PureTreeEdge: 親子ノードを結ぶ着手と探索統計を保持する ]
-  フィールド: [ id: 辺識別子; parent_node_id: 親ノード識別子; child_node_id: 子ノード識別子; move_usi: USI形式の着手;
-visits: 訪問回数; wins: 勝数; losses: 敗数; draws: 引分数; mean_value: 平均評価値 ]
+  責務: [
+    PureTreeEdge: 親子ノードを結ぶ着手と探索統計を保持する
+  ]
+  フィールド: [
+    id: 辺識別子
+    parent_node_id: 親ノード識別子
+    child_node_id: 子ノード識別子
+    move_usi: USI形式の着手
+    visits: 訪問回数
+    wins: 勝数
+    losses: 敗数
+    draws: 引分数
+    mean_value: 平均評価値
+  ]
 }
 */
 struct PureTreeEdge {
@@ -51,9 +72,15 @@ struct PureTreeEdge {
 
 /*
 {
-  責務: [ PureTree: ルート・ノード・辺からなる永続木を保持する ]
-  フィールド: [ root_node_id_: ルートノード識別子; nodes_: ノード一覧; edges_: 辺一覧 ]
-  処理: [ 空木の生成; ノードと辺の追加; ルート設定; 読み取り専用データの提供 ]
+  責務: [
+    PureTree: ルート・ノード・辺からなる永続木を保持する
+  ]
+  フィールド: [
+    root_node_id_: ルートノード識別子 nodes_: ノード一覧 edges_: 辺一覧
+  ]
+  処理: [
+    1: 空木の生成 2: ノードと辺の追加 3: ルート設定 4: 読み取り専用データの提供
+  ]
 }
 */
 class PureTree {
@@ -138,67 +165,123 @@ class PureTree {
 
 /*
 {
-  責務: [ validate_pure_tree: Pure Treeの統計・参照・木構造を検証する ]
-  処理: [ 入出力またはデータ変換を行い、不正データを拒否する ]
-  引数: [ tree: 検証する木 ]
-  戻り値: [ なし ]
+  責務: [
+    validate_pure_tree: Pure Treeの統計・参照・木構造を検証する
+  ]
+  処理: [
+    1: 入出力またはデータ変換を行い、不正データを拒否する
+  ]
+  引数: [
+    tree: 検証する木
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void validate_pure_tree(const PureTree& tree);
 
 /*
 {
-  責務: [ serialize_pure_tree: Pure Treeをバージョン付きテキストへ変換する ]
-  処理: [ 入出力またはデータ変換を行い、不正データを拒否する ]
-  引数: [ tree: 直列化する木 ]
-  戻り値: [ UTF-8テキスト ]
+  責務: [
+    serialize_pure_tree: Pure Treeをバージョン付きテキストへ変換する
+  ]
+  処理: [
+    1: 入出力またはデータ変換を行い、不正データを拒否する
+  ]
+  引数: [
+    tree: 直列化する木
+  ]
+  戻り値: [
+    1: UTF-8テキスト
+  ]
 }
 */
 [[nodiscard]] std::string serialize_pure_tree(const PureTree& tree);
 /*
 {
-  責務: [ deserialize_pure_tree: バージョン付きテキストからPure Treeを復元する ]
-  処理: [ 入出力またはデータ変換を行い、不正データを拒否する ]
-  引数: [ data: 読み込むテキスト ]
-  戻り値: [ 復元した木 ]
+  責務: [
+    deserialize_pure_tree: バージョン付きテキストからPure Treeを復元する
+  ]
+  処理: [
+    1: 入出力またはデータ変換を行い、不正データを拒否する
+  ]
+  引数: [
+    data: 読み込むテキスト
+  ]
+  戻り値: [
+    1: 復元した木
+  ]
 }
 */
 [[nodiscard]] PureTree deserialize_pure_tree(std::string_view data);
 
 /*
 {
-  責務: [ write_pure_tree: Pure Treeを出力ストリームへ書き込む ]
-  処理: [ 入出力またはデータ変換を行い、不正データを拒否する ]
-  引数: [ output: 書き込み先; tree: 書き込む木 ]
-  戻り値: [ なし ]
+  責務: [
+    write_pure_tree: Pure Treeを出力ストリームへ書き込む
+  ]
+  処理: [
+    1: 入出力またはデータ変換を行い、不正データを拒否する
+  ]
+  引数: [
+    output: 書き込み先 tree: 書き込む木
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void write_pure_tree(std::ostream& output, const PureTree& tree);
 /*
 {
-  責務: [ read_pure_tree: 入力ストリームからPure Treeを読む ]
-  処理: [ 入出力またはデータ変換を行い、不正データを拒否する ]
-  引数: [ input: 読み込み元 ]
-  戻り値: [ 復元した木 ]
+  責務: [
+    read_pure_tree: 入力ストリームからPure Treeを読む
+  ]
+  処理: [
+    1: 入出力またはデータ変換を行い、不正データを拒否する
+  ]
+  引数: [
+    input: 読み込み元
+  ]
+  戻り値: [
+    1: 復元した木
+  ]
 }
 */
 [[nodiscard]] PureTree read_pure_tree(std::istream& input);
 
 /*
 {
-  責務: [ save_pure_tree: Pure Treeをファイルへ保存する ]
-  処理: [ 入出力またはデータ変換を行い、不正データを拒否する ]
-  引数: [ path: 保存先; tree: 保存する木 ]
-  戻り値: [ なし ]
+  責務: [
+    save_pure_tree: Pure Treeをファイルへ保存する
+  ]
+  処理: [
+    1: 入出力またはデータ変換を行い、不正データを拒否する
+  ]
+  引数: [
+    path: 保存先 tree: 保存する木
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void save_pure_tree(const std::filesystem::path& path, const PureTree& tree);
 /*
 {
-  責務: [ load_pure_tree: ファイルからPure Treeを読む ]
-  処理: [ 入出力またはデータ変換を行い、不正データを拒否する ]
-  引数: [ path: 読み込み元 ]
-  戻り値: [ 復元した木 ]
+  責務: [
+    load_pure_tree: ファイルからPure Treeを読む
+  ]
+  処理: [
+    1: 入出力またはデータ変換を行い、不正データを拒否する
+  ]
+  引数: [
+    path: 読み込み元
+  ]
+  戻り値: [
+    1: 復元した木
+  ]
 }
 */
 [[nodiscard]] PureTree load_pure_tree(const std::filesystem::path& path);
