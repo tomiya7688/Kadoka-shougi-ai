@@ -94,6 +94,17 @@ target_link_libraries(kadoka_shogi_training_parser
         kadoka_shogi_runtime
 )
 
+add_library(kadoka_shogi_best_manifest
+    tools/kadoka_best/src/manifest.cpp
+)
+
+add_dependencies(kadoka_shogi_best_manifest kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_best_manifest
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/kadoka_best/include
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -123,6 +134,10 @@ install(
 )
 
 enable_testing()
+
+add_executable(kadoka_best_manifest_test tests/kadoka_best_manifest_test.cpp)
+target_link_libraries(kadoka_best_manifest_test PRIVATE kadoka_shogi_best_manifest)
+add_test(NAME kadoka_best_manifest_test COMMAND kadoka_best_manifest_test)
 
 add_executable(core_smoke_test tests/core_smoke_test.cpp)
 target_link_libraries(core_smoke_test PRIVATE kadoka_shogi_core)
