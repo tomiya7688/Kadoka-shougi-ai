@@ -1,5 +1,7 @@
 # AI Model Metadata
 
+Japanese canonical specification: [AIモデルメタデータ](AI%E3%83%A2%E3%83%87%E3%83%AB%E3%83%A1%E3%82%BF%E3%83%87%E3%83%BC%E3%82%BF.md).
+
 Kadoka Shougi AI adopts the sibling-project metadata format `kadoka.ai_metadata.v1` shared with Kadoka Othello AI and Kadoka Tetris AI.
 
 This is a cross-project **metadata** contract, not the shogi runtime model binary format. Shogi-specific search, evaluation, NN, opening-book, or training assets remain free to use formats appropriate for shogi.
@@ -85,3 +87,14 @@ Recommended provenance:
 6. Character licensing must remain distinguishable from technical model/code licensing.
 
 See `models/examples/family_metadata.json` for a validated example.
+
+
+## Sibling project implementation map
+
+| Project | Specification | Example and validator | Game-specific package relation |
+| --- | --- | --- | --- |
+| Shougi | `doc/specifications/AIモデルメタデータ.md` | `models/examples/family_metadata.json`; `tools/family_metadata/script/validate_metadata.py` | Metadata is separate from runtime/package manifests. |
+| Othello | `doc/family-model-metadata.md` | Package `metadata.json` files; `tools/family_metadata/script/validate_metadata.py` | Package `manifest.json` refers to metadata; model binaries remain game-specific. |
+| Tetris | `docs/AIモデルメタデータ.md` | `models/examples/family_metadata.json`; `tools/family_metadata/script/validate_metadata.py` | Metadata remains independent of Python settings and future C++ runtime formats. |
+
+The three validators use the same format identifier, required identity fields, and supported game values. Othello additionally checks benchmark numbers for finite values. Each game keeps its own runtime/package manifest and model format; this metadata contract does not replace them.
