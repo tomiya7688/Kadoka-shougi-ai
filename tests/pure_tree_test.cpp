@@ -3,6 +3,7 @@
 #include <cassert>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -16,6 +17,16 @@ template <typename Action> void expect_invalid(Action&& action) {
     try {
         action();
     } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    assert(rejected);
+}
+
+template <typename Action> void expect_runtime_error(Action&& action) {
+    bool rejected = false;
+    try {
+        action();
+    } catch (const std::runtime_error&) {
         rejected = true;
     }
     assert(rejected);
@@ -149,17 +160,38 @@ int main() {
     validate_pure_tree(nul_identity);
     assert_same_tree(nul_identity, deserialize_pure_tree(serialize_pure_tree(nul_identity)));
 
-    // 親IDと着手の複合キーも、NULを含む別ペアを混同しない。
+    // USI形式の着手でも、NULを含む親ノードIDを保持できる。
     PureTree nul_parent_move = PureTree::empty();
     nul_parent_move.add_node(PureTreeNode{std::string("p\0q", 3), "position-0", "root-path"});
     nul_parent_move.add_node(PureTreeNode{"p", "position-1", "parent-2"});
     nul_parent_move.add_node(PureTreeNode{"child-1", "position-2", "path-2"});
     nul_parent_move.add_node(PureTreeNode{"child-2", "position-3", "path-3"});
     nul_parent_move.set_root(std::string("p\0q", 3));
-    nul_parent_move.add_edge(PureTreeEdge{"root-parent", std::string("p\0q", 3), "p", "from-root"});
-    nul_parent_move.add_edge(PureTreeEdge{"edge-1", std::string("p\0q", 3), "child-1", "x"});
-    nul_parent_move.add_edge(PureTreeEdge{"edge-2", "p", "child-2", std::string("q\0x", 3)});
+    nul_parent_move.add_edge(PureTreeEdge{"root-parent", std::string("p\0q", 3), "p", "7g7f"});
+    nul_parent_move.add_edge(PureTreeEdge{"edge-1", std::string("p\0q", 3), "child-1", "2g2f"});
+    nul_parent_move.add_edge(PureTreeEdge{"edge-2", "p", "child-2", "3c3d"});
     validate_pure_tree(nul_parent_move);
+
+    PureTree valid_special_moves = PureTree::empty();
+    valid_special_moves.add_node(PureTreeNode{"move-root", "move-position-0", "move-path-0"});
+    valid_special_moves.add_node(PureTreeNode{"move-child-1", "move-position-1", "move-path-1"});
+    valid_special_moves.add_node(PureTreeNode{"move-child-2", "move-position-2", "move-path-2"});
+    valid_special_moves.set_root("move-root");
+    valid_special_moves.add_edge(PureTreeEdge{"drop", "move-root", "move-child-1", "P*5e"});
+    valid_special_moves.add_edge(PureTreeEdge{"promote", "move-root", "move-child-2", "7g7f+"});
+    validate_pure_tree(valid_special_moves);
+
+    PureTree invalid_move = PureTree::empty();
+    invalid_move.add_node(PureTreeNode{"move-root", "invalid-position-0", "invalid-path-0"});
+    invalid_move.add_node(PureTreeNode{"move-child", "invalid-position-1", "invalid-path-1"});
+    invalid_move.set_root("move-root");
+    expect_invalid([&] { invalid_move.add_edge(PureTreeEdge{"bad-move", "move-root", "move-child", "not-a-move"}); });
+
+#if !defined(_WIN32)
+    if (std::filesystem::exists("/dev/full")) {
+        expect_runtime_error([&] { save_pure_tree(std::filesystem::path{"/dev/full"}, empty); });
+    }
+#endif
 
     PureTree invalid_mean = PureTree::empty();
     expect_invalid([&] { invalid_mean.add_node(PureTreeNode{"bad", "position", "path", 0, 0, 0, 0, 1.1}); });
