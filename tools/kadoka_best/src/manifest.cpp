@@ -219,9 +219,12 @@ private:
     // }
     JsonValue::Object parse_object() {
         require('{');
+        if (depth_ >= 128) fail("JSON nesting exceeds limit");
+        ++depth_;
         skip_space();
         JsonValue::Object result;
         if (consume('}')) {
+            --depth_;
             return result;
         }
         while (true) {
@@ -238,6 +241,7 @@ private:
             }
             skip_space();
             if (consume('}')) {
+                --depth_;
                 return result;
             }
             require(',');
@@ -250,9 +254,12 @@ private:
     // }
     JsonValue::Array parse_array() {
         require('[');
+        if (depth_ >= 128) fail("JSON nesting exceeds limit");
+        ++depth_;
         skip_space();
         JsonValue::Array result;
         if (consume(']')) {
+            --depth_;
             return result;
         }
         while (true) {
@@ -260,6 +267,7 @@ private:
             result.push_back(parse_value());
             skip_space();
             if (consume(']')) {
+                --depth_;
                 return result;
             }
             require(',');
@@ -334,6 +342,7 @@ private:
 
     std::string_view input_;
     std::size_t position_ = 0;
+    std::size_t depth_ = 0;
 };
 
 // {
@@ -647,7 +656,9 @@ std::vector<std::string> validate_manifest(const KadokaBestManifest& manifest) {
         errors.emplace_back("checkpoint id and version must not be empty");
     }
     if (manifest.checkpoint && !manifest.model) errors.emplace_back("checkpoint requires a model reference");
-    if (manifest.layer == LayerType::raw && !manifest.model) errors.emplace_back("raw layer requires a model reference");
+    if (manifest.layer == LayerType::raw && !manifest.model) {
+        errors.emplace_back("raw layer requires a model reference");
+    }
     if (manifest.layer == LayerType::integrated && !manifest.model && manifest.components.empty()) {
         errors.emplace_back("integrated layer requires a model or component reference");
     }
