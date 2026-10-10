@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 namespace kadoka::shogi::tree {
@@ -72,6 +73,10 @@ struct PureTreeEdge {
     root_node_id_: ルート識別子
     nodes_: ノード一覧
     edges_: 辺一覧
+    node_ids_: ノードIDの重複確認用索引
+    position_path_keys_: 局面・経路ペアの重複確認用索引
+    edge_ids_: 辺IDの重複確認用索引
+    parent_move_keys_: 親ノード・着手ペアの重複確認用索引
   ]
   処理: [
     1: 空木、ノード、辺、ルートを管理する
@@ -210,6 +215,10 @@ class PureTree {
     std::optional<std::string> root_node_id_{};
     std::vector<PureTreeNode> nodes_{};
     std::vector<PureTreeEdge> edges_{};
+    std::unordered_set<std::string> node_ids_{};
+    std::unordered_set<std::string> position_path_keys_{};
+    std::unordered_set<std::string> edge_ids_{};
+    std::unordered_set<std::string> parent_move_keys_{};
 };
 
 /*
