@@ -151,8 +151,8 @@ int main() {
 
     // 親IDと着手の複合キーも、NULを含む別ペアを混同しない。
     PureTree nul_parent_move = PureTree::empty();
-    nul_parent_move.add_node(PureTreeNode{"root", "position-0", std::string("p\0q", 3)});
-    nul_parent_move.add_node(PureTreeNode{"parent-2", "position-1", "p"});
+    nul_parent_move.add_node(PureTreeNode{std::string("p\0q", 3), "position-0", "root-path"});
+    nul_parent_move.add_node(PureTreeNode{"p", "position-1", "parent-2"});
     nul_parent_move.add_node(PureTreeNode{"child-1", "position-2", "path-2"});
     nul_parent_move.add_node(PureTreeNode{"child-2", "position-3", "path-3"});
     nul_parent_move.set_root(std::string("p\0q", 3));
