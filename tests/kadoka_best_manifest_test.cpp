@@ -10,7 +10,8 @@ namespace {
 //   引数: [condition: 成立を期待する条件] [message: 失敗理由]
 // }
 void expect(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
+    if (!condition)
+        throw std::runtime_error(message);
 }
 
 // {
@@ -34,10 +35,8 @@ kadoka::best::KadokaBestManifest raw_manifest() {
 kadoka::best::KadokaBestManifest integrated_manifest() {
     kadoka::best::KadokaBestManifest manifest = raw_manifest();
     manifest.layer = kadoka::best::LayerType::integrated;
-    manifest.components = {
-        {kadoka::best::ComponentRole::evaluation, "kadoka.eval", "1.2.0"},
-        {kadoka::best::ComponentRole::search, "kadoka.search", "3.0.1"}
-    };
+    manifest.components = {{kadoka::best::ComponentRole::evaluation, "kadoka.eval", "1.2.0"},
+                           {kadoka::best::ComponentRole::search, "kadoka.search", "3.0.1"}};
     return manifest;
 }
 
@@ -49,18 +48,16 @@ kadoka::best::KadokaBestManifest full_manifest() {
     kadoka::best::KadokaBestManifest manifest;
     manifest.layer = kadoka::best::LayerType::full;
     manifest.package_version = "1.0.0";
-    manifest.components = {
-        {kadoka::best::ComponentRole::orchestrator, "kadoka.orchestrator", "1.0.0"},
-        {kadoka::best::ComponentRole::search, "kadoka.search", "3.0.1"},
-        {kadoka::best::ComponentRole::evaluation, "kadoka.eval", "1.2.0"}
-    };
+    manifest.components = {{kadoka::best::ComponentRole::orchestrator, "kadoka.orchestrator", "1.0.0"},
+                           {kadoka::best::ComponentRole::search, "kadoka.search", "3.0.1"},
+                           {kadoka::best::ComponentRole::evaluation, "kadoka.eval", "1.2.0"}};
     manifest.source_layer = kadoka::best::LayerType::raw;
     manifest.target_layer = kadoka::best::LayerType::integrated;
     kadoka::best::refresh_config_hash(manifest);
     return manifest;
 }
 
-}  // namespace
+} // namespace
 
 // {
 //   責務: [main: 3層、参照検証、config hash、JSON round-tripを確認する]
@@ -90,25 +87,16 @@ int main() {
 
     auto escaped = raw;
     escaped.model->id = "kadoka.quoted\"raw\nmodel";
-    const auto escaped_copy = kadoka::best::deserialize_manifest(
-        kadoka::best::serialize_manifest(escaped)
-    );
+    const auto escaped_copy = kadoka::best::deserialize_manifest(kadoka::best::serialize_manifest(escaped));
     expect(escaped_copy.model->id == escaped.model->id, "JSON string escapes should round-trip");
 
-    expect(
-        kadoka::best::compute_config_hash({}) ==
-            "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-        "empty config should match the SHA-256 golden value"
-    );
-    expect(
-        raw.config_hash == kadoka::best::compute_config_hash(raw.config),
-        "config hash should be reproducible"
-    );
-    expect(
-        kadoka::best::compute_config_hash({{"b", "2"}, {"a", "1"}}) ==
-            kadoka::best::compute_config_hash({{"a", "1"}, {"b", "2"}}),
-        "config hash should ignore insertion order"
-    );
+    expect(kadoka::best::compute_config_hash({}) ==
+               "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+           "empty config should match the SHA-256 golden value");
+    expect(raw.config_hash == kadoka::best::compute_config_hash(raw.config), "config hash should be reproducible");
+    expect(kadoka::best::compute_config_hash({{"b", "2"}, {"a", "1"}}) ==
+               kadoka::best::compute_config_hash({{"a", "1"}, {"b", "2"}}),
+           "config hash should ignore insertion order");
 
     auto missing_component_version = integrated;
     missing_component_version.components.front().version.clear();
@@ -121,30 +109,21 @@ int main() {
            "raw manifest without model reference should be rejected");
 
     auto missing_orchestrator = full;
-    missing_orchestrator.components.erase(
-        missing_orchestrator.components.begin(),
-        missing_orchestrator.components.begin() + 1
-    );
+    missing_orchestrator.components.erase(missing_orchestrator.components.begin(),
+                                          missing_orchestrator.components.begin() + 1);
     expect(!kadoka::best::validate_manifest(missing_orchestrator).empty(),
            "full manifest without orchestrator should be rejected");
 
-    expect(
-        kadoka::best::component_role_name(ComponentRole::orchestrator) == "orchestrator",
-        "component role should serialize to its canonical name"
-    );
-    expect(
-        kadoka::best::layer_type_name(LayerType::integrated) == "integrated",
-        "layer should serialize to its canonical name"
-    );
+    expect(kadoka::best::component_role_name(ComponentRole::orchestrator) == "orchestrator",
+           "component role should serialize to its canonical name");
+    expect(kadoka::best::layer_type_name(LayerType::integrated) == "integrated",
+           "layer should serialize to its canonical name");
 
     bool duplicate_rejected = false;
     try {
-        (void)kadoka::best::deserialize_manifest(
-            "{\"format\":\"kadoka.best_manifest.v1\",\"format\":\"duplicate\"}"
-        );
+        (void)kadoka::best::deserialize_manifest("{\"format\":\"kadoka.best_manifest.v1\",\"format\":\"duplicate\"}");
     } catch (const std::runtime_error&) {
         duplicate_rejected = true;
     }
     expect(duplicate_rejected, "duplicate JSON keys should be rejected");
 }
-
