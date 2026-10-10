@@ -339,6 +339,40 @@ std::string identity_key(std::string_view position, std::string_view path) {
     return key;
 }
 
+/*
+{
+  責務: [
+    is_valid_usi_move: USIの通常着手・成り・駒打ち表記を検証する
+  ]
+  処理: [
+    1: 駒打ちは駒種と升目の形式を確認する
+    2: 通常着手は移動元・移動先と任意の成り記号を確認する
+  ]
+  引数: [
+    move: 検証する着手文字列
+  ]
+  戻り値: [
+    1: USI構文なら真
+  ]
+}
+*/
+bool is_valid_usi_move(std::string_view move) {
+    const auto valid_square = [](char file, char rank) {
+        return file >= '1' && file <= '9' && rank >= 'a' && rank <= 'i';
+    };
+    if (move.size() == 4 && move[1] == '*') {
+        constexpr std::string_view kDroppablePieces = "PLNSGBR";
+        return kDroppablePieces.find(move[0]) != std::string_view::npos && valid_square(move[2], move[3]);
+    }
+    if (move.size() != 4 && move.size() != 5) {
+        return false;
+    }
+    if (move.size() == 5 && move[4] != '+') {
+        return false;
+    }
+    return valid_square(move[0], move[1]) && valid_square(move[2], move[3]);
+}
+
 } // namespace
 
 /*
@@ -382,16 +416,34 @@ void PureTree::add_node(PureTreeNode node) {
     validate_identity(node.position_identity, "position identity");
     validate_identity(node.path_identity, "path identity");
     validate_stats(node.visits, node.wins, node.losses, node.draws, node.mean_value);
-    if (std::any_of(nodes_.begin(), nodes_.end(), [&node](const auto& existing) { return existing.id == node.id; })) {
+
+    const std::string identity = identity_key(node.position_identity, node.path_identity);
+    if (node_ids_.contains(node.id)) {
         throw std::invalid_argument("duplicate node id");
     }
-    const std::string key = identity_key(node.position_identity, node.path_identity);
-    if (std::any_of(nodes_.begin(), nodes_.end(), [&key](const auto& existing) {
-            return identity_key(existing.position_identity, existing.path_identity) == key;
-        })) {
+    if (position_path_keys_.contains(identity)) {
         throw std::invalid_argument("duplicate position/path identity");
     }
-    nodes_.push_back(std::move(node));
+
+    const auto [node_id, inserted_id] = node_ids_.insert(node.id);
+    if (!inserted_id) {
+        throw std::invalid_argument("duplicate node id");
+    }
+    try {
+        const auto [identity_key_it, inserted_identity] = position_path_keys_.insert(identity);
+        if (!inserted_identity) {
+            throw std::invalid_argument("duplicate position/path identity");
+        }
+        try {
+            nodes_.push_back(std::move(node));
+        } catch (...) {
+            position_path_keys_.erase(identity_key_it);
+            throw;
+        }
+    } catch (...) {
+        node_ids_.erase(node_id);
+        throw;
+    }
 }
 
 /*
@@ -442,24 +494,42 @@ void PureTree::add_edge(PureTreeEdge edge) {
     validate_identity(edge.child_node_id, "edge child node id");
     validate_identity(edge.move_usi, "edge move");
     validate_stats(edge.visits, edge.wins, edge.losses, edge.draws, edge.mean_value);
+    if (!is_valid_usi_move(edge.move_usi)) {
+        throw std::invalid_argument("edge move is not valid USI syntax");
+    }
     if (edge.parent_node_id == edge.child_node_id) {
         throw std::invalid_argument("edge must connect different nodes");
     }
-    const auto contains_node = [this](std::string_view id) {
-        return std::any_of(nodes_.begin(), nodes_.end(), [id](const auto& node) { return node.id == id; });
-    };
-    if (!contains_node(edge.parent_node_id) || !contains_node(edge.child_node_id)) {
+    if (!node_ids_.contains(edge.parent_node_id) || !node_ids_.contains(edge.child_node_id)) {
         throw std::invalid_argument("edge references an unknown node");
     }
-    if (std::any_of(edges_.begin(), edges_.end(), [&edge](const auto& existing) { return existing.id == edge.id; })) {
+    if (edge_ids_.contains(edge.id)) {
         throw std::invalid_argument("duplicate edge id");
     }
-    if (std::any_of(edges_.begin(), edges_.end(), [&edge](const auto& existing) {
-            return existing.parent_node_id == edge.parent_node_id && existing.move_usi == edge.move_usi;
-        })) {
+    const std::string parent_move_key = identity_key(edge.parent_node_id, edge.move_usi);
+    if (parent_move_keys_.contains(parent_move_key)) {
         throw std::invalid_argument("duplicate move from parent node");
     }
-    edges_.push_back(std::move(edge));
+
+    const auto [edge_id, inserted_id] = edge_ids_.insert(edge.id);
+    if (!inserted_id) {
+        throw std::invalid_argument("duplicate edge id");
+    }
+    try {
+        const auto [parent_move, inserted_move] = parent_move_keys_.insert(parent_move_key);
+        if (!inserted_move) {
+            throw std::invalid_argument("duplicate move from parent node");
+        }
+        try {
+            edges_.push_back(std::move(edge));
+        } catch (...) {
+            parent_move_keys_.erase(parent_move);
+            throw;
+        }
+    } catch (...) {
+        edge_ids_.erase(edge_id);
+        throw;
+    }
 }
 
 /*
@@ -772,6 +842,7 @@ PureTree read_pure_tree(std::istream& input) {
   処理: [
     1: 出力ファイルを切り詰めモードで開く
     2: 木を直列化して保存する
+    3: flushとcloseの結果を検査する
   ]
   引数: [
     path: 保存先 tree: 保存する木
@@ -785,6 +856,14 @@ void save_pure_tree(const std::filesystem::path& path, const PureTree& tree) {
     if (!output)
         throw std::runtime_error("failed to open Pure Tree output file");
     write_pure_tree(output, tree);
+    output.flush();
+    if (!output) {
+        throw std::runtime_error("failed to flush Pure Tree output file");
+    }
+    output.close();
+    if (output.fail()) {
+        throw std::runtime_error("failed to close Pure Tree output file");
+    }
 }
 
 /*
