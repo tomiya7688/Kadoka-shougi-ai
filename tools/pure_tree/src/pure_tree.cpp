@@ -23,10 +23,18 @@ constexpr std::string_view kHeader = "KADOKA_PURE_TREE";
 
 /*
 {
-  責務: [ validate_identity: 必須識別子が空でないことを確認する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ value: 検証する文字列; field: 項目名 ]
-  戻り値: [ なし ]
+  責務: [
+    validate_identity: 必須識別子が空でないことを確認する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    value: 検証する文字列 field: 項目名
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void validate_identity(std::string_view value, std::string_view field) {
@@ -37,10 +45,18 @@ void validate_identity(std::string_view value, std::string_view field) {
 
 /*
 {
-  責務: [ validate_stats: 探索統計の整合性と平均値の範囲を検証する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ visits: 訪問回数; wins: 勝数; losses: 敗数; draws: 引分数; mean_value: 平均評価値 ]
-  戻り値: [ なし ]
+  責務: [
+    validate_stats: 探索統計の整合性と平均値の範囲を検証する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    visits: 訪問回数 wins: 勝数 losses: 敗数 draws: 引分数 mean_value: 平均評価値
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void validate_stats(std::uint64_t visits, std::uint64_t wins, std::uint64_t losses, std::uint64_t draws,
@@ -55,10 +71,18 @@ void validate_stats(std::uint64_t visits, std::uint64_t wins, std::uint64_t loss
 
 /*
 {
-  責務: [ escape_field: 制御文字を保存可能なエスケープ表現に変換する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ value: 変換する文字列 ]
-  戻り値: [ エスケープ済み文字列 ]
+  責務: [
+    escape_field: 制御文字を保存可能なエスケープ表現に変換する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    value: 変換する文字列
+  ]
+  戻り値: [
+    1: エスケープ済み文字列
+  ]
 }
 */
 std::string escape_field(std::string_view value) {
@@ -93,10 +117,18 @@ std::string escape_field(std::string_view value) {
 
 /*
 {
-  責務: [ hex_value: 16進数一桁を数値へ変換する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ ch: 変換する文字 ]
-  戻り値: [ 数値。対象外なら負数 ]
+  責務: [
+    hex_value: 16進数一桁を数値へ変換する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    ch: 変換する文字
+  ]
+  戻り値: [
+    1: 数値。対象外なら負数
+  ]
 }
 */
 int hex_value(char ch) {
@@ -111,10 +143,18 @@ int hex_value(char ch) {
 
 /*
 {
-  責務: [ unescape_field: エスケープ表現から元の文字列を復元する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ value: 復元する文字列 ]
-  戻り値: [ 復元した文字列 ]
+  責務: [
+    unescape_field: エスケープ表現から元の文字列を復元する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    value: 復元する文字列
+  ]
+  戻り値: [
+    1: 復元した文字列
+  ]
 }
 */
 std::string unescape_field(std::string_view value) {
@@ -163,10 +203,18 @@ std::string unescape_field(std::string_view value) {
 
 /*
 {
-  責務: [ split_fields: タブ区切り行をフィールドへ分割する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ line: 分割する行 ]
-  戻り値: [ フィールド一覧 ]
+  責務: [
+    split_fields: タブ区切り行をフィールドへ分割する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    line: 分割する行
+  ]
+  戻り値: [
+    1: フィールド一覧
+  ]
 }
 */
 std::vector<std::string_view> split_fields(std::string_view line) {
@@ -186,10 +234,18 @@ std::vector<std::string_view> split_fields(std::string_view line) {
 template <typename Integer>
 /*
 {
-  責務: [ parse_integer: 整数フィールド全体を解析する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ value: 解析する文字列; field: 項目名 ]
-  戻り値: [ 解析した整数 ]
+  責務: [
+    parse_integer: 整数フィールド全体を解析する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    value: 解析する文字列 field: 項目名
+  ]
+  戻り値: [
+    1: 解析した整数
+  ]
 }
 */
 Integer parse_integer(std::string_view value, std::string_view field) {
@@ -203,10 +259,18 @@ Integer parse_integer(std::string_view value, std::string_view field) {
 
 /*
 {
-  責務: [ parse_double: 平均評価値を解析する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ value: 解析する文字列 ]
-  戻り値: [ 解析した値 ]
+  責務: [
+    parse_double: 平均評価値を解析する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    value: 解析する文字列
+  ]
+  戻り値: [
+    1: 解析した値
+  ]
 }
 */
 double parse_double(std::string_view value) {
@@ -221,10 +285,18 @@ double parse_double(std::string_view value) {
 
 /*
 {
-  責務: [ format_double: 平均評価値を往復可能な精度で整形する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ value: 整形する値 ]
-  戻り値: [ 数値文字列 ]
+  責務: [
+    format_double: 平均評価値を往復可能な精度で整形する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    value: 整形する値
+  ]
+  戻り値: [
+    1: 数値文字列
+  ]
 }
 */
 std::string format_double(double value) {
@@ -239,10 +311,18 @@ std::string format_double(double value) {
 
 /*
 {
-  責務: [ identity_key: 2つの文字列を衝突しない複合キーへ符号化する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ position: 局面または親識別子; path: 経路または着手 ]
-  戻り値: [ 長さ接頭辞付きキー ]
+  責務: [
+    identity_key: 2つの文字列を衝突しない複合キーへ符号化する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    position: 局面または親識別子 path: 経路または着手
+  ]
+  戻り値: [
+    1: 長さ接頭辞付きキー
+  ]
 }
 */
 std::string identity_key(std::string_view position, std::string_view path) {
@@ -261,10 +341,18 @@ std::string identity_key(std::string_view position, std::string_view path) {
 
 /*
 {
-  責務: [ PureTree::empty: 空のPure Treeを生成する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ 入力はない ]
-  戻り値: [ 空の木 ]
+  責務: [
+    PureTree::empty: 空のPure Treeを生成する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+
+  ]
+  戻り値: [
+    1: 空の木
+  ]
 }
 */
 PureTree PureTree::empty() {
@@ -273,10 +361,18 @@ PureTree PureTree::empty() {
 
 /*
 {
-  責務: [ PureTree::add_node: 検証済みノードを木へ追加する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ node: 追加するノード ]
-  戻り値: [ なし ]
+  責務: [
+    PureTree::add_node: 検証済みノードを木へ追加する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    node: 追加するノード
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void PureTree::add_node(PureTreeNode node) {
@@ -298,10 +394,18 @@ void PureTree::add_node(PureTreeNode node) {
 
 /*
 {
-  責務: [ PureTree::set_root: 既存ノードを木のルートに設定する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ node_id: ルート識別子 ]
-  戻り値: [ なし ]
+  責務: [
+    PureTree::set_root: 既存ノードを木のルートに設定する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    node_id: ルート識別子
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void PureTree::set_root(std::string_view node_id) {
@@ -315,10 +419,18 @@ void PureTree::set_root(std::string_view node_id) {
 
 /*
 {
-  責務: [ PureTree::add_edge: 検証済み辺を木へ追加する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ edge: 追加する辺 ]
-  戻り値: [ なし ]
+  責務: [
+    PureTree::add_edge: 検証済み辺を木へ追加する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    edge: 追加する辺
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void PureTree::add_edge(PureTreeEdge edge) {
@@ -349,10 +461,18 @@ void PureTree::add_edge(PureTreeEdge edge) {
 
 /*
 {
-  責務: [ validate_pure_tree: ノード・辺・統計・到達可能性を検証する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ tree: 検証する木 ]
-  戻り値: [ なし ]
+  責務: [
+    validate_pure_tree: ノード・辺・統計・到達可能性を検証する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    tree: 検証する木
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void validate_pure_tree(const PureTree& tree) {
@@ -452,10 +572,18 @@ void validate_pure_tree(const PureTree& tree) {
 
 /*
 {
-  責務: [ serialize_pure_tree: 木をバージョン付きテキストへ変換する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ tree: 直列化する木 ]
-  戻り値: [ 直列化テキスト ]
+  責務: [
+    serialize_pure_tree: 木をバージョン付きテキストへ変換する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    tree: 直列化する木
+  ]
+  戻り値: [
+    1: 直列化テキスト
+  ]
 }
 */
 std::string serialize_pure_tree(const PureTree& tree) {
@@ -485,10 +613,18 @@ std::string serialize_pure_tree(const PureTree& tree) {
 
 /*
 {
-  責務: [ deserialize_pure_tree: テキストを解析し木を復元する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ data: 入力テキスト ]
-  戻り値: [ 復元した木 ]
+  責務: [
+    deserialize_pure_tree: テキストを解析し木を復元する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    data: 入力テキスト
+  ]
+  戻り値: [
+    1: 復元した木
+  ]
 }
 */
 PureTree deserialize_pure_tree(std::string_view data) {
@@ -576,10 +712,18 @@ PureTree deserialize_pure_tree(std::string_view data) {
 
 /*
 {
-  責務: [ write_pure_tree: テキストを出力ストリームへ書き出す ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ output: 書き込み先; tree: 出力する木 ]
-  戻り値: [ なし ]
+  責務: [
+    write_pure_tree: テキストを出力ストリームへ書き出す
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    output: 書き込み先 tree: 出力する木
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void write_pure_tree(std::ostream& output, const PureTree& tree) {
@@ -591,10 +735,18 @@ void write_pure_tree(std::ostream& output, const PureTree& tree) {
 
 /*
 {
-  責務: [ read_pure_tree: 入力ストリームから木を復元する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ input: 読み込み元 ]
-  戻り値: [ 復元した木 ]
+  責務: [
+    read_pure_tree: 入力ストリームから木を復元する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    input: 読み込み元
+  ]
+  戻り値: [
+    1: 復元した木
+  ]
 }
 */
 PureTree read_pure_tree(std::istream& input) {
@@ -606,10 +758,18 @@ PureTree read_pure_tree(std::istream& input) {
 
 /*
 {
-  責務: [ save_pure_tree: 木をファイルへ保存する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ path: 保存先; tree: 保存する木 ]
-  戻り値: [ なし ]
+  責務: [
+    save_pure_tree: 木をファイルへ保存する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    path: 保存先 tree: 保存する木
+  ]
+  戻り値: [
+
+  ]
 }
 */
 void save_pure_tree(const std::filesystem::path& path, const PureTree& tree) {
@@ -621,10 +781,18 @@ void save_pure_tree(const std::filesystem::path& path, const PureTree& tree) {
 
 /*
 {
-  責務: [ load_pure_tree: ファイルから木を復元する ]
-  処理: [ 入力を検証し、要求された変換または更新を行う ]
-  引数: [ path: 読み込み元 ]
-  戻り値: [ 復元した木 ]
+  責務: [
+    load_pure_tree: ファイルから木を復元する
+  ]
+  処理: [
+    1: 入力を検証し、要求された変換または更新を行う
+  ]
+  引数: [
+    path: 読み込み元
+  ]
+  戻り値: [
+    1: 復元した木
+  ]
 }
 */
 PureTree load_pure_tree(const std::filesystem::path& path) {
