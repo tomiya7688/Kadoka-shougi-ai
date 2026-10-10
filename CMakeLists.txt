@@ -200,6 +200,11 @@ add_test(NAME game_history_test COMMAND game_history_test)
 add_executable(pure_tree_test tests/pure_tree_test.cpp)
 target_link_libraries(pure_tree_test PRIVATE kadoka_shogi_pure_tree)
 add_test(NAME pure_tree_test COMMAND pure_tree_test)
+if(MSVC)
+    target_compile_options(pure_tree_test PRIVATE /UNDEBUG)
+else()
+    target_compile_options(pure_tree_test PRIVATE -UNDEBUG)
+endif()
 
 add_executable(training_parser_test tests/training_parser_test.cpp)
 target_link_libraries(
