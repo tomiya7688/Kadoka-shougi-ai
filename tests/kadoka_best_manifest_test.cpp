@@ -88,6 +88,13 @@ int main() {
     expect(full_copy.source_layer == LayerType::raw, "source layer should round-trip");
     expect(full_copy.target_layer == LayerType::integrated, "target layer should round-trip");
 
+    auto escaped = raw;
+    escaped.model->id = "kadoka.quoted\"raw\nmodel";
+    const auto escaped_copy = kadoka::best::deserialize_manifest(
+        kadoka::best::serialize_manifest(escaped)
+    );
+    expect(escaped_copy.model->id == escaped.model->id, "JSON string escapes should round-trip");
+
     expect(
         kadoka::best::compute_config_hash({}) ==
             "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
