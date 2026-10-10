@@ -37,6 +37,15 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: git diff --name-only "$BASE_SHA...$GITHUB_SHA" -- '*.cpp' '*.hpp' '*.h' | xargs --no-run-if-empty clang-format --dry-run --Werror
 
+      - name: Emit formatted C++ files for repair
+        if: always()
+        run: |
+          for path in tools/kadoka_best/include/kadoka/best/manifest.hpp tools/kadoka_best/src/manifest.cpp tests/kadoka_best_manifest_test.cpp; do
+            echo "===FORMAT_START:${path}==="
+            clang-format "${path}"
+            echo "===FORMAT_END:${path}==="
+          done
+
       - name: Validate family model metadata
         run: python tools/family_metadata/script/validate_metadata.py --game shogi models/examples/family_metadata.json
 
