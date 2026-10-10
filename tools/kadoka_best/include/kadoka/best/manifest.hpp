@@ -11,22 +11,12 @@ namespace kadoka::best {
 // {
 //   責務: [LayerType: Kadoka BestのRaw / Integrated / Full層を識別する]
 // }
-enum class LayerType {
-    raw,
-    integrated,
-    full
-};
+enum class LayerType { raw, integrated, full };
 
 // {
 //   責務: [ComponentRole: manifestが参照するAI構成要素の役割を識別する]
 // }
-enum class ComponentRole {
-    evaluation,
-    search,
-    opening,
-    endgame,
-    orchestrator
-};
+enum class ComponentRole { evaluation, search, opening, endgame, orchestrator };
 
 // {
 //   責務: [ArtifactReference: modelまたはcheckpointのIDとversionを保持する]
@@ -80,9 +70,7 @@ struct KadokaBestManifest {
 //   引数: [config: hash対象の設定map]
 //   戻り値: [sha256:接頭辞と小文字16進数64桁のhash]
 // }
-[[nodiscard]] std::string compute_config_hash(
-    const std::map<std::string, std::string>& config
-);
+[[nodiscard]] std::string compute_config_hash(const std::map<std::string, std::string>& config);
 
 // {
 //   責務: [refresh_config_hash: manifestの設定からconfig_hashを更新する]
@@ -95,18 +83,14 @@ void refresh_config_hash(KadokaBestManifest& manifest);
 //   引数: [manifest: 検査するmanifest]
 //   戻り値: [問題がなければ空、それ以外は人間向けエラー一覧]
 // }
-[[nodiscard]] std::vector<std::string> validate_manifest(
-    const KadokaBestManifest& manifest
-);
+[[nodiscard]] std::vector<std::string> validate_manifest(const KadokaBestManifest& manifest);
 
 // {
 //   責務: [serialize_manifest: 検証済みmanifestを安定順序のJSONへ変換する]
 //   引数: [manifest: JSON化するmanifest]
 //   戻り値: [manifest JSON]
 // }
-[[nodiscard]] std::string serialize_manifest(
-    const KadokaBestManifest& manifest
-);
+[[nodiscard]] std::string serialize_manifest(const KadokaBestManifest& manifest);
 
 // {
 //   責務: [deserialize_manifest: JSONからmanifestを復元し構造と参照を検証する]
@@ -115,5 +99,4 @@ void refresh_config_hash(KadokaBestManifest& manifest);
 // }
 [[nodiscard]] KadokaBestManifest deserialize_manifest(std::string_view json);
 
-}  // namespace kadoka::best
-
+} // namespace kadoka::best
