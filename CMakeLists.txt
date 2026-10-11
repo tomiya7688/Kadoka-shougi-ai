@@ -106,6 +106,22 @@ target_include_directories(kadoka_shogi_best_manifest
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/kadoka_best/include
 )
 
+add_library(kadoka_shogi_league_scheduler
+    tools/ai_league/src/match_scheduler.cpp
+)
+
+add_dependencies(kadoka_shogi_league_scheduler kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_league_scheduler
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/ai_league/include
+)
+
+target_link_libraries(kadoka_shogi_league_scheduler
+    PUBLIC
+        kadoka_shogi_best_manifest
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -143,6 +159,10 @@ add_test(NAME kadoka_best_manifest_test COMMAND kadoka_best_manifest_test)
 add_executable(kadoka_participant_registry_test tests/kadoka_participant_registry_test.cpp)
 target_link_libraries(kadoka_participant_registry_test PRIVATE kadoka_shogi_best_manifest)
 add_test(NAME kadoka_participant_registry_test COMMAND kadoka_participant_registry_test)
+
+add_executable(kadoka_match_scheduler_test tests/kadoka_match_scheduler_test.cpp)
+target_link_libraries(kadoka_match_scheduler_test PRIVATE kadoka_shogi_league_scheduler)
+add_test(NAME kadoka_match_scheduler_test COMMAND kadoka_match_scheduler_test)
 
 add_executable(core_smoke_test tests/core_smoke_test.cpp)
 target_link_libraries(core_smoke_test PRIVATE kadoka_shogi_core)
