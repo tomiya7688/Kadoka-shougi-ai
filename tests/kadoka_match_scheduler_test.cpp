@@ -1,5 +1,6 @@
 #include "kadoka/league/match_scheduler.hpp"
 
+#include <algorithm>
 #include <map>
 #include <stdexcept>
 #include <string>
