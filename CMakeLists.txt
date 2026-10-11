@@ -96,6 +96,7 @@ target_link_libraries(kadoka_shogi_training_parser
 
 add_library(kadoka_shogi_best_manifest
     tools/kadoka_best/src/manifest.cpp
+    tools/kadoka_best/src/participant_registry.cpp
 )
 
 add_dependencies(kadoka_shogi_best_manifest kadoka_rule_check)
@@ -138,6 +139,10 @@ enable_testing()
 add_executable(kadoka_best_manifest_test tests/kadoka_best_manifest_test.cpp)
 target_link_libraries(kadoka_best_manifest_test PRIVATE kadoka_shogi_best_manifest)
 add_test(NAME kadoka_best_manifest_test COMMAND kadoka_best_manifest_test)
+
+add_executable(kadoka_participant_registry_test tests/kadoka_participant_registry_test.cpp)
+target_link_libraries(kadoka_participant_registry_test PRIVATE kadoka_shogi_best_manifest)
+add_test(NAME kadoka_participant_registry_test COMMAND kadoka_participant_registry_test)
 
 add_executable(core_smoke_test tests/core_smoke_test.cpp)
 target_link_libraries(core_smoke_test PRIVATE kadoka_shogi_core)
