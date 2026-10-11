@@ -108,4 +108,3 @@ class ParticipantRegistry {
 [[nodiscard]] ParticipantRegistry deserialize_registry(std::string_view serialized);
 
 } // namespace kadoka::best
-
