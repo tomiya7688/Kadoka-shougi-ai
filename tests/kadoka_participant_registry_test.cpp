@@ -99,4 +99,3 @@ int main() {
     }
     expect(malformed_rejected, "malformed participant row should be rejected");
 }
-
