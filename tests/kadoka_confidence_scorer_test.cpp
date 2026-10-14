@@ -80,8 +80,9 @@ int main() {
         expect_invalid(scorer, ConfidenceInputs{.source_rating = 1500.0});
         expect_invalid(scorer, ConfidenceInputs{.candidate_gap_cp = -1.0});
         expect_invalid(scorer, ConfidenceInputs{.policy_entropy = 1.1});
-        expect_invalid(
-            scorer, ConfidenceInputs{.engine_disagreement = std::numeric_limits<double>::quiet_NaN()});
+        ConfidenceInputs non_finite_disagreement;
+        non_finite_disagreement.engine_disagreement = std::numeric_limits<double>::quiet_NaN();
+        expect_invalid(scorer, non_finite_disagreement);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
