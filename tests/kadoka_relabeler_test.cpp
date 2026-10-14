@@ -35,10 +35,10 @@ kadoka::best::ParticipantId make_participant_id(const char digit) {
 //   引数: [name: backend名] [move_usi: 合法な着手] [score: 返す評価値],
 //   戻り値: [backend: 決定論的なテストbackend]
 // }
-kadoka::shogi::runtime::FunctionAIBackend make_backend(std::string name, std::string move_usi, const std::int32_t score) {
+kadoka::shogi::runtime::FunctionAIBackend make_backend(std::string name, std::string move_usi,
+                                                       const std::int32_t score) {
     return {
-        kadoka::shogi::runtime::AIBackendKind::Native,
-        std::move(name),
+        kadoka::shogi::runtime::AIBackendKind::Native, std::move(name),
         [move_usi = std::move(move_usi), score](const kadoka::shogi::Position&, const kadoka::shogi::SearchLimits&) {
             kadoka::shogi::SearchResult result;
             result.best_move = kadoka::shogi::runtime::move_from_usi(move_usi);
@@ -55,7 +55,8 @@ kadoka::shogi::runtime::FunctionAIBackend make_backend(std::string name, std::st
 //   引数: [source: 元サンプル] [evaluators: 評価個体一覧],
 //   戻り値: []
 // }
-void expect_invalid(const kadoka::relabel::RelabelSource& source, const std::vector<kadoka::relabel::RelabelEvaluator>& evaluators) {
+void expect_invalid(const kadoka::relabel::RelabelSource& source,
+                    const std::vector<kadoka::relabel::RelabelEvaluator>& evaluators) {
     try {
         (void)kadoka::relabel::evaluate_relabel_sample(source, evaluators);
     } catch (const std::invalid_argument&) {
@@ -90,8 +91,7 @@ int main() {
         auto first_backend = make_backend("first", "7g7f", 35);
         auto second_backend = make_backend("second", "3c3d", -12);
         runtime::FunctionAIBackend failing_backend(
-            runtime::AIBackendKind::Script,
-            "failing",
+            runtime::AIBackendKind::Script, "failing",
             [](const shogi::Position&, const shogi::SearchLimits&) -> shogi::SearchResult {
                 throw std::runtime_error("evaluation transport failed");
             });
@@ -109,21 +109,18 @@ int main() {
         check(evaluations_completed, "successful backends should complete");
 
         const bool scores_remain_distinct =
-            record.evaluations[0].search_result->score_cp == 35 &&
-            record.evaluations[1].search_result->score_cp == -12;
+            record.evaluations[0].search_result->score_cp == 35 && record.evaluations[1].search_result->score_cp == -12;
         check(scores_remain_distinct, "per-engine scores should remain distinct");
 
-        const bool moves_remain_distinct =
-            runtime::move_to_usi(record.evaluations[0].search_result->best_move) !=
-            runtime::move_to_usi(record.evaluations[1].search_result->best_move);
+        const bool moves_remain_distinct = runtime::move_to_usi(record.evaluations[0].search_result->best_move) !=
+                                           runtime::move_to_usi(record.evaluations[1].search_result->best_move);
         check(moves_remain_distinct, "engine disagreement should remain observable in the appended results");
 
-        const bool source_is_preserved =
-            record.source.sample_id == source.sample_id &&
-            record.source.dataset_revision == source.dataset_revision &&
-            record.source.observed_move_usi == source.observed_move_usi &&
-            record.source.observed_score_cp == source.observed_score_cp &&
-            record.source.position_sfen == source.position_sfen;
+        const bool source_is_preserved = record.source.sample_id == source.sample_id &&
+                                         record.source.dataset_revision == source.dataset_revision &&
+                                         record.source.observed_move_usi == source.observed_move_usi &&
+                                         record.source.observed_score_cp == source.observed_score_cp &&
+                                         record.source.position_sfen == source.position_sfen;
         check(source_is_preserved, "relabel output should preserve the original sample and provenance");
 
         const std::vector<relabel::RelabelEvaluator> with_failure{
@@ -134,16 +131,14 @@ int main() {
         const auto partial = relabel::evaluate_relabel_sample(source, with_failure);
         check(partial.evaluations.size() == 3, "one backend failure should not discard other results");
 
-        const bool failure_is_stored =
-            partial.evaluations[1].status == relabel::RelabelEvaluationStatus::failed &&
-            partial.evaluations[1].error == "evaluation transport failed";
+        const bool failure_is_stored = partial.evaluations[1].status == relabel::RelabelEvaluationStatus::failed &&
+                                       partial.evaluations[1].error == "evaluation transport failed";
         check(failure_is_stored, "backend failure should be retained with evaluator provenance");
         check(partial.evaluations[2].status == relabel::RelabelEvaluationStatus::completed,
               "evaluation should continue after a backend failure");
 
         const std::vector<relabel::RelabelEvaluator> one_evaluator{evaluators[0]};
-        const std::vector<relabel::RelabelEvaluator> duplicate_evaluators{
-            evaluators[0], evaluators[0]};
+        const std::vector<relabel::RelabelEvaluator> duplicate_evaluators{evaluators[0], evaluators[0]};
         expect_invalid(source, one_evaluator);
         expect_invalid(source, duplicate_evaluators);
 
