@@ -105,7 +105,8 @@ struct RelabelRecord {
 //   エラー: [入力の不足・重複・不正局面はstd::invalid_argument等で失敗]
 // }
 //
-[[nodiscard]] RelabelRecord evaluate_relabel_sample(const RelabelSource& source, std::span<const RelabelEvaluator> evaluators,
-                                                     const shogi::SearchLimits& limits = {});
+[[nodiscard]] RelabelRecord evaluate_relabel_sample(const RelabelSource& source,
+                                                    std::span<const RelabelEvaluator> evaluators,
+                                                    const shogi::SearchLimits& limits = {});
 
 } // namespace kadoka::relabel
