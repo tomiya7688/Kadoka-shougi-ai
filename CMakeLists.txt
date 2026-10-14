@@ -122,6 +122,17 @@ target_link_libraries(kadoka_shogi_rating_store
         kadoka_shogi_best_manifest
 )
 
+add_library(kadoka_shogi_confidence_scorer
+    tools/confidence_scorer/src/confidence_scorer.cpp
+)
+
+add_dependencies(kadoka_shogi_confidence_scorer kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_confidence_scorer
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/confidence_scorer/include
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -163,6 +174,10 @@ add_test(NAME kadoka_participant_registry_test COMMAND kadoka_participant_regist
 add_executable(kadoka_rating_store_test tests/kadoka_rating_store_test.cpp)
 target_link_libraries(kadoka_rating_store_test PRIVATE kadoka_shogi_rating_store)
 add_test(NAME kadoka_rating_store_test COMMAND kadoka_rating_store_test)
+
+add_executable(kadoka_confidence_scorer_test tests/kadoka_confidence_scorer_test.cpp)
+target_link_libraries(kadoka_confidence_scorer_test PRIVATE kadoka_shogi_confidence_scorer)
+add_test(NAME kadoka_confidence_scorer_test COMMAND kadoka_confidence_scorer_test)
 
 add_executable(core_smoke_test tests/core_smoke_test.cpp)
 target_link_libraries(core_smoke_test PRIVATE kadoka_shogi_core)
