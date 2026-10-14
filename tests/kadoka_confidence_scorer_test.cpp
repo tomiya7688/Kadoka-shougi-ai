@@ -64,8 +64,8 @@ int main() {
         check(std::abs(result.confidence - 0.74375) < 1e-12, "equal-weight golden confidence changed");
         check(std::abs(result.uncertainty - (1.0 - result.confidence)) < 1e-12,
               "uncertainty should complement confidence");
-        check(result.inputs.source_rating == inputs.source_rating
-                  && result.inputs.candidate_gap_cp == inputs.candidate_gap_cp,
+        check(result.inputs.source_rating == inputs.source_rating &&
+                  result.inputs.candidate_gap_cp == inputs.candidate_gap_cp,
               "result should retain the original input values");
 
         auto changed_rating = inputs;
@@ -80,8 +80,8 @@ int main() {
         expect_invalid(scorer, ConfidenceInputs{.source_rating = 1500.0});
         expect_invalid(scorer, ConfidenceInputs{.candidate_gap_cp = -1.0});
         expect_invalid(scorer, ConfidenceInputs{.policy_entropy = 1.1});
-        expect_invalid(scorer,
-                       ConfidenceInputs{.engine_disagreement = std::numeric_limits<double>::quiet_NaN()});
+        expect_invalid(
+            scorer, ConfidenceInputs{.engine_disagreement = std::numeric_limits<double>::quiet_NaN()});
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
