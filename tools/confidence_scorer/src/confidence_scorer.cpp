@@ -6,19 +6,37 @@
 #include <string>
 #include <string_view>
 
+namespace {
+
+// {
+//   責務: [require_finite_nonnegative: 任意の実数根拠に有限かつ非負の制約を適用する],
+//   処理: [1: 値が提供されていればfiniteと非負を検証する],
+//   引数: [value: 検査対象の値] [name: エラーへ含める入力名],
+//   戻り値: [],
+//   エラー: [値が無効ならstd::invalid_argument]
+// }
+void require_finite_nonnegative(const std::optional<double>& value, const std::string_view name) {
+    if (value && (!std::isfinite(*value) || *value < 0.0))
+        throw std::invalid_argument(std::string(name) + " must be finite and nonnegative");
+}
+
+// {
+//   責務: [require_probability: 任意の正規化根拠を0から1へ制限する],
+//   処理: [1: 値が提供されていれば有限性と範囲を検証する],
+//   引数: [value: 検査対象の値] [name: エラーへ含める入力名],
+//   戻り値: [],
+//   エラー: [値が無効ならstd::invalid_argument]
+// }
+void require_probability(const std::optional<double>& value, const std::string_view name) {
+    if (value && (!std::isfinite(*value) || *value < 0.0 || *value > 1.0))
+        throw std::invalid_argument(std::string(name) + " must be within [0, 1]");
+}
+
+} // namespace
+
 namespace kadoka::confidence {
 
 ConfidenceResult DefaultConfidenceScorer::score(const ConfidenceInputs& inputs) const {
-    const auto require_finite_nonnegative =
-        [](const std::optional<double>& value, const std::string_view name) {
-        if (value && (!std::isfinite(*value) || *value < 0.0))
-            throw std::invalid_argument(std::string(name) + " must be finite and nonnegative");
-    };
-    const auto require_probability = [](const std::optional<double>& value, const std::string_view name) {
-        if (value && (!std::isfinite(*value) || *value < 0.0 || *value > 1.0))
-            throw std::invalid_argument(std::string(name) + " must be within [0, 1]");
-    };
-
     if (inputs.source_rating && !std::isfinite(*inputs.source_rating))
         throw std::invalid_argument("source_rating must be finite");
     require_finite_nonnegative(inputs.source_uncertainty, "source_uncertainty");
