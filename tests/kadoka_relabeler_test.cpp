@@ -90,8 +90,8 @@ int main() {
 
         auto first_backend = make_backend("first", "7g7f", 35);
         auto second_backend = make_backend("second", "3c3d", -12);
-        runtime::FunctionAIBackend failing_backend(
-            runtime::AIBackendKind::Script, "failing",
+        shogi::runtime::FunctionAIBackend failing_backend(
+            shogi::runtime::AIBackendKind::Script, "failing",
             [](const shogi::Position&, const shogi::SearchLimits&) -> shogi::SearchResult {
                 throw std::runtime_error("evaluation transport failed");
             });
@@ -112,8 +112,8 @@ int main() {
             record.evaluations[0].search_result->score_cp == 35 && record.evaluations[1].search_result->score_cp == -12;
         check(scores_remain_distinct, "per-engine scores should remain distinct");
 
-        const bool moves_remain_distinct = runtime::move_to_usi(record.evaluations[0].search_result->best_move) !=
-                                           runtime::move_to_usi(record.evaluations[1].search_result->best_move);
+        const bool moves_remain_distinct = shogi::runtime::move_to_usi(record.evaluations[0].search_result->best_move) !=
+                                           shogi::runtime::move_to_usi(record.evaluations[1].search_result->best_move);
         check(moves_remain_distinct, "engine disagreement should remain observable in the appended results");
 
         const bool source_is_preserved = record.source.sample_id == source.sample_id &&
