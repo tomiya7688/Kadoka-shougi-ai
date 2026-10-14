@@ -1,5 +1,4 @@
 #include "kadoka/relabel/relabeler.hpp"
-
 #include "kadoka/runtime/ai_backend.hpp"
 #include "kadoka/runtime/player_api.hpp"
 
@@ -36,16 +35,11 @@ kadoka::best::ParticipantId make_participant_id(const char digit) {
 //   引数: [name: backend名] [move_usi: 合法な着手] [score: 返す評価値],
 //   戻り値: [backend: 決定論的なテストbackend]
 // }
-kadoka::shogi::runtime::FunctionAIBackend make_backend(
-    std::string name,
-    std::string move_usi,
-    const std::int32_t score) {
+kadoka::shogi::runtime::FunctionAIBackend make_backend(std::string name, std::string move_usi, const std::int32_t score) {
     return {
         kadoka::shogi::runtime::AIBackendKind::Native,
         std::move(name),
-        [move_usi = std::move(move_usi), score](
-            const kadoka::shogi::Position&,
-            const kadoka::shogi::SearchLimits&) {
+        [move_usi = std::move(move_usi), score](const kadoka::shogi::Position&, const kadoka::shogi::SearchLimits&) {
             kadoka::shogi::SearchResult result;
             result.best_move = kadoka::shogi::runtime::move_from_usi(move_usi);
             result.score_cp = score;
@@ -61,8 +55,7 @@ kadoka::shogi::runtime::FunctionAIBackend make_backend(
 //   引数: [source: 元サンプル] [evaluators: 評価個体一覧],
 //   戻り値: []
 // }
-void expect_invalid(const kadoka::relabel::RelabelSource& source,
-                    const std::vector<kadoka::relabel::RelabelEvaluator>& evaluators) {
+void expect_invalid(const kadoka::relabel::RelabelSource& source, const std::vector<kadoka::relabel::RelabelEvaluator>& evaluators) {
     try {
         (void)kadoka::relabel::evaluate_relabel_sample(source, evaluators);
     } catch (const std::invalid_argument&) {
