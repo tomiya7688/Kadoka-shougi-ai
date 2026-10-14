@@ -50,7 +50,7 @@ struct RelabelEvaluator {
     best::ParticipantId participant;
     std::string model_version;
     std::string config_hash;
-    runtime::AIBackend* backend = nullptr;
+    shogi::runtime::AIBackend* backend = nullptr;
 };
 
 // {
@@ -71,7 +71,7 @@ struct RelabelEvaluation {
     std::string model_version;
     std::string config_hash;
     RelabelEvaluationStatus status = RelabelEvaluationStatus::failed;
-    std::optional<runtime::TurnStatus> turn_status;
+    std::optional<shogi::runtime::TurnStatus> turn_status;
     std::optional<shogi::SearchResult> search_result;
     std::chrono::nanoseconds decision_time{0};
     std::optional<std::string> error;
