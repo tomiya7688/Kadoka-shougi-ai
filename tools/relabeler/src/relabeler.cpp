@@ -18,9 +18,7 @@ namespace {
 //   戻り値: [],
 //   エラー: [契約違反をstd::invalid_argumentで通知する]
 // }
-void validate_relabel_inputs(
-    const RelabelSource& source,
-    std::span<const RelabelEvaluator> evaluators) {
+void validate_relabel_inputs(const RelabelSource& source, std::span<const RelabelEvaluator> evaluators) {
     if (source.dataset_id.empty() || source.dataset_revision.empty() ||
         source.sample_id.empty() || source.position_sfen.empty()) {
         throw std::invalid_argument("relabel source identifiers and position are required");
@@ -41,10 +39,8 @@ void validate_relabel_inputs(
 
 } // namespace
 
-RelabelRecord evaluate_relabel_sample(
-    const RelabelSource& source,
-    std::span<const RelabelEvaluator> evaluators,
-    const shogi::SearchLimits& limits) {
+RelabelRecord evaluate_relabel_sample(const RelabelSource& source, std::span<const RelabelEvaluator> evaluators,
+                                      const shogi::SearchLimits& limits) {
     validate_relabel_inputs(source, evaluators);
     const shogi::Position position = shogi::Position::from_sfen(source.position_sfen);
 
