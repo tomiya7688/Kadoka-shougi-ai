@@ -106,7 +106,8 @@ int main() {
         check(record.evaluations[0].search_result->score_cp == 35
                   && record.evaluations[1].search_result->score_cp == -12,
               "per-engine scores should remain distinct");
-        check(record.evaluations[0].search_result->best_move != record.evaluations[1].search_result->best_move,
+        check(runtime::move_to_usi(record.evaluations[0].search_result->best_move)
+                  != runtime::move_to_usi(record.evaluations[1].search_result->best_move),
               "engine disagreement should remain observable in the appended results");
         check(record.source.sample_id == source.sample_id && record.source.dataset_revision == source.dataset_revision
                   && record.source.observed_move_usi == source.observed_move_usi
