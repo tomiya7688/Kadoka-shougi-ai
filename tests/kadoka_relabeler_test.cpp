@@ -112,8 +112,9 @@ int main() {
             record.evaluations[0].search_result->score_cp == 35 && record.evaluations[1].search_result->score_cp == -12;
         check(scores_remain_distinct, "per-engine scores should remain distinct");
 
-        const bool moves_remain_distinct = shogi::runtime::move_to_usi(record.evaluations[0].search_result->best_move) !=
-                                           shogi::runtime::move_to_usi(record.evaluations[1].search_result->best_move);
+        const auto first_move_usi = shogi::runtime::move_to_usi(record.evaluations[0].search_result->best_move);
+        const auto second_move_usi = shogi::runtime::move_to_usi(record.evaluations[1].search_result->best_move);
+        const bool moves_remain_distinct = first_move_usi != second_move_usi;
         check(moves_remain_distinct, "engine disagreement should remain observable in the appended results");
 
         const bool source_is_preserved = record.source.sample_id == source.sample_id &&
