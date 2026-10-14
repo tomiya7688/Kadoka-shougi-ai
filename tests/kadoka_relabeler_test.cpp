@@ -89,7 +89,7 @@ int main() {
         };
 
         auto first_backend = make_backend("first", "7g7f", 35);
-        auto second_backend = make_backend("second", "3c3d", -12);
+        auto second_backend = make_backend("second", "5g5f", -12);
         shogi::runtime::FunctionAIBackend failing_backend(
             shogi::runtime::AIBackendKind::Script, "failing",
             [](const shogi::Position&, const shogi::SearchLimits&) -> shogi::SearchResult {
