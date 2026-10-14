@@ -96,17 +96,18 @@ struct RelabelRecord {
 //     2: 各AIの結果を元ラベルを変更せず追加する,
 //     3: 1個体の失敗を記録して残りの評価を続行する
 //   ],
-//   引数: [source: 上書きしない元サンプル] [evaluators: 一意な2個以上の評価個体]
-//         [limits: 全backendへ渡す探索制限],
+//   引数: [
+//     source: 上書きしない元サンプル,
+//     evaluators: 一意な2個以上の評価個体,
+//     limits: 全backendへ渡す探索制限
+//   ],
 //   戻り値: [record: 元サンプルと全個体の成功・失敗結果],
 //   エラー: [入力の不足・重複・不正局面はstd::invalid_argument等で失敗]
-//
 // }
-// 
+//
 [[nodiscard]] RelabelRecord evaluate_relabel_sample(
     const RelabelSource& source,
     std::span<const RelabelEvaluator> evaluators,
-    const shogi::SearchLimits& limits = {}
-);
+    const shogi::SearchLimits& limits = {});
 
 } // namespace kadoka::relabel
