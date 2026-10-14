@@ -19,7 +19,8 @@ ConfidenceResult DefaultConfidenceScorer::score(const ConfidenceInputs& inputs) 
             throw std::invalid_argument(std::string(name) + " must be within [0, 1]");
     };
 
-    require_finite_nonnegative(inputs.source_rating, "source_rating");
+    if (inputs.source_rating && !std::isfinite(*inputs.source_rating))
+        throw std::invalid_argument("source_rating must be finite");
     require_finite_nonnegative(inputs.source_uncertainty, "source_uncertainty");
     require_finite_nonnegative(inputs.candidate_gap_cp, "candidate_gap_cp");
     require_probability(inputs.policy_entropy, "policy_entropy");
