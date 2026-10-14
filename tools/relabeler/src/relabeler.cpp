@@ -19,8 +19,8 @@ namespace {
 //   エラー: [契約違反をstd::invalid_argumentで通知する]
 // }
 void validate_relabel_inputs(const RelabelSource& source, std::span<const RelabelEvaluator> evaluators) {
-    if (source.dataset_id.empty() || source.dataset_revision.empty() ||
-        source.sample_id.empty() || source.position_sfen.empty()) {
+    if (source.dataset_id.empty() || source.dataset_revision.empty() || source.sample_id.empty() ||
+        source.position_sfen.empty()) {
         throw std::invalid_argument("relabel source identifiers and position are required");
     }
     if (evaluators.size() < 2)
@@ -28,8 +28,8 @@ void validate_relabel_inputs(const RelabelSource& source, std::span<const Relabe
 
     std::set<std::string> participant_ids;
     for (const RelabelEvaluator& evaluator : evaluators) {
-        if (evaluator.participant.value.empty() || evaluator.model_version.empty() ||
-            evaluator.config_hash.empty() || evaluator.backend == nullptr) {
+        if (evaluator.participant.value.empty() || evaluator.model_version.empty() || evaluator.config_hash.empty() ||
+            evaluator.backend == nullptr) {
             throw std::invalid_argument("each evaluator requires an ID, version, config hash, and backend");
         }
         if (!participant_ids.insert(evaluator.participant.value).second)
