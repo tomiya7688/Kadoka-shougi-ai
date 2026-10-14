@@ -53,11 +53,11 @@ RelabelRecord evaluate_relabel_sample(const RelabelSource& source, std::span<con
             .config_hash = evaluator.config_hash,
         };
         try {
-            const runtime::TurnResult result = runtime::run_ai_turn(*evaluator.backend, position, limits);
+            const shogi::runtime::TurnResult result = shogi::runtime::run_ai_turn(*evaluator.backend, position, limits);
             evaluation.turn_status = result.status;
             evaluation.search_result = result.search_result;
             evaluation.decision_time = result.decision_time;
-            if (result.status == runtime::TurnStatus::IllegalMove) {
+            if (result.status == shogi::runtime::TurnStatus::IllegalMove) {
                 evaluation.status = RelabelEvaluationStatus::failed;
                 evaluation.error = "backend proposed an illegal move";
             } else {
