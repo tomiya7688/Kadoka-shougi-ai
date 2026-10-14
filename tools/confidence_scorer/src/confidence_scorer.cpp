@@ -9,8 +9,8 @@
 namespace kadoka::confidence {
 
 ConfidenceResult DefaultConfidenceScorer::score(const ConfidenceInputs& inputs) const {
-    const auto require_finite_nonnegative = [](const std::optional<double>& value,
-                                               const std::string_view name) {
+    const auto require_finite_nonnegative =
+        [](const std::optional<double>& value, const std::string_view name) {
         if (value && (!std::isfinite(*value) || *value < 0.0))
             throw std::invalid_argument(std::string(name) + " must be finite and nonnegative");
     };
