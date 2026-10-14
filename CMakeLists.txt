@@ -147,6 +147,7 @@ target_include_directories(kadoka_shogi_relabeler
 target_link_libraries(kadoka_shogi_relabeler
     PUBLIC
         kadoka_shogi_runtime
+        kadoka_shogi_best_manifest
 )
 
 add_executable(kadoka_shogi
