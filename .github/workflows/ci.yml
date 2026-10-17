@@ -35,11 +35,7 @@ jobs:
       - name: Check C++ formatting
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          files=$(git diff --name-only "$BASE_SHA...$GITHUB_SHA" -- '*.cpp' '*.hpp' '*.h')
-          for file in $files; do
-            clang-format "$file" | diff -u "$file" - || true
-          done
+        run: git diff --name-only "$BASE_SHA...$GITHUB_SHA" -- '*.cpp' '*.hpp' '*.h' | xargs --no-run-if-empty clang-format --dry-run --Werror
 
       - name: Validate family model metadata
         run: python tools/family_metadata/script/validate_metadata.py --game shogi models/examples/family_metadata.json
