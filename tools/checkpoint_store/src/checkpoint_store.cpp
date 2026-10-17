@@ -255,4 +255,3 @@ CheckpointState load_checkpoint(const std::filesystem::path& path, const Checkpo
 }
 
 } // namespace kadoka::training
-

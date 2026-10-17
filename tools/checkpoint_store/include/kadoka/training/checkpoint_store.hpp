@@ -54,8 +54,6 @@ void save_checkpoint(const std::filesystem::path& path, const CheckpointState& s
 //   戻り値: [CheckpointState: 復元した学習状態],
 //   エラー: [破損・非対応version・互換性不一致はruntime_error] [file失敗はfilesystem_error]
 // }
-CheckpointState load_checkpoint(const std::filesystem::path& path,
-                                const CheckpointCompatibility& expected = {});
+CheckpointState load_checkpoint(const std::filesystem::path& path, const CheckpointCompatibility& expected = {});
 
 } // namespace kadoka::training
-

@@ -22,8 +22,8 @@ int main() {
     using kadoka::training::save_checkpoint;
 
     const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
-    const std::filesystem::path directory = std::filesystem::temp_directory_path() /
-                                            ("kadoka-checkpoint-test-" + std::to_string(unique));
+    const std::filesystem::path directory =
+        std::filesystem::temp_directory_path() / ("kadoka-checkpoint-test-" + std::to_string(unique));
     std::filesystem::create_directory(directory);
     const std::filesystem::path checkpoint_path = directory / "epoch-12-step-340.ckpt";
     const std::filesystem::path corrupt_path = directory / "corrupt.ckpt";
@@ -120,4 +120,3 @@ int main() {
         return 1;
     }
 }
-
