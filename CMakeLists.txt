@@ -94,6 +94,17 @@ target_link_libraries(kadoka_shogi_training_parser
         kadoka_shogi_runtime
 )
 
+add_library(kadoka_shogi_checkpoint_store
+    tools/checkpoint_store/src/checkpoint_store.cpp
+)
+
+add_dependencies(kadoka_shogi_checkpoint_store kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_checkpoint_store
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/checkpoint_store/include
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -205,6 +216,10 @@ add_test(
     NAME recursive_training_importer_test
     COMMAND recursive_training_importer_test
 )
+
+add_executable(checkpoint_store_test tests/checkpoint_store_test.cpp)
+target_link_libraries(checkpoint_store_test PRIVATE kadoka_shogi_checkpoint_store)
+add_test(NAME checkpoint_store_test COMMAND checkpoint_store_test)
 
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
