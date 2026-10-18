@@ -105,6 +105,20 @@ target_include_directories(kadoka_shogi_checkpoint_store
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/checkpoint_store/include
 )
 
+add_library(kadoka_shogi_checkpoint_manager
+    tools/checkpoint_manager/src/checkpoint_manager.cpp
+)
+
+add_dependencies(kadoka_shogi_checkpoint_manager kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_checkpoint_manager
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/checkpoint_manager/include
+)
+
+target_link_libraries(kadoka_shogi_checkpoint_manager PUBLIC kadoka_shogi_checkpoint_store)
+
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -217,6 +231,9 @@ add_test(
     COMMAND recursive_training_importer_test
 )
 
+add_executable(checkpoint_manager_test tests/checkpoint_manager_test.cpp)
+target_link_libraries(checkpoint_manager_test PRIVATE kadoka_shogi_checkpoint_manager)
+add_test(NAME checkpoint_manager_test COMMAND checkpoint_manager_test)
 add_executable(checkpoint_store_test tests/checkpoint_store_test.cpp)
 target_link_libraries(checkpoint_store_test PRIVATE kadoka_shogi_checkpoint_store)
 add_test(NAME checkpoint_store_test COMMAND checkpoint_store_test)
@@ -256,3 +273,6 @@ add_test(
         ${Python3_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/process_ai_backend_helper.py
 )
+
+
+
