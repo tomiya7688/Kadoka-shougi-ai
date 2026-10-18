@@ -18,8 +18,8 @@ int main() {
     using kadoka::training::load_checkpoint;
 
     const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
-    const auto directory = std::filesystem::temp_directory_path() /
-                           ("kadoka-checkpoint-manager-" + std::to_string(unique));
+    const auto directory =
+        std::filesystem::temp_directory_path() / ("kadoka-checkpoint-manager-" + std::to_string(unique));
     try {
         CheckpointManager manager(directory, 2);
         if (manager.latest_path() || manager.best_path())

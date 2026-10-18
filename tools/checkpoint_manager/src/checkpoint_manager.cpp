@@ -253,8 +253,8 @@ bool CheckpointManager::consider_best(const CheckpointState& state, const std::s
     const auto checkpoint = save_snapshot("best", state);
     std::ostringstream value_stream;
     value_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << metric_value;
-    const std::string metadata = metric_name + "\n" + value_stream.str() + "\n" +
-                                (lower_is_better ? "lower" : "higher");
+    const std::string metadata =
+        metric_name + "\n" + value_stream.str() + "\n" + (lower_is_better ? "lower" : "higher");
     publish_pointer("best", checkpoint.filename().string(), metadata);
     return true;
 }
