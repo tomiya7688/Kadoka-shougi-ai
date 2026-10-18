@@ -6,10 +6,10 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
-#include <stdexcept>
 #include <sstream>
-#include <utility>
+#include <stdexcept>
 #include <system_error>
+#include <utility>
 
 namespace kadoka::training {
 namespace {
@@ -260,5 +260,3 @@ bool CheckpointManager::consider_best(const CheckpointState& state, const std::s
 }
 
 } // namespace kadoka::training
-
-
