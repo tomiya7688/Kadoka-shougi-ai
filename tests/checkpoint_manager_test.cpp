@@ -46,12 +46,12 @@ int main() {
         if (!std::filesystem::exists(periodic[1]))
             throw std::runtime_error("retained periodic checkpoint is missing");
 
-        if (!manager.consider_best(state, "validation_loss", 0.5, true))
+        if (!manager.consider_best(state, "validation_loss", 0.4000004, true))
             throw std::runtime_error("first best checkpoint was not accepted");
         state.step = 5;
-        if (manager.consider_best(state, "validation_loss", 0.6, true))
+        if (manager.consider_best(state, "validation_loss", 0.4000006, true))
             throw std::runtime_error("worse best metric replaced the best checkpoint");
-        if (!manager.consider_best(state, "validation_loss", 0.4, true))
+        if (!manager.consider_best(state, "validation_loss", 0.4000002, true))
             throw std::runtime_error("improved best metric did not replace the best checkpoint");
         const auto best = manager.best_path();
         if (!best || load_checkpoint(*best).step != 5)

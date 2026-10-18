@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
+#include <limits>
 #include <stdexcept>
 #include <sstream>
 #include <utility>
@@ -249,7 +251,9 @@ bool CheckpointManager::consider_best(const CheckpointState& state, const std::s
             return false;
     }
     const auto checkpoint = save_snapshot("best", state);
-    const std::string metadata = metric_name + "\n" + std::to_string(metric_value) + "\n" +
+    std::ostringstream value_stream;
+    value_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << metric_value;
+    const std::string metadata = metric_name + "\n" + value_stream.str() + "\n" +
                                 (lower_is_better ? "lower" : "higher");
     publish_pointer("best", checkpoint.filename().string(), metadata);
     return true;
