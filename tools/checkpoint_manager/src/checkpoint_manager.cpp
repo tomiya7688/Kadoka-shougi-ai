@@ -23,7 +23,8 @@ std::vector<std::filesystem::path> pointer_files(const std::filesystem::path& di
     std::vector<std::filesystem::path> files;
     const std::string prefix = kind + ".pointer.";
     for (const auto& entry : std::filesystem::directory_iterator(directory)) {
-        if (entry.is_regular_file() && entry.path().filename().string().starts_with(prefix))
+        const std::string filename = entry.path().filename().string();
+        if (entry.is_regular_file() && filename.starts_with(prefix) && !filename.ends_with(".tmp"))
             files.push_back(entry.path());
     }
     std::sort(files.begin(), files.end());

@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <stdexcept>
 #include <string>
 
@@ -32,8 +33,14 @@ int main() {
         state.epoch = 1;
         state.step = 1;
         const auto latest = manager.save_latest(state);
+        const auto incomplete_latest = directory / "latest.pointer.zzz.tmp";
+        {
+            std::ofstream output(incomplete_latest);
+            output << "partial";
+        }
         if (manager.latest_path() != latest || load_checkpoint(latest).step != 1)
             throw std::runtime_error("latest checkpoint was not published correctly");
+        std::filesystem::remove(incomplete_latest);
 
         state.step = 2;
         manager.save_periodic(state);
@@ -55,8 +62,14 @@ int main() {
         if (!manager.consider_best(state, "validation_loss", 0.4000002, true))
             throw std::runtime_error("improved best metric did not replace the best checkpoint");
         const auto best = manager.best_path();
-        if (!best || load_checkpoint(*best).step != 5)
+        const auto incomplete_best = directory / "best.pointer.zzz.tmp";
+        {
+            std::ofstream output(incomplete_best);
+            output << "partial";
+        }
+        if (!best || load_checkpoint(*best).step != 5 || manager.best_path() != best)
             throw std::runtime_error("best pointer does not name the improved checkpoint");
+        std::filesystem::remove(incomplete_best);
 
         CheckpointManager reopened(directory, 2);
         if (reopened.latest_path() != newest_periodic || reopened.best_path() != best)
