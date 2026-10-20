@@ -158,12 +158,12 @@ std::uint64_t draw_below(std::mt19937_64& generator, const std::uint64_t bound) 
 //   責務: [sample_relabel_candidates: 元サンプルを変更せずseed付きで再評価対象を選ぶ],
 //   処理: [1: 設定と全候補を検証する] [2: 一意な元識別子順へ正規化する]
 //         [3: 整数の重み付き非復元抽選を行い、元配列へのindexを返す],
-//   引数: [candidates: 元データと信頼度] [count: 最大抽選数] [seed: 再現用seed] [policy: 抽選設定],
+//   引数: [candidates: 元データと信頼度] [request: 最大抽選数と再現用seed] [policy: 抽選設定],
 //   戻り値: [choices: 抽選順の結果。候補不足なら正重み候補全件],
 //   エラー: [不正設定・入力・識別子重複はinvalid_argument、総重みoverflowはoverflow_error]
 // }
 std::vector<PrioritySampleChoice> sample_relabel_candidates(const std::span<const PrioritySamplingCandidate> candidates,
-                                                            const std::size_t count, const std::uint64_t seed,
+                                                            const PrioritySamplingRequest& request,
                                                             const PrioritySamplingPolicy& policy) {
     require_probability(policy.low_confidence_threshold, "low_confidence_threshold");
     require_probability(policy.high_confidence_threshold, "high_confidence_threshold");
@@ -200,12 +200,12 @@ std::vector<PrioritySampleChoice> sample_relabel_candidates(const std::span<cons
     }
 
     std::vector<PrioritySampleChoice> choices;
-    const std::size_t limit = std::min(count, eligible_count);
+    const std::size_t limit = std::min(request.count, eligible_count);
     choices.reserve(limit);
     if (limit == 0)
         return choices;
     TicketTree tree(ordered);
-    std::mt19937_64 generator(seed);
+    std::mt19937_64 generator(request.seed);
     for (std::size_t selected = 0; selected < limit; ++selected) {
         const std::size_t index = tree.take(draw_below(generator, tree.total()));
         choices.push_back(ordered[index]);

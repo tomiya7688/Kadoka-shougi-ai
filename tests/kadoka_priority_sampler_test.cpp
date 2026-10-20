@@ -77,7 +77,7 @@ void expect_invalid(const std::vector<PrioritySamplingCandidate>& candidates,
                     const PrioritySamplingPolicy& policy = {}) {
     bool rejected = false;
     try {
-        (void)sample_relabel_candidates(candidates, 0, 1, policy);
+        (void)sample_relabel_candidates(candidates, {.count = 0, .seed = 1}, policy);
     } catch (const std::invalid_argument&) {
         rejected = true;
     }
@@ -97,17 +97,17 @@ int main() {
     try {
         const std::vector<PrioritySamplingCandidate> candidates = {
             make_candidate("low", 0.2), make_candidate("medium", 0.6), make_candidate("high", 0.95)};
-        const auto choices = sample_relabel_candidates(candidates, 100, 42);
+        const auto choices = sample_relabel_candidates(candidates, {.count = 100, .seed = 42});
         const auto ids = selected_ids(candidates, choices);
         require(choices.size() == 3 && std::set<std::string>(ids.begin(), ids.end()).size() == 3,
                 "sampling did not cap at eligible candidates without replacement");
-        require(ids == selected_ids(candidates, sample_relabel_candidates(candidates, 100, 42)),
+        require(ids == selected_ids(candidates, sample_relabel_candidates(candidates, {.count = 100, .seed = 42})),
                 "same seed did not reproduce the draw order");
         const std::vector<std::string> golden = {"high", "low", "medium"};
         require(ids == golden, "seed-42 golden order changed: " + ids[0] + "," + ids[1] + "," + ids[2]);
         auto reversed = candidates;
         std::reverse(reversed.begin(), reversed.end());
-        require(ids == selected_ids(reversed, sample_relabel_candidates(reversed, 100, 42)),
+        require(ids == selected_ids(reversed, sample_relabel_candidates(reversed, {.count = 100, .seed = 42})),
                 "input iteration order changed the selected sample identities");
         for (const auto& choice : choices) {
             const std::array<std::uint64_t, 3> tickets = {8192, 3072, 1024};
@@ -116,12 +116,12 @@ int main() {
             require(choice.tickets == tickets[choice.candidate_index] && choice.band == bands[choice.candidate_index],
                     "default confidence band or integer weight is incorrect");
         }
-        require(sample_relabel_candidates(candidates, 0, 42).empty(), "zero count produced choices");
-        require(sample_relabel_candidates({}, 5, 42).empty(), "empty input produced choices");
+        require(sample_relabel_candidates(candidates, {.count = 0, .seed = 42}).empty(), "zero count produced choices");
+        require(sample_relabel_candidates({}, {.count = 5, .seed = 42}).empty(), "empty input produced choices");
 
         const std::vector<PrioritySamplingCandidate> boundaries = {make_candidate("low-edge", 0.4),
                                                                    make_candidate("high-edge", 0.8)};
-        for (const auto& choice : sample_relabel_candidates(boundaries, 2, 42))
+        for (const auto& choice : sample_relabel_candidates(boundaries, {.count = 2, .seed = 42}))
             require(choice.band == (choice.candidate_index == 0 ? ConfidenceBand::medium : ConfidenceBand::high),
                     "confidence threshold equality was classified incorrectly");
 
@@ -129,10 +129,10 @@ int main() {
         policy.low_weight = 0;
         policy.medium_weight = 0;
         policy.high_audit_weight = 5;
-        const auto audit_only = sample_relabel_candidates(candidates, 10, 42, policy);
+        const auto audit_only = sample_relabel_candidates(candidates, {.count = 10, .seed = 42}, policy);
         require(audit_only.size() == 1 && audit_only.front().candidate_index == 2 && audit_only.front().tickets == 5120,
                 "custom weights did not exclude disabled bands");
-        require(sample_relabel_candidates(std::span(candidates).first(2), 10, 42, policy).empty(),
+        require(sample_relabel_candidates(std::span(candidates).first(2), {.count = 10, .seed = 42}, policy).empty(),
                 "disabled candidates were selected");
 
         std::vector<PrioritySamplingCandidate> sparse_pool;
@@ -140,7 +140,7 @@ int main() {
             sparse_pool.push_back(make_candidate("sample-" + std::to_string(index), index % 3 == 0 ? 0.95 : 0.2));
         policy = {};
         policy.low_weight = 0;
-        const auto sparse_choices = sample_relabel_candidates(sparse_pool, 100, 19, policy);
+        const auto sparse_choices = sample_relabel_candidates(sparse_pool, {.count = 100, .seed = 19}, policy);
         const auto sparse_ids = selected_ids(sparse_pool, sparse_choices);
         require(sparse_choices.size() == 7 && std::set<std::string>(sparse_ids.begin(), sparse_ids.end()).size() == 7,
                 "sparse non-power-of-two pool was not exhausted without duplicates");
@@ -149,7 +149,7 @@ int main() {
 
         std::array<std::size_t, 3> counts{};
         for (std::uint64_t seed = 0; seed < 4096; ++seed)
-            ++counts[sample_relabel_candidates(candidates, 1, seed).front().candidate_index];
+            ++counts[sample_relabel_candidates(candidates, {.count = 1, .seed = seed}).front().candidate_index];
         require(counts[0] > 2 * counts[1] && counts[1] > 2 * counts[2] && counts[2] > 0,
                 "low-confidence priority, medium mixing or random high-confidence audit is missing");
 
@@ -164,15 +164,16 @@ int main() {
         boost_candidates[1].assessment = DefaultConfidenceScorer{}.score(disagreement_inputs);
         std::array<std::size_t, 2> boost_counts{};
         for (std::uint64_t seed = 0; seed < 4096; ++seed)
-            ++boost_counts[sample_relabel_candidates(boost_candidates, 1, seed).front().candidate_index];
+            ++boost_counts
+                [sample_relabel_candidates(boost_candidates, {.count = 1, .seed = seed}).front().candidate_index];
         require(boost_counts[1] > 2 * boost_counts[0], "disagreement did not increase selection probability");
-        for (const auto& choice : sample_relabel_candidates(boost_candidates, 2, 42))
+        for (const auto& choice : sample_relabel_candidates(boost_candidates, {.count = 2, .seed = 42}))
             require(choice.tickets == (choice.candidate_index == 0 ? 3072 : 7168),
                     "disagreement tickets do not match the documented scale");
         policy = {};
         policy.medium_weight = std::numeric_limits<std::uint32_t>::max();
         policy.disagreement_boost = std::numeric_limits<std::uint32_t>::max();
-        for (const auto& choice : sample_relabel_candidates(boost_candidates, 2, 42, policy)) {
+        for (const auto& choice : sample_relabel_candidates(boost_candidates, {.count = 2, .seed = 42}, policy)) {
             const std::uint64_t scale = choice.candidate_index == 0 ? 1024 : 2048;
             require(choice.tickets == static_cast<std::uint64_t>(policy.medium_weight) * scale,
                     "maximum configured weight overflowed before widening to uint64_t");
@@ -182,21 +183,23 @@ int main() {
         half_ticket_inputs.engine_disagreement = 1.0 / 2048.0;
         half_ticket_inputs.result_consistency = 1.0 / 2048.0;
         half_ticket.front().assessment = DefaultConfidenceScorer{}.score(half_ticket_inputs);
-        require(sample_relabel_candidates(half_ticket, 1, 42).front().tickets == 3076,
+        require(sample_relabel_candidates(half_ticket, {.count = 1, .seed = 42}).front().tickets == 3076,
                 "half-ticket disagreement was not rounded upward");
         policy = {};
         policy.medium_weight = 0;
-        require(sample_relabel_candidates(boost_candidates, 2, 42, policy).empty(),
+        require(sample_relabel_candidates(boost_candidates, {.count = 2, .seed = 42}, policy).empty(),
                 "disagreement boost re-enabled a disabled band");
 
         auto duplicate = candidates;
         duplicate.push_back(candidates.front());
         expect_invalid(duplicate);
         duplicate.back().source.dataset_revision = "revision-2";
-        require(sample_relabel_candidates(duplicate, 100, 1).size() == 4, "distinct dataset revisions were conflated");
+        require(sample_relabel_candidates(duplicate, {.count = 100, .seed = 1}).size() == 4,
+                "distinct dataset revisions were conflated");
         duplicate.back().source.dataset_revision = "revision-1";
         duplicate.back().source.dataset_id = "other-dataset";
-        require(sample_relabel_candidates(duplicate, 100, 1).size() == 4, "distinct dataset IDs were conflated");
+        require(sample_relabel_candidates(duplicate, {.count = 100, .seed = 1}).size() == 4,
+                "distinct dataset IDs were conflated");
         auto invalid = candidates;
         invalid.front().source.sample_id.clear();
         expect_invalid(invalid);

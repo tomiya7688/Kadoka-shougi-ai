@@ -17,6 +17,15 @@ namespace kadoka::relabel {
 enum class ConfidenceBand : std::uint8_t { low, medium, high };
 
 // {
+//   責務: [PrioritySamplingRequest: 抽選数とseedを名前付きで指定し、引数の取り違えを防ぐ],
+//   フィールド: [count: 最大抽選数] [seed: 再現用の乱数初期値]
+// }
+struct PrioritySamplingRequest {
+    std::size_t count = 0;
+    std::uint64_t seed = 0;
+};
+
+// {
 //   責務: [PrioritySamplingPolicy: 信頼度の境界と再評価抽選の重みを設定する],
 //   フィールド: [
 //     low_confidence_threshold: この値未満を低信頼とする境界,
@@ -62,15 +71,15 @@ struct PrioritySampleChoice {
 //     2: 信頼度帯とdisagreementから整数の抽選券を割り当てる,
 //     3: seed固定の重み付き非復元抽選で元配列indexを返す
 //   ],
-//   引数: [candidates: 元ラベルと信頼度を保持する候補] [count: 最大抽選数]
-//         [seed: 乱数生成器の初期値] [policy: 信頼度境界と抽選重み],
+//   引数: [candidates: 元ラベルと信頼度を保持する候補] [request: 抽選数と再現用seed]
+//         [policy: 信頼度境界と抽選重み],
 //   戻り値: [choices: 抽選順の候補index・帯・抽選券数。正重み候補が足りなければその全件],
 //   エラー: [不正値・空ID・同一dataset/revision/sampleの重複はinvalid_argument]
 //           [抽選券の総和がuint64_tを超える場合はoverflow_error],
 //   副作用: [元候補・ラベル・信頼度入力を変更しない]
 // }
 [[nodiscard]] std::vector<PrioritySampleChoice>
-sample_relabel_candidates(std::span<const PrioritySamplingCandidate> candidates, std::size_t count, std::uint64_t seed,
+sample_relabel_candidates(std::span<const PrioritySamplingCandidate> candidates, const PrioritySamplingRequest& request,
                           const PrioritySamplingPolicy& policy = {});
 
 } // namespace kadoka::relabel

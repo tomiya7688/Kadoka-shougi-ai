@@ -4,7 +4,7 @@
 
 保存済みのconfidence・uncertaintyとengine disagreementから、再評価する元サンプルを重複なく選びます。低信頼サンプルの優先、中信頼サンプルの混入、高信頼サンプルの無作為監査を、調整可能な重みで実現します。
 
-`PrioritySamplingCandidate` は [Multi-engine Relabeling](MULTI_ENGINE_RELABELING_V1.md) の `RelabelSource` と [Confidence Scorer](CONFIDENCE_SCORER_V1.md) の `ConfidenceResult` を保持します。`sample_relabel_candidates(candidates, count, seed, policy)` が返す `candidate_index` から元候補へ戻り、`source` を再評価APIへ渡せます。抽選中に元ラベル・評価根拠は変更しません。
+`PrioritySamplingCandidate` は [Multi-engine Relabeling](MULTI_ENGINE_RELABELING_V1.md) の `RelabelSource` と [Confidence Scorer](CONFIDENCE_SCORER_V1.md) の `ConfidenceResult` を保持します。`sample_relabel_candidates(candidates, request, policy)` が返す `candidate_index` から元候補へ戻り、`source` を再評価APIへ渡せます。`PrioritySamplingRequest` の `.count` と `.seed` を名前付きで指定することで、整数引数の取り違えを防げます。抽選中に元ラベル・評価根拠は変更しません。
 
 ## 抽選policy
 
