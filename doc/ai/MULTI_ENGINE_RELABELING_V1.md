@@ -26,6 +26,10 @@ RelabelRecordは以下をまとめて返します。
 - 個々のbackend実行失敗や違法手はその評価結果だけをfailedにする
 - Runtimeが返す元Positionは変更せず、各AIは同じ初期局面から評価する
 
+## 再評価対象の選択
+
+[再評価Priority Sampler v1](RELABEL_PRIORITY_SAMPLER_V1.md) は、信頼度・disagreementから元サンプルを重複なく選びます。抽選結果のcandidate indexから `RelabelSource` を取得し、この文書の再評価APIへ渡せます。
+
 ## 完了確認
 
 kadoka_relabeler_testは異なる2個のAI出力、元ラベルとprovenanceの保持、途中AI失敗後の継続、重複個体と不足・未設定入力の拒否を検査します。

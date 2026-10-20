@@ -150,6 +150,23 @@ target_link_libraries(kadoka_shogi_relabeler
         kadoka_shogi_best_manifest
 )
 
+add_library(kadoka_shogi_priority_sampler
+    tools/priority_sampler/src/priority_sampler.cpp
+)
+
+add_dependencies(kadoka_shogi_priority_sampler kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_priority_sampler
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/priority_sampler/include
+)
+
+target_link_libraries(kadoka_shogi_priority_sampler
+    PUBLIC
+        kadoka_shogi_confidence_scorer
+        kadoka_shogi_relabeler
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -179,6 +196,10 @@ install(
 )
 
 enable_testing()
+
+add_executable(kadoka_priority_sampler_test tests/kadoka_priority_sampler_test.cpp)
+target_link_libraries(kadoka_priority_sampler_test PRIVATE kadoka_shogi_priority_sampler)
+add_test(NAME kadoka_priority_sampler_test COMMAND kadoka_priority_sampler_test)
 
 add_executable(kadoka_best_manifest_test tests/kadoka_best_manifest_test.cpp)
 target_link_libraries(kadoka_best_manifest_test PRIVATE kadoka_shogi_best_manifest)
