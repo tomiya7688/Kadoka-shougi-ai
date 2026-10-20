@@ -134,6 +134,7 @@ target_include_directories(kadoka_shogi_confidence_scorer
 )
 
 add_library(kadoka_shogi_relabeler
+    tools/relabeler/src/batch.cpp
     tools/relabeler/src/relabeler.cpp
 )
 
