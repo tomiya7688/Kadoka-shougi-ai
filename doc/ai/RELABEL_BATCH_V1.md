@@ -1,7 +1,8 @@
 # 再評価バッチ実行 v1
 
-Issue #38 のうち、queue、予算付き実行、保存先の呼び出し、再開cursorの基盤です。
-公開APIは `kadoka/relabel/batch.hpp`、リンク先は `kadoka_shogi_relabeler` です。
+Issue #38 のqueue、予算付き実行、部分結果の保存、再開cursorを扱います。
+公開APIは `kadoka/relabel/batch.hpp` と `kadoka/relabel/batch_file_store.hpp`、
+リンク先は `kadoka_shogi_relabeler` です。
 
 ## queueと再開
 
@@ -44,9 +45,25 @@ sinkが例外を投げた場合はそのまま伝播します。保存の成否�
 保存先は `(queue revision, sample index)` を一意keyとして冪等に実装してください。
 先行sampleの保存結果は維持されます。
 
-この段階ではファイル形式・DB adapter・checkpoint読込CLIを提供しません。
-既定の保存adapterと専用の振る舞いテストはIssue #38の残作業です。
-既存CIの成功だけではbatchの予算停止・再開・保存障害の振る舞いの検証にはなりません。
+## ファイル保存と再開
+
+`RelabelBatchFileStore(directory, queue.revision)` はqueue専用ディレクトリを作成し、
+`0000000000000000.batch` から始まる連続した確定ファイルを読んでcursorを復元します。
+各ファイルは形式version、queue revision、次cursor、元source、全AI評価結果を含みます。
+16MiBを超えるrecord、欠番、不正形式、revision不一致は復元時に拒否します。
+評価個体数の読み取り上限は1024です。
+
+初回は `store.cursor()` をrequestへ渡し、sinkから `store.save(record, next)` を呼びます。
+再起動後は同じディレクトリ・revisionでstoreを開き、復元したcursorから再開します。
+`store.load(index)` で確定済みrecordを読み直せます。
+一時ファイルへ書いて閉じた後、同じディレクトリ内で確定ファイル名へrenameします。
+未確定の `.tmp` は復元時に無視し、次の保存で上書きします。
+1つのディレクトリには同時に1 writerだけを使用してください。
+OS・ストレージの電源断耐久性を保証するfsyncは実装していません。
+
+`kadoka_relabel_batch_test` はファイルを開き直した再開、部分成功recordの復元、
+件数・node・時間予算、sink拒否、欠番・破損・revision違いの拒否を検査します。
+専用のDB adapterや操作用CLIは提供していません。
 
 ## 停止理由
 
