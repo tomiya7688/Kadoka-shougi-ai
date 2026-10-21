@@ -30,6 +30,10 @@ RelabelRecordは以下をまとめて返します。
 
 [再評価Priority Sampler v1](RELABEL_PRIORITY_SAMPLER_V1.md) は、信頼度・disagreementから元サンプルを重複なく選びます。抽選結果のcandidate indexから `RelabelSource` を取得し、この文書の再評価APIへ渡せます。
 
-## 完了確認
+## バッチ実行
+
+[再評価バッチ実行 v1](RELABEL_BATCH_V1.md) に、queue、予算、保存先と再開cursorの契約を定義します。
+
+## 単一sampleの完了確認
 
 kadoka_relabeler_testは異なる2個のAI出力、元ラベルとprovenanceの保持、途中AI失敗後の継続、重複個体と不足・未設定入力の拒否を検査します。
