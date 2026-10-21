@@ -127,10 +127,14 @@ void test_resume_and_budgets() {
     relabel::RelabelBatchFileStore reopened(directory.path / "main", queue.revision);
     check(reopened.cursor().next_index == 2, "restart must recover committed cursor");
     const auto saved = reopened.load(0);
+    check(saved.evaluations.size() == 2, "both evaluator records must persist");
+    const auto& first_search = saved.evaluations[0].search_result;
+    const auto& second_search = saved.evaluations[1].search_result;
+    if (!first_search || !second_search)
+        throw std::runtime_error("both search results must persist");
     check(saved.source.observed_move_usi == queue.sources[0].observed_move_usi &&
-              saved.source.observed_score_cp == 42 && saved.evaluations.size() == 2 &&
-              saved.evaluations[0].search_result->info == "line\nquote\"\\" &&
-              saved.evaluations[0].search_result->score_cp == 27 && saved.evaluations[1].search_result->score_cp == -14,
+              saved.source.observed_score_cp == 42 && first_search->info == "line\nquote\"\\" &&
+              first_search->score_cp == 27 && second_search->score_cp == -14,
           "file store must preserve source labels and both search results");
     request.cursor = reopened.cursor();
     const auto remaining = relabel::evaluate_relabel_batch(

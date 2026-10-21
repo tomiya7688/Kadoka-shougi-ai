@@ -14,8 +14,17 @@
 namespace kadoka::relabel {
 namespace {
 
-constexpr std::uintmax_t max_record_bytes = 16U * 1024U * 1024U;
+constexpr std::uintmax_t max_record_bytes = std::uintmax_t{16} * 1024U * 1024U;
 constexpr std::size_t max_evaluations = 1024;
+
+// {
+//   責務: [RecordReadExpectation: 読取対象のrevisionとcursorを束ねる],
+//   フィールド: [revision: 期待するqueue revision] [next_index: 期待する次index]
+// }
+struct RecordReadExpectation {
+    std::string revision;
+    std::size_t next_index = 0;
+};
 
 // {
 //   責務: [record_path: indexから固定桁数の確定ファイル名を作る],
@@ -141,15 +150,15 @@ std::string serialize(const std::string& revision, const std::size_t next_index,
 //   責務: [deserialize: 保存ファイルを厳格に読み元recordとcursorを復元する],
 //   処理: [1: version・revision・indexを照合する] [2: sourceとAI結果を読む]
 //     [3: 余剰データを拒否する],
-//   引数: [payload: 保存ファイル内容] [revision: 期待revision] [next_index: 期待cursor],
+//   引数: [payload: 保存ファイル内容] [expected: 期待revisionとcursor],
 //   戻り値: [record: 元sourceと全AI結果]
 // }
-RelabelRecord deserialize(const std::string& payload, const std::string& revision, const std::size_t next_index) {
+RelabelRecord deserialize(const std::string& payload, const RecordReadExpectation& expected) {
     std::istringstream input(payload);
     input.imbue(std::locale::classic());
     std::string magic;
-    if (!(input >> magic) || magic != "KRB1" || read_string(input) != revision ||
-        read_value<std::uint64_t>(input) != next_index)
+    if (!(input >> magic) || magic != "KRB1" || read_string(input) != expected.revision ||
+        read_value<std::uint64_t>(input) != expected.next_index)
         throw std::runtime_error("relabel batch revision or index mismatch");
     RelabelRecord record;
     auto& source = record.source;
@@ -239,7 +248,7 @@ RelabelRecord read_record(const std::filesystem::path& path, const std::string& 
     std::string payload(static_cast<std::size_t>(size), '\0');
     if (!input.read(payload.data(), static_cast<std::streamsize>(size)))
         throw std::runtime_error("cannot read complete relabel batch record");
-    return deserialize(payload, revision, next_index);
+    return deserialize(payload, {revision, next_index});
 }
 
 } // namespace
