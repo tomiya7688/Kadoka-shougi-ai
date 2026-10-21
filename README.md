@@ -81,6 +81,7 @@ Repository-level information stays in this README. Detailed documentation should
 - [Context routing](doc/architecture/CONTEXT_ROUTING.md)
 - [Sibling project alignment](doc/architecture/SIBLING_PROJECT_ALIGNMENT.md)
 - [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
+- [Model Registry v1（日本語）](doc/model_hub/MODEL_REGISTRY_V1.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
 - [Diagram area](doc/diagrams/README.md)
 
