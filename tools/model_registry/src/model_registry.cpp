@@ -191,7 +191,12 @@ class JsonReader {
             if (escaped == 'u') {
                 std::uint32_t codepoint = read_hex();
                 if (codepoint >= 0xD800U && codepoint <= 0xDBFFU) {
-                    if (input_.size() - position_ < 2 || input_[position_++] != '\\' || input_[position_++] != 'u')
+                    if (input_.size() - position_ < 2)
+                        throw std::invalid_argument("missing low surrogate");
+                    const char slash = input_[position_];
+                    const char marker = input_[position_ + 1];
+                    position_ += 2;
+                    if (slash != '\\' || marker != 'u')
                         throw std::invalid_argument("missing low surrogate");
                     const auto low = read_hex();
                     if (low < 0xDC00U || low > 0xDFFFU)

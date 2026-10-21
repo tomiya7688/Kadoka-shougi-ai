@@ -106,6 +106,15 @@ void test_round_trip_and_compatibility() {
               restored.artifact_sha256 == manifest.artifact_sha256 && restored.artifact_format_version == 2 &&
               restored.min_memory_mb == 512 && restored.min_threads == 2,
           "manifest JSON round trip must preserve all identity and runtime fields");
+    auto escaped_json = json;
+    const auto source_key = escaped_json.find("\"source_reference\":");
+    const auto source_end = escaped_json.find(",\n", source_key);
+    check(source_key != std::string::npos && source_end != std::string::npos,
+          "serialized source reference must be present");
+    const auto source_colon = escaped_json.find(':', source_key);
+    escaped_json.replace(source_colon + 1, source_end - source_colon - 1, R"("\uD83D\uDE00")");
+    check(manifest_from_json(escaped_json).source_reference == "\xF0\x9F\x98\x80",
+          "surrogate pair must decode into UTF-8");
     CompatibilityTarget target{.api_version = 1,
                                .formats = {{"kadoka.weights", 2}},
                                .runtime_id = "kadoka_shogi_runtime",
