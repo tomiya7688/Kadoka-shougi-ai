@@ -94,6 +94,15 @@ target_link_libraries(kadoka_shogi_training_parser
         kadoka_shogi_runtime
 )
 
+add_library(kadoka_shogi_dataset_registry
+    tools/dataset_registry/src/dataset_registry.cpp
+)
+add_dependencies(kadoka_shogi_dataset_registry kadoka_rule_check)
+target_include_directories(kadoka_shogi_dataset_registry
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/dataset_registry/include
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -205,6 +214,10 @@ add_test(
     NAME recursive_training_importer_test
     COMMAND recursive_training_importer_test
 )
+
+add_executable(dataset_registry_test tests/dataset_registry_test.cpp)
+target_link_libraries(dataset_registry_test PRIVATE kadoka_shogi_dataset_registry)
+add_test(NAME dataset_registry_test COMMAND dataset_registry_test)
 
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
