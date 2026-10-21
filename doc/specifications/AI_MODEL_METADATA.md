@@ -50,6 +50,8 @@ These names have the same meaning in all three sibling projects. Unknown fields 
 
 This format provides the common metadata layer for bundled, downloaded, user-trained, and external-base models described by #10. It does not by itself implement download management or training templates.
 
+The local registration contract and compatibility API are specified in [Model Registry v1](../model_hub/MODEL_REGISTRY_V1.md).
+
 Recommended `distribution` examples:
 
 ```json
