@@ -368,7 +368,11 @@ std::vector<DatasetMetadata> DatasetRegistry::list() const {
     for (const auto& entry : std::filesystem::directory_iterator(directory_)) {
         if (entry.path().extension() == ".dataset") {
             const auto id = entry.path().stem().string();
-            result.push_back(*get(id));
+            auto metadata = get(id);
+            if (!metadata) {
+                throw std::invalid_argument("dataset record disappeared while listing");
+            }
+            result.push_back(std::move(*metadata));
         }
     }
     std::sort(result.begin(), result.end(),
