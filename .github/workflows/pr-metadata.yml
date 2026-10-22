@@ -1,0 +1,24 @@
+# {
+#   責務: [PR metadata: 担当・自己レビュー・baseの鮮度をPRごとに検査する]
+#   処理: [1: PRイベントを読む] [2: 本文とbase SHAを確認する]
+# }
+name: PR metadata
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: PRの担当・自己レビュー・baseを確認する
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/pr_metadata_check.py
