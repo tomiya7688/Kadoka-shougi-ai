@@ -79,6 +79,7 @@ Repository-level information stays in this README. Detailed documentation should
 
 - [Architecture](doc/architecture/ARCHITECTURE.md)
 - [Context routing](doc/architecture/CONTEXT_ROUTING.md)
+- [開発・PR作業手順（日本語）](doc/development/PR_WORKFLOW.md)
 - [Sibling project alignment](doc/architecture/SIBLING_PROJECT_ALIGNMENT.md)
 - [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)

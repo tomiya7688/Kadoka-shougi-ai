@@ -8,9 +8,9 @@ C++では、範囲外アクセス、解放済み領域の利用、未定義動�
 
 [ワークフロー定義](../../.github/workflows/cpp-safety.yml)は、プルリクエスト、`main`へのpush、手動実行で動きます。ワークフローは次の2種類の検査を独立して実行します。
 
-1. **GCCとClangによるsanitizer検査**  
+1. **GCCとClangによるsanitizer検査**
    Linux上でプロジェクトをDebug構成でビルドし、CTest全件を実行します。AddressSanitizerはメモリ誤用を、UndefinedBehaviorSanitizerは未定義動作を検出します。libstdc++のassertionとchecked iteratorも有効にします。
-2. **CodeQLによる静的解析**  
+2. **CodeQLによる静的解析**
    CMakeのRelease構成をビルドし、C/C++コードを解析してGitHub code scanningへ結果を送信します。
 
 いずれかの構成、ビルド、テスト、解析が失敗した場合、該当するCIチェックは失敗します。
