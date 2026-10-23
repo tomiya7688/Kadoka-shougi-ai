@@ -116,7 +116,7 @@ Runtime must not depend upward on Creator/Training/Analysis. This mirrors the si
 
 ## Documentation language
 
-設計・仕様・開発文書は日本語版を正本とし、英語版は補助翻訳として扱います。文書を追加・更新するときは[文書言語方針](DOCUMENTATION_POLICY.md)に従い、日本語正本と索引リンクを先に整えます。
+この文書には現時点で日本語版がなく、各節の英語原文が暫定正本です。改定時は[文書言語方針と移行手順](DOCUMENTATION_POLICY.md)に従ってください。節を移行したときは、この案内と該当節に日本語正本へのリンクを追加します。
 
 ## Codex implementation conventions
 

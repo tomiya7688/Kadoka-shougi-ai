@@ -77,14 +77,14 @@ Repository-level information stays in this README. Detailed documentation should
 
 ## Documentation
 
-このプロジェクトの設計・仕様・開発文書は日本語版を正本とします。英語版は補助翻訳です。
-
-- [文書言語方針](doc/architecture/DOCUMENTATION_POLICY.md)
+- [日本語正本と既存英語文書の移行方針](doc/architecture/DOCUMENTATION_POLICY.md)
 - [Architecture](doc/architecture/ARCHITECTURE.md)
 - [Context routing](doc/architecture/CONTEXT_ROUTING.md)
+- [開発・PR作業手順（日本語）](doc/development/PR_WORKFLOW.md)
 - [Sibling project alignment](doc/architecture/SIBLING_PROJECT_ALIGNMENT.md)
 - [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
+- [C++安全性CI](doc/architecture/CPP_SAFETY_CI.md)
 - [Diagram area](doc/diagrams/README.md)
 
 ## Initial engine families
