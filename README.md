@@ -77,6 +77,7 @@ Repository-level information stays in this README. Detailed documentation should
 
 ## Documentation
 
+- [日本語正本と既存英語文書の移行方針](doc/architecture/DOCUMENTATION_POLICY.md)
 - [Architecture](doc/architecture/ARCHITECTURE.md)
 - [Context routing](doc/architecture/CONTEXT_ROUTING.md)
 - [開発・PR作業手順（日本語）](doc/development/PR_WORKFLOW.md)
