@@ -83,6 +83,7 @@ Repository-level information stays in this README. Detailed documentation should
 - [開発・PR作業手順（日本語）](doc/development/PR_WORKFLOW.md)
 - [Sibling project alignment](doc/architecture/SIBLING_PROJECT_ALIGNMENT.md)
 - [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
+- [Model Registry v1（日本語）](doc/model_hub/MODEL_REGISTRY_V1.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
 - [C++安全性CI](doc/architecture/CPP_SAFETY_CI.md)
 - [Diagram area](doc/diagrams/README.md)

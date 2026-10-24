@@ -134,6 +134,17 @@ target_link_libraries(kadoka_shogi_training_parser
         kadoka_shogi_runtime
 )
 
+add_library(kadoka_shogi_model_registry
+    tools/model_registry/src/model_registry.cpp
+)
+
+add_dependencies(kadoka_shogi_model_registry kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_model_registry
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/model_registry/include
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -163,6 +174,11 @@ install(
 )
 
 enable_testing()
+
+add_executable(kadoka_model_registry_test tests/kadoka_model_registry_test.cpp)
+target_link_libraries(kadoka_model_registry_test PRIVATE kadoka_shogi_model_registry)
+add_test(NAME kadoka_model_registry_test
+    COMMAND kadoka_model_registry_test ${CMAKE_CURRENT_SOURCE_DIR}/models/examples/model_manifest_v1.json)
 
 add_executable(core_smoke_test tests/core_smoke_test.cpp)
 target_link_libraries(core_smoke_test PRIVATE kadoka_shogi_core)

@@ -1,0 +1,16 @@
+{
+  "schema": "kadoka.model_manifest.v1",
+  "model_id": "kadoka.shogi.example",
+  "model_version": "0.1.0",
+  "model_type": "evaluation_search",
+  "artifact_format": "kadoka.weights",
+  "artifact_format_version": 1,
+  "api_version": 1,
+  "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source_kind": "bundled",
+  "source_reference": "tomiya7688/Kadoka-shougi-ai",
+  "license": "MIT",
+  "runtime_id": "kadoka_shogi_runtime",
+  "min_memory_mb": 512,
+  "min_threads": 1
+}
