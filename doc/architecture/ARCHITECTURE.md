@@ -116,6 +116,10 @@ The shared `engine` layer must not import a concrete AI implementation or runtim
 
 Runtime must not depend upward on Creator/Training/Analysis. This mirrors the sibling-project direction used by Kadoka Othello AI and Kadoka Tetris AI: match-time code stays lightweight, while model creation and heavy data work remain outside the hot path.
 
+## Documentation language
+
+この文書には現時点で日本語版がなく、各節の英語原文が暫定正本です。改定時は[文書言語方針と移行手順](DOCUMENTATION_POLICY.md)に従ってください。節を移行したときは、この案内と該当節に日本語正本へのリンクを追加します。
+
 ## Codex implementation conventions
 
 When adding a feature:

@@ -7,7 +7,8 @@
 ## 層の責務
 
 - **Core**: 盤面・持ち駒・合法手・終局など、将棋規則に基づくcanonical stateと裁定を所有します。
-- **Engine API / AI実装**: Positionを入力として探索し、行動候補を返します。提案はCoreの裁定前にはcanonical stateではありません。
+- **Engine API**: Position、SearchLimits、SearchResultなど、AI実装とRuntimeが共有する抽象契約を定義します。
+- **AI実装**: Engine APIを使って探索し、行動候補を返します。提案はCoreの裁定前にはcanonical stateではありません。
 - **Runtime**: backend呼び出し、Actionの検証、状態遷移、対局進行、clock、headless matchなどを調整します。
 - **Adapter / Transport**: Engine APIやRuntimeの境界をnative、外部process、script等へ接続し、入出力を変換します。Core規則を再実装せず、canonical stateを直接変更しません。
 - **Protocol / UI**: 利用者や外部クライアントの操作を通常のPlayer Actionに変換し、Runtime/Coreの検証結果を表示します。
@@ -20,11 +21,12 @@
 ~~~text
 Protocol / UI ───────────────→ Runtime ──→ Core
 AI Package / Observation Adapter ──→ Runtime
-Native / Process Adapter ─────────→ Runtime backend契約
-Native / Process Adapter ─────────→ Engine API / AI実装 ──→ Core
+Native Adapter ────────────────→ Runtime backend契約 / Engine API
+Process Adapter ───────────────→ Runtime backend契約 / process transport
+AI実装 ───────────────────────→ Engine API ──→ Core
 
 Creator / Training / Analysis ──→ Core
-Creator / Training / Analysis ──→ Runtime（self-play / headless評価時のみ）
+Creator / Training / Analysis ──→ Runtime（self-play、headless評価、公開された対局履歴・Player記録の解析時）
 
 Tests ──→ 検証対象の各層
 ~~~
@@ -64,17 +66,23 @@ Tests ──→ 検証対象の各層
 
 ### native / external / scriptの1手
 
+AIBackendを使う経路とPlayerActionを使う経路は、別のRuntime APIです。
+
 ~~~text
-Engine または Adapter
-        ↓ SearchResult / PlayerAction（提案）
-Runtime TurnRunner
-        ↓ Core合法手・Action検証
-Coreがcanonical stateを更新
-        ↓
-RuntimeがActionResult / 次の観測を返す
+Engine → NativeEngineBackend ─┐
+外部process / script backend ─┴→ run_ai_turn(AIBackend&, Position)
+                                  → backend.decide() の SearchResult
+                                  → Coreの合法性検証・状態遷移
+                                  → TurnResult（status、next_position等）
+
+PlayerAction → apply_player_action(Position, PlayerAction)
+             → Coreの合法性検証・状態遷移
+             → NativeActionApplication（ActionResult、next_position等）
+
+Position / PlayerClock → make_player_observation() → PlayerObservation
 ~~~
 
-違法な移動や不正なActionは盤面を変更しません。NativeEngineBackend、外部process、scriptの違いで合法性検証を分岐させません。Adapterは候補を正規化してRuntimeへ渡し、最終判断をCoreに委譲します。
+PlayerObservationの生成は行動の適用とは別の呼び出しです。違法な移動や不正なActionは盤面を変更しません。NativeEngineBackend、外部process、scriptの違いで合法性検証を分岐させません。Adapterは候補を正規化してRuntimeへ渡し、最終判断をCoreに委譲します。
 
 ### headless対局
 
