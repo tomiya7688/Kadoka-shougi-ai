@@ -92,6 +92,8 @@ Add new subdirectories instead of accumulating unrelated documents at the root o
 
 ## Dependency direction
 
+具体的な依存許可表、現行ソース配置、native/external/script境界、headless経路、seed所有者は[Runtime / Core / Adapter依存境界](RUNTIME_CORE_ADAPTER_BOUNDARY.md)に記載します。
+
 Keep dependencies simple and one-way where practical:
 
 ```text
