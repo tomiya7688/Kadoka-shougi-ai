@@ -22,13 +22,26 @@ int main() {
     using kadoka::training::save_checkpoint;
 
     const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
-    const std::filesystem::path directory =
-        std::filesystem::temp_directory_path() / ("kadoka-checkpoint-test-" + std::to_string(unique));
-    std::filesystem::create_directory(directory);
-    const std::filesystem::path checkpoint_path = directory / "epoch-12-step-340.ckpt";
-    const std::filesystem::path corrupt_path = directory / "corrupt.ckpt";
-
+    std::filesystem::path directory;
     try {
+        for (unsigned attempt = 0; attempt < 32; ++attempt) {
+            const auto candidate = std::filesystem::temp_directory_path() /
+                                   ("kadoka-checkpoint-test-" + std::to_string(unique) + "-" +
+                                    std::to_string(attempt));
+            std::error_code error;
+            if (std::filesystem::create_directory(candidate, error)) {
+                directory = candidate;
+                break;
+            }
+            if (error)
+                throw std::filesystem::filesystem_error("could not create checkpoint test directory", candidate,
+                                                        error);
+        }
+        if (directory.empty())
+            throw std::runtime_error("could not reserve a unique checkpoint test directory");
+        const std::filesystem::path checkpoint_path = directory / "epoch-12-step-340.ckpt";
+        const std::filesystem::path corrupt_path = directory / "corrupt.ckpt";
+
         CheckpointState source;
         source.epoch = 12;
         source.step = 340;
@@ -51,13 +64,22 @@ int main() {
             restored.dataset_version != source.dataset_version || restored.metrics != source.metrics)
             throw std::runtime_error("checkpoint round-trip changed saved training state");
 
+        CheckpointState different = source;
+        different.weights = {99, 98, 97};
+        different.metrics = {{"loss", 0.999}};
         bool rejected = false;
         try {
-            save_checkpoint(checkpoint_path, source);
+            save_checkpoint(checkpoint_path, different);
         } catch (const std::filesystem::filesystem_error&) {
             rejected = true;
         }
-        if (!rejected || load_checkpoint(checkpoint_path).weights != source.weights)
+        const CheckpointState after_rejection = load_checkpoint(checkpoint_path);
+        if (!rejected || after_rejection.epoch != source.epoch || after_rejection.step != source.step ||
+            after_rejection.weights != source.weights || after_rejection.optimizer_state != source.optimizer_state ||
+            after_rejection.scheduler_state != source.scheduler_state || after_rejection.rng_state != source.rng_state ||
+            after_rejection.dataset_cursor != source.dataset_cursor ||
+            after_rejection.training_config_hash != source.training_config_hash ||
+            after_rejection.dataset_version != source.dataset_version || after_rejection.metrics != source.metrics)
             throw std::runtime_error("saving over an existing checkpoint did not fail safely");
 
         rejected = false;
@@ -84,6 +106,8 @@ int main() {
             corrupt.seekg(12);
             char byte = 0;
             corrupt.read(&byte, 1);
+            if (corrupt.gcount() != 1 || !corrupt)
+                throw std::runtime_error("could not read the corruption test byte");
             byte ^= 0x01;
             corrupt.seekp(12);
             corrupt.write(&byte, 1);
@@ -94,11 +118,43 @@ int main() {
         rejected = false;
         try {
             (void)load_checkpoint(corrupt_path);
+        } catch (const std::runtime_error& error) {
+            rejected = std::string(error.what()).find("checksum mismatch") != std::string::npos;
+        }
+        if (!rejected)
+            throw std::runtime_error("corrupted checkpoint did not fail checksum validation");
+
+        const std::filesystem::path future_path = directory / "future.ckpt";
+        std::filesystem::copy_file(checkpoint_path, future_path);
+        {
+            std::fstream future(future_path, std::ios::binary | std::ios::in | std::ios::out);
+            future.seekp(8);
+            const char next_version = 2;
+            future.write(&next_version, 1);
+            future.close();
+            if (!future)
+                throw std::runtime_error("could not prepare the future version fixture");
+        }
+        rejected = false;
+        try {
+            (void)load_checkpoint(future_path);
+        } catch (const std::runtime_error& error) {
+            rejected = std::string(error.what()).find("format version is unsupported") != std::string::npos;
+        }
+        if (!rejected)
+            throw std::runtime_error("future checkpoint version was not identified");
+
+        const std::filesystem::path truncated_path = directory / "truncated.ckpt";
+        std::filesystem::copy_file(checkpoint_path, truncated_path);
+        std::filesystem::resize_file(truncated_path, 15);
+        rejected = false;
+        try {
+            (void)load_checkpoint(truncated_path);
         } catch (const std::runtime_error&) {
             rejected = true;
         }
         if (!rejected)
-            throw std::runtime_error("corrupted checkpoint was accepted");
+            throw std::runtime_error("truncated checkpoint was accepted");
 
         CheckpointState invalid = source;
         invalid.weights.clear();
@@ -115,7 +171,9 @@ int main() {
         std::cout << "checkpoint_store_test passed\n";
         return 0;
     } catch (const std::exception& error) {
-        std::filesystem::remove_all(directory);
+        std::error_code ignored;
+        if (!directory.empty())
+            std::filesystem::remove_all(directory, ignored);
         std::cerr << error.what() << '\n';
         return 1;
     }

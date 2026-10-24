@@ -9,8 +9,16 @@
 #include <limits>
 #include <stdexcept>
 #include <string_view>
+#include <system_error>
 
 namespace kadoka::training {
+
+// {
+//   責務: [checkpoint metric形式: doubleをIEEE 754 binary64として固定する],
+//   引数: [double: 使用するplatformの浮動小数点型],
+//   戻り値: [なし: 非対応platformをコンパイル時に拒否する]
+// }
+static_assert(std::numeric_limits<double>::is_iec559 && sizeof(double) == 8);
 
 // {
 //   責務: [save_checkpoint: 学習状態を検証しchecksum付きbinary checkpointとして原子的に保存する],
@@ -39,7 +47,30 @@ void save_checkpoint(const std::filesystem::path& path, const CheckpointState& s
             throw std::invalid_argument("checkpoint metric names must be nonempty and values finite");
     }
 
+    // {
+    //   責務: [account_bytes: 書込みバッファを確保する前に形式上限を検査する],
+    //   引数: [count: 次のfieldが使用するbyte数],
+    //   戻り値: [なし: totalを更新する],
+    //   エラー: [1 GiBの上限を超える場合はinvalid_argument]
+    // }
+    std::uint64_t total = 8 + 4 + 8 + 8 + 4 + 8;
+    const auto account_bytes = [&total](const std::uint64_t count) {
+        if (count > kMaximumCheckpointBytes - total)
+            throw std::invalid_argument("checkpoint exceeds the 1 GiB format limit");
+        total += count;
+    };
+    account_bytes(4 + state.training_config_hash.size());
+    account_bytes(4 + state.dataset_version.size());
+    for (const auto* blob : {&state.weights, &state.optimizer_state, &state.scheduler_state, &state.rng_state,
+                             &state.dataset_cursor})
+        account_bytes(8 + blob->size());
+    for (const auto& [name, value] : state.metrics) {
+        (void)value;
+        account_bytes(4 + name.size() + 8);
+    }
+
     std::vector<std::uint8_t> bytes;
+    bytes.reserve(static_cast<std::size_t>(total));
     const auto append_u8 = [&bytes](const std::uint8_t value) { bytes.push_back(value); };
     const auto append_u32 = [&bytes, &append_u8](const std::uint32_t value) {
         for (unsigned shift = 0; shift < 32; shift += 8)
@@ -99,12 +130,14 @@ void save_checkpoint(const std::filesystem::path& path, const CheckpointState& s
     const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
     std::filesystem::path temporary_directory;
     for (unsigned attempt = 0; attempt < 32; ++attempt) {
-        temporary_directory = parent / (path.filename().string() + ".tmp-" + std::to_string(timestamp) + "-" +
+        temporary_directory = parent / (".kadoka-checkpoint.tmp-" + std::to_string(timestamp) + "-" +
                                         std::to_string(sequence.fetch_add(1)));
         std::error_code error;
         if (std::filesystem::create_directory(temporary_directory, error))
             break;
-        if (error || attempt == 31)
+        if (!error && attempt == 31)
+            error = std::make_error_code(std::errc::file_exists);
+        if (error)
             throw std::filesystem::filesystem_error("could not reserve checkpoint temporary directory",
                                                     temporary_directory, error);
     }
@@ -164,6 +197,15 @@ CheckpointState load_checkpoint(const std::filesystem::path& path, const Checkpo
                                                 std::make_error_code(std::errc::io_error));
 
     const std::size_t content_size = bytes.size() - 8;
+    for (std::size_t index = 0; index < kMagic.size(); ++index) {
+        if (bytes[index] != kMagic[index])
+            throw std::runtime_error("checkpoint magic is invalid");
+    }
+    std::uint32_t version = 0;
+    for (unsigned shift = 0; shift < 32; shift += 8)
+        version |= static_cast<std::uint32_t>(bytes[8 + shift / 8]) << shift;
+    if (version != kFormatVersion)
+        throw std::runtime_error("checkpoint format version is unsupported");
     const auto read_u64_at = [&bytes](const std::size_t offset) {
         std::uint64_t value = 0;
         for (unsigned shift = 0; shift < 64; shift += 8)

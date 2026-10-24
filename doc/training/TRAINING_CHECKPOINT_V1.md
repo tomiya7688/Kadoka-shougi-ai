@@ -11,16 +11,16 @@ Training Checkpointは、学習処理を再開するための状態を保存し�
 - `save_checkpoint(path, state)` はtargetが存在しない場合だけ保存します。
 - 保存先の親directoryは事前に存在する必要があります。
 - checkpointはversion付きbinary形式で書き出し、checksumで偶発的な破損を検出します。
-- 一時directoryはtargetと同じ親directoryに作り、全量を書いた後にhard linkで公開します。読み手には未完成ファイルを見せません。既存targetは置換しません。
+- 一時directoryはtargetと同じ親directoryに作り、全量を書いた後にhard linkで公開します。読み手には未完成ファイルを見せません。既存targetは置換しません。保存先のfilesystemがhard linkをサポートしない場合は保存に失敗します。
 - `load_checkpoint(path, expected)` は必須field、format version、checksum、metricsを検証して状態を返します。
 - expectedにconfig hashまたはdataset versionを指定した場合、不一致は読み込み失敗になります。空文字列の条件は照合しません。
 - 1 checkpointの最大サイズは1 GiB、metrics数は最大100,000です。
 
-Checksumは破損検出用であり、改ざん防止署名ではありません。ファイル内容のflushは行いますが、電源断時の媒体永続性までは保証しません。
+Checksumは破損検出用であり、改ざん防止署名ではありません。公開の原子性は通常実行中の読み手に対する保証です。ファイル内容のflushは行いますが、電源断時の媒体永続性までは保証しません。保存・読込時は最大1 GiBのcheckpointに加えて復元用のbyte列をメモリに保持します。
 
 ## 保存形式
 
-形式はlittle-endianの固定versionです。magic `KDKCKPT1`、format version、epoch、step、config hash、dataset version、5種類のlength付きbyte列、metrics map、FNV-1a 64-bit checksumの順です。metricsはIEEE 754 binary64として保存します。
+形式はlittle-endianの固定versionです。magic `KDKCKPT1`、u32 format version、u64 epoch、u64 step、u32長付きconfig hash、u32長付きdataset version、u64長付きbyte列5個（weights、optimizer、scheduler、RNG、dataset cursor）、u32 metrics個数、metrics map、u64 FNV-1a checksumの順です。各metricはu32長付き名前とIEEE 754 binary64値の組で、名前順に保存します。名前は非空、値は有限数のみです。checksumは末尾8 byteを除く全byteを対象にします。
 
 ## 境界
 
@@ -31,4 +31,3 @@ Checksumは破損検出用であり、改ざん防止署名ではありません
 ## 確認
 
 `checkpoint_store_test` は全stateのround-trip、既存targetを壊さないこと、config/dataset不一致、checksum破損、不正な必須fieldの拒否を確認します。
-

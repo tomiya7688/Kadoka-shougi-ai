@@ -39,10 +39,11 @@ struct CheckpointCompatibility {
 // {
 //   責務: [save_checkpoint: 完成したcheckpointファイルを原子的に公開する],
 //   処理: [1: 状態を検証してversion付き形式へ符号化する] [2: 同じdirectoryの一時領域へ全量を書き出す]
-//         [3: 完成ファイルを新規targetへrenameする],
+//         [3: 同じfilesystem上で完成ファイルを新規targetへhard linkで公開する],
 //   引数: [path: 新規作成するcheckpointファイル] [state: 保存する学習状態],
 //   戻り値: [],
-//   エラー: [targetが既存または親directoryがない場合はfilesystem_error] [状態が不正ならinvalid_argument]
+//   エラー: [targetが既存、親directoryがない、hard link非対応の場合はfilesystem_error]
+//           [状態が不正ならinvalid_argument]
 // }
 void save_checkpoint(const std::filesystem::path& path, const CheckpointState& state);
 
