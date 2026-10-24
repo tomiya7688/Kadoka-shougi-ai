@@ -85,6 +85,7 @@ Repository-level information stays in this README. Detailed documentation should
 - [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
 - [C++安全性CI](doc/architecture/CPP_SAFETY_CI.md)
+- [1.0.0リリース到達条件](doc/release/1.0.0.md)
 - [Diagram area](doc/diagrams/README.md)
 
 ## Initial engine families
