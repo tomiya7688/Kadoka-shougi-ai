@@ -82,6 +82,7 @@ Repository-level information stays in this README. Detailed documentation should
 - [Context routing](doc/architecture/CONTEXT_ROUTING.md)
 - [開発・PR作業手順（日本語）](doc/development/PR_WORKFLOW.md)
 - [Sibling project alignment](doc/architecture/SIBLING_PROJECT_ALIGNMENT.md)
+- [手法移植の出典・ライセンス記録](doc/architecture/METHOD_PORTING_PROVENANCE.md)
 - [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
 - [C++安全性CI](doc/architecture/CPP_SAFETY_CI.md)
