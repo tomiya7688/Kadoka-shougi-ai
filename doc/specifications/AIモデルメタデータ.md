@@ -65,4 +65,3 @@ metadataはモデルの識別、由来、要求環境、再現性、license、be
 ## 英語版
 
 [AI Model Metadata](AI_MODEL_METADATA.md)
-
