@@ -134,6 +134,22 @@ target_link_libraries(kadoka_shogi_training_parser
         kadoka_shogi_runtime
 )
 
+# {
+#   責務: [kadoka_shogi_checkpoint_store: 学習checkpointの保存と復元を提供する]
+#   引数: [checkpoint_store.cpp: 保存形式と公開処理の実装]
+#   戻り値: [kadoka_shogi_checkpoint_store: C++20ライブラリtarget]
+# }
+add_library(kadoka_shogi_checkpoint_store
+    tools/checkpoint_store/src/checkpoint_store.cpp
+)
+
+add_dependencies(kadoka_shogi_checkpoint_store kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_checkpoint_store
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/checkpoint_store/include
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -245,6 +261,15 @@ add_test(
     NAME recursive_training_importer_test
     COMMAND recursive_training_importer_test
 )
+
+# {
+#   責務: [checkpoint_store_test: checkpoint形式と破損・上書き拒否の回帰検証を登録する]
+#   引数: [checkpoint_store_test.cpp: 独立した回帰テスト]
+#   戻り値: [CTestのcheckpoint_store_test]
+# }
+add_executable(checkpoint_store_test tests/checkpoint_store_test.cpp)
+target_link_libraries(checkpoint_store_test PRIVATE kadoka_shogi_checkpoint_store)
+add_test(NAME checkpoint_store_test COMMAND checkpoint_store_test)
 
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
