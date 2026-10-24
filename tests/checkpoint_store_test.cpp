@@ -26,16 +26,14 @@ int main() {
     try {
         for (unsigned attempt = 0; attempt < 32; ++attempt) {
             const auto candidate = std::filesystem::temp_directory_path() /
-                                   ("kadoka-checkpoint-test-" + std::to_string(unique) + "-" +
-                                    std::to_string(attempt));
+                                   ("kadoka-checkpoint-test-" + std::to_string(unique) + "-" + std::to_string(attempt));
             std::error_code error;
             if (std::filesystem::create_directory(candidate, error)) {
                 directory = candidate;
                 break;
             }
             if (error)
-                throw std::filesystem::filesystem_error("could not create checkpoint test directory", candidate,
-                                                        error);
+                throw std::filesystem::filesystem_error("could not create checkpoint test directory", candidate, error);
         }
         if (directory.empty())
             throw std::runtime_error("could not reserve a unique checkpoint test directory");
@@ -76,8 +74,8 @@ int main() {
         const CheckpointState after_rejection = load_checkpoint(checkpoint_path);
         if (!rejected || after_rejection.epoch != source.epoch || after_rejection.step != source.step ||
             after_rejection.weights != source.weights || after_rejection.optimizer_state != source.optimizer_state ||
-            after_rejection.scheduler_state != source.scheduler_state || after_rejection.rng_state != source.rng_state ||
-            after_rejection.dataset_cursor != source.dataset_cursor ||
+            after_rejection.scheduler_state != source.scheduler_state ||
+            after_rejection.rng_state != source.rng_state || after_rejection.dataset_cursor != source.dataset_cursor ||
             after_rejection.training_config_hash != source.training_config_hash ||
             after_rejection.dataset_version != source.dataset_version || after_rejection.metrics != source.metrics)
             throw std::runtime_error("saving over an existing checkpoint did not fail safely");

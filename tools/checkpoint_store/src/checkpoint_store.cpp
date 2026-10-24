@@ -61,8 +61,8 @@ void save_checkpoint(const std::filesystem::path& path, const CheckpointState& s
     };
     account_bytes(4 + state.training_config_hash.size());
     account_bytes(4 + state.dataset_version.size());
-    for (const auto* blob : {&state.weights, &state.optimizer_state, &state.scheduler_state, &state.rng_state,
-                             &state.dataset_cursor})
+    for (const auto* blob :
+         {&state.weights, &state.optimizer_state, &state.scheduler_state, &state.rng_state, &state.dataset_cursor})
         account_bytes(8 + blob->size());
     for (const auto& [name, value] : state.metrics) {
         (void)value;
