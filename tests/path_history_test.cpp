@@ -54,6 +54,9 @@ template <class Callback> void assert_invalid(Callback&& callback) {
 int main() {
     FullMovePathHistory full{kStartSfen};
     check(full.moves_usi().empty());
+    const FullMovePathHistory restored_empty_full = deserialize_full_move_path_history(full.serialize());
+    check(restored_empty_full.moves_usi().empty());
+    check(restored_empty_full.identity() == full.identity());
     full.record("7g7f", kAfterFirstMove);
     full.record("3c3d", kAfterSecondMove);
 
@@ -69,6 +72,9 @@ int main() {
     check(different_path.identity() != full.identity());
 
     LastNMovePathHistory recent{2, kStartSfen};
+    const auto restored_empty_recent = deserialize_path_history(recent.serialize());
+    check(restored_empty_recent->moves_usi().empty());
+    check(restored_empty_recent->identity() == recent.identity());
     recent.record("7g7f", kAfterFirstMove);
     recent.record("3c3d", kAfterSecondMove);
     recent.record("8h2b+", kAfterThirdMove);
