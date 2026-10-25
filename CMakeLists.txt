@@ -150,6 +150,23 @@ target_include_directories(kadoka_shogi_checkpoint_store
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/checkpoint_store/include
 )
 
+# {
+#   責務: [kadoka_shogi_checkpoint_manager: checkpoint store上のlatest・periodic・best管理をビルドする],
+#   依存: [kadoka_rule_check] [kadoka_shogi_checkpoint_store]
+# }
+add_library(kadoka_shogi_checkpoint_manager
+    tools/checkpoint_manager/src/checkpoint_manager.cpp
+)
+
+add_dependencies(kadoka_shogi_checkpoint_manager kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_checkpoint_manager
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/checkpoint_manager/include
+)
+
+target_link_libraries(kadoka_shogi_checkpoint_manager PUBLIC kadoka_shogi_checkpoint_store)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -261,6 +278,14 @@ add_test(
     NAME recursive_training_importer_test
     COMMAND recursive_training_importer_test
 )
+
+# {
+#   責務: [checkpoint_manager_test: pointer公開とretentionの回帰検証をCTestに登録する],
+#   依存: [kadoka_shogi_checkpoint_manager]
+# }
+add_executable(checkpoint_manager_test tests/checkpoint_manager_test.cpp)
+target_link_libraries(checkpoint_manager_test PRIVATE kadoka_shogi_checkpoint_manager)
+add_test(NAME checkpoint_manager_test COMMAND checkpoint_manager_test)
 
 # {
 #   責務: [checkpoint_store_test: checkpoint形式と破損・上書き拒否の回帰検証を登録する]
