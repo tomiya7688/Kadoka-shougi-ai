@@ -97,10 +97,15 @@ target_link_libraries(kadoka_shogi_runtime
         kadoka_shogi_core
 )
 
+# {
+#   責務: [kadoka_shogi_ai_package: AI向け局面観測と経路履歴をライブラリにまとめる],
+#   追加: [path_history.cpp: 現在局面と着手経路の保存形式を提供する]
+# }
 add_library(kadoka_shogi_ai_package
     ai_package/src/board_recognition.cpp
     ai_package/src/json_player_observation_parser.cpp
     ai_package/src/observation.cpp
+    ai_package/src/path_history.cpp
 )
 
 add_dependencies(kadoka_shogi_ai_package kadoka_rule_check)
@@ -254,6 +259,14 @@ add_test(
     NAME board_recognition_adapter_test
     COMMAND board_recognition_adapter_test
 )
+
+# {
+#   責務: [path_history_test: 経路識別・保持上限・保存形式の回帰検証を登録する],
+#   依存: [kadoka_shogi_ai_package]
+# }
+add_executable(path_history_test tests/path_history_test.cpp)
+target_link_libraries(path_history_test PRIVATE kadoka_shogi_ai_package)
+add_test(NAME path_history_test COMMAND path_history_test)
 
 add_executable(game_history_test tests/game_history_test.cpp)
 target_link_libraries(game_history_test PRIVATE kadoka_shogi_runtime)
