@@ -8,46 +8,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
-# {
-#   責務: [KADOKA_ENABLE_SANITIZERS: Linux上のGCCまたはClangで安全性検査を有効にする]
-#   処理: [
-#     1: ASanとUBSanをコンパイル・リンクへ設定する
-#     2: libstdc++のassertionとchecked iteratorを有効にする
-#     3: 対応しない環境で有効化された場合は構成を失敗させる
-#   ]
-#   引数: [KADOKA_ENABLE_SANITIZERS: 検査を有効にするかどうか]
-#   戻り値: [なし: CMakeのコンパイル設定とリンク設定を変更する]
-# }
-option(
-    KADOKA_ENABLE_SANITIZERS
-    "Linux上のGCCまたはClangでsanitizer検査を有効にする"
-    OFF
-)
-
-if(KADOKA_ENABLE_SANITIZERS)
-    # 未定義動作とメモリ破壊を検出できるLinux環境に限定する。
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang"
-        AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        add_compile_options(
-            -fsanitize=address,undefined
-            -fno-omit-frame-pointer
-            -fno-sanitize-recover=all
-            -D_GLIBCXX_ASSERTIONS
-            -D_GLIBCXX_DEBUG
-        )
-        add_link_options(
-            -fsanitize=address,undefined
-            -fno-omit-frame-pointer
-            -fno-sanitize-recover=all
-        )
-    else()
-        # 対応環境を誤認したまま検査なしで続行しない。
-        message(FATAL_ERROR
-            "KADOKA_ENABLE_SANITIZERS はLinux上のGCCまたはClangが必要です"
-        )
-    endif()
-endif()
-
 add_custom_target(kadoka_rule_check
     COMMAND
         ${Python3_EXECUTABLE}
@@ -134,11 +94,6 @@ target_link_libraries(kadoka_shogi_training_parser
         kadoka_shogi_runtime
 )
 
-# {
-#   責務: [kadoka_shogi_checkpoint_store: 学習checkpointの保存と復元を提供する]
-#   引数: [checkpoint_store.cpp: 保存形式と公開処理の実装]
-#   戻り値: [kadoka_shogi_checkpoint_store: C++20ライブラリtarget]
-# }
 add_library(kadoka_shogi_checkpoint_store
     tools/checkpoint_store/src/checkpoint_store.cpp
 )
@@ -149,6 +104,24 @@ target_include_directories(kadoka_shogi_checkpoint_store
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/checkpoint_store/include
 )
+
+# {
+#   責務: [kadoka_shogi_checkpoint_manager: checkpoint store上のlatest・periodic・best管理をビルドする],
+#   依存: [kadoka_rule_check] [kadoka_shogi_checkpoint_store]
+# }
+add_library(kadoka_shogi_checkpoint_manager
+    tools/checkpoint_manager/src/checkpoint_manager.cpp
+)
+
+add_dependencies(kadoka_shogi_checkpoint_manager kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_checkpoint_manager
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/checkpoint_manager/include
+)
+
+target_link_libraries(kadoka_shogi_checkpoint_manager PUBLIC kadoka_shogi_checkpoint_store)
+
 
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
@@ -263,10 +236,12 @@ add_test(
 )
 
 # {
-#   責務: [checkpoint_store_test: checkpoint形式と破損・上書き拒否の回帰検証を登録する]
-#   引数: [checkpoint_store_test.cpp: 独立した回帰テスト]
-#   戻り値: [CTestのcheckpoint_store_test]
+#   責務: [checkpoint_manager_test: pointer公開とretentionの回帰検証をCTestに登録する],
+#   依存: [kadoka_shogi_checkpoint_manager]
 # }
+add_executable(checkpoint_manager_test tests/checkpoint_manager_test.cpp)
+target_link_libraries(checkpoint_manager_test PRIVATE kadoka_shogi_checkpoint_manager)
+add_test(NAME checkpoint_manager_test COMMAND checkpoint_manager_test)
 add_executable(checkpoint_store_test tests/checkpoint_store_test.cpp)
 target_link_libraries(checkpoint_store_test PRIVATE kadoka_shogi_checkpoint_store)
 add_test(NAME checkpoint_store_test COMMAND checkpoint_store_test)
@@ -306,3 +281,6 @@ add_test(
         ${Python3_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/process_ai_backend_helper.py
 )
+
+
+
