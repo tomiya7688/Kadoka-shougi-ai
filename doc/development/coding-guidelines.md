@@ -204,15 +204,22 @@ for correction.
 
 ## 12. Formatting
 
-`.clang-format` is the repository formatting source of truth.
+`.clang-format` is the repository formatting source of truth. Install the pinned
+`clang-format==18.1.8` from `tools/requirements-format.txt` into your development
+environment. Check `clang-format --version` before formatting.
 
 Typical usage:
 
 ```bash
-clang-format -i engine/src/*.cpp engine/include/kadoka/*.hpp tests/*.cpp protocol/cli/*.cpp
+python -m pip install --no-deps -r tools/requirements-format.txt
+clang-format -i path/to/changed.cpp path/to/changed.hpp
+clang-format --dry-run --Werror path/to/changed.cpp path/to/changed.hpp
 ```
 
-Format touched C/C++ files before opening a PR. Avoid large format-only rewrites mixed with functional changes.
+Pass only the C/C++ files changed by the task. Do not pass generated build
+output, vendor files, or unrelated working-tree changes. Run `-i`, then
+`--dry-run --Werror` and the related tests before review. Avoid large
+format-only rewrites mixed with functional changes.
 
 ## 13. Static analysis
 
@@ -236,9 +243,10 @@ Static-analysis fixes should remain understandable and should not introduce abst
 The CI-equivalent quality gate on Ubuntu uses these commands from the repository root:
 
 ```bash
-sudo apt-get update && sudo apt-get install --yes clang-format clang-tidy
+python -m pip install --no-deps -r tools/requirements-format.txt
+sudo apt-get update && sudo apt-get install --yes clang-tidy
 BASE_SHA="$(git merge-base origin/main HEAD)"
-git diff --name-only "$BASE_SHA...HEAD" -- '*.cpp' '*.hpp' '*.h' | xargs --no-run-if-empty clang-format --dry-run --Werror
+git diff --diff-filter=ACMR --name-only -z "$BASE_SHA...HEAD" -- '*.cpp' '*.hpp' '*.h' | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_CXX_CLANG_TIDY=clang-tidy
 cmake --build build --config Release --parallel 2
 ctest --test-dir build -C Release --output-on-failure

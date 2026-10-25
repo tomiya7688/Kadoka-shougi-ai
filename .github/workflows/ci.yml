@@ -30,12 +30,14 @@ jobs:
           python-version: "3.11"
 
       - name: Install C++ quality tools
-        run: sudo apt-get update && sudo apt-get install --yes clang-format clang-tidy
+        run: |
+          python -m pip install --no-deps -r tools/requirements-format.txt
+          sudo apt-get update && sudo apt-get install --yes clang-tidy
 
       - name: Check C++ formatting
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: git diff --name-only "$BASE_SHA...$GITHUB_SHA" -- '*.cpp' '*.hpp' '*.h' | xargs --no-run-if-empty clang-format --dry-run --Werror
+        run: git diff --diff-filter=ACMR --name-only -z "$BASE_SHA...$GITHUB_SHA" -- '*.cpp' '*.hpp' '*.h' | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
 
       - name: Validate family model metadata
         run: python tools/family_metadata/script/validate_metadata.py --game shogi models/examples/family_metadata.json
