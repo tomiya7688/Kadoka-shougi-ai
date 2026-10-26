@@ -122,12 +122,19 @@ int run() {
           "reloaded provenance must match");
     check(reloaded.list().size() == 3 && reloaded.list().front().dataset_id == "derived-1",
           "list must be stable and sorted");
+    auto grandchild = make_root("grandchild-1", DatasetRole::benchmark);
+    grandchild.source_type = "derived";
+    grandchild.parent_dataset_id = derived.dataset_id;
+    grandchild.generation = 2;
+    check(registry.add(grandchild), "grandchild must be added");
     const auto root_path = temp.path / "root-1.dataset";
     const auto hidden_root = temp.path / "root-1.tmp";
     std::filesystem::rename(root_path, hidden_root);
     check(rejects([&] { static_cast<void>(reloaded.list()); }), "orphaned child must be rejected on reload");
     check(rejects([&] { static_cast<void>(reloaded.get(derived.dataset_id)); }),
           "orphaned child must be rejected by get");
+    check(rejects([&] { static_cast<void>(reloaded.get(grandchild.dataset_id)); }),
+          "missing grandparent must be rejected by get");
     std::filesystem::rename(hidden_root, root_path);
 
     auto bad_parent = derived;
@@ -151,10 +158,20 @@ int run() {
     bad_date.dataset_id = "bad-date";
     bad_date.created_at = "2026-02-30T00:00:00Z";
     check(rejects([&] { static_cast<void>(registry.add(bad_date)); }), "invalid calendar date must be rejected");
+    auto bad_utf8 = root;
+    bad_utf8.dataset_id = "bad-utf8";
+    bad_utf8.license = std::string("\xC0\xAF", 2);
+    check(rejects([&] { static_cast<void>(registry.add(bad_utf8)); }), "invalid UTF-8 must be rejected");
 
+    check(registry.remove(grandchild.dataset_id), "grandchild removal must succeed");
     check(registry.remove(derived.dataset_id), "child removal must succeed");
     check(registry.remove(root.dataset_id), "parent removal after child must succeed");
     check(!registry.remove(root.dataset_id), "missing ID removal must report false");
+    auto unicode = make_root("unicode-license", DatasetRole::training);
+    unicode.license = "利用可";
+    check(registry.add(unicode), "valid UTF-8 must be accepted");
+    check(registry.get(unicode.dataset_id)->license == unicode.license, "UTF-8 must survive reload");
+    check(registry.remove(unicode.dataset_id), "UTF-8 record must be removable");
 
     {
         std::ofstream corrupt(temp.path / "corrupt.dataset", std::ios::binary);

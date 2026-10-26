@@ -33,16 +33,50 @@ bool valid_id(std::string_view value) {
 }
 
 // {
-//   責務: [valid_text: 自由記述欄の空値・制御文字・過大入力を拒否する],
+//   責務: [valid_utf8_text: 不正なUTF-8符号化と制御文字を拒否する],
+//   引数: [value: 検証するbyte列],
+//   戻り値: [valid: 正しいUTF-8の表示用文字列ならtrue]
+// }
+bool valid_utf8_text(std::string_view value) {
+    for (std::size_t offset = 0; offset < value.size();) {
+        const auto lead = static_cast<unsigned char>(value[offset]);
+        if (lead < 0x80) {
+            if (lead < 0x20 || lead == 0x7f) {
+                return false;
+            }
+            ++offset;
+            continue;
+        }
+        const std::size_t followers = lead >= 0xc2 && lead <= 0xdf   ? 1
+                                      : lead >= 0xe0 && lead <= 0xef ? 2
+                                      : lead >= 0xf0 && lead <= 0xf4 ? 3
+                                                                     : 0;
+        if (followers == 0 || followers >= value.size() - offset) {
+            return false;
+        }
+        const auto second = static_cast<unsigned char>(value[offset + 1]);
+        if ((lead == 0xc2 && second < 0xa0) || (lead == 0xe0 && second < 0xa0) || (lead == 0xed && second > 0x9f) ||
+            (lead == 0xf0 && second < 0x90) || (lead == 0xf4 && second > 0x8f)) {
+            return false;
+        }
+        for (std::size_t index = 1; index <= followers; ++index) {
+            const auto continuation = static_cast<unsigned char>(value[offset + index]);
+            if (continuation < 0x80 || continuation > 0xbf) {
+                return false;
+            }
+        }
+        offset += followers + 1;
+    }
+    return true;
+}
+
+// {
+//   責務: [valid_text: 自由記述欄の空値・UTF-8・過大入力を検証する],
 //   引数: [value: 候補] [required: 空欄を許すか],
 //   戻り値: [valid: 使用できる場合true]
 // }
 bool valid_text(std::string_view value, bool required) {
-    if ((required && value.empty()) || value.size() > 4096) {
-        return false;
-    }
-    return std::none_of(value.begin(), value.end(),
-                        [](unsigned char character) { return character < 0x20 || character == 0x7f; });
+    return (!required || !value.empty()) && value.size() <= 4096 && valid_utf8_text(value);
 }
 
 // {
@@ -343,7 +377,7 @@ bool DatasetRegistry::remove(const std::string& dataset_id) {
 }
 
 // {
-//   責務: [get: IDに対応するrecordのファイル名・親参照・世代を照合する],
+//   責務: [get: IDに対応するrecordのファイル名・祖先参照・世代を照合する],
 //   引数: [dataset_id: 対象ID],
 //   戻り値: [metadata: 存在する場合の内容]
 // }
@@ -356,17 +390,19 @@ std::optional<DatasetMetadata> DatasetRegistry::get(const std::string& dataset_i
     if (metadata.dataset_id != dataset_id) {
         throw std::invalid_argument("dataset filename and content mismatch");
     }
-    if (!metadata.parent_dataset_id.empty()) {
-        const auto parent_path = record_path(directory_, metadata.parent_dataset_id);
+    DatasetMetadata descendant = metadata;
+    while (!descendant.parent_dataset_id.empty()) {
+        const auto parent_path = record_path(directory_, descendant.parent_dataset_id);
         if (!std::filesystem::exists(std::filesystem::symlink_status(parent_path))) {
             throw std::invalid_argument("orphaned dataset record");
         }
-        const auto parent = decode(read_record(parent_path));
-        if (parent.dataset_id != metadata.parent_dataset_id ||
+        auto parent = decode(read_record(parent_path));
+        if (parent.dataset_id != descendant.parent_dataset_id ||
             parent.generation == std::numeric_limits<std::uint32_t>::max() ||
-            metadata.generation != parent.generation + 1) {
+            descendant.generation != parent.generation + 1) {
             throw std::invalid_argument("orphaned dataset record");
         }
+        descendant = std::move(parent);
     }
     return metadata;
 }
@@ -380,11 +416,11 @@ std::vector<DatasetMetadata> DatasetRegistry::list() const {
     for (const auto& entry : std::filesystem::directory_iterator(directory_)) {
         if (entry.path().extension() == ".dataset") {
             const auto id = entry.path().stem().string();
-            auto metadata = get(id);
-            if (!metadata) {
-                throw std::invalid_argument("dataset record disappeared while listing");
+            auto metadata = decode(read_record(entry.path()));
+            if (metadata.dataset_id != id) {
+                throw std::invalid_argument("dataset filename and content mismatch");
             }
-            result.push_back(std::move(*metadata));
+            result.push_back(std::move(metadata));
         }
     }
     std::sort(result.begin(), result.end(),

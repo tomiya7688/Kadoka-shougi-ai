@@ -77,7 +77,7 @@ class DatasetRegistry {
     [[nodiscard]] bool remove(const std::string& dataset_id);
 
     // {
-    //   責務: [get: 保存済みDatasetのID・親参照・世代を照合する],
+    //   責務: [get: 保存済みDatasetのID・祖先参照・世代を照合する],
     //   引数: [dataset_id: 検索するID],
     //   戻り値: [metadata: 存在する場合の内容]
     // }
