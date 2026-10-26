@@ -230,6 +230,10 @@ install(
 
 enable_testing()
 
+# {
+#   責務: [kadoka_model_registry_test: manifest・互換判定・再読込の回帰検証をCTestへ登録する],
+#   依存: [kadoka_shogi_model_registry]
+# }
 add_executable(kadoka_model_registry_test tests/kadoka_model_registry_test.cpp)
 target_link_libraries(kadoka_model_registry_test PRIVATE kadoka_shogi_model_registry)
 add_test(NAME kadoka_model_registry_test

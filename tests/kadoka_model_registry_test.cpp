@@ -115,6 +115,15 @@ void test_round_trip_and_compatibility() {
     escaped_json.replace(source_colon + 1, source_end - source_colon - 1, R"("\uD83D\uDE00")");
     check(manifest_from_json(escaped_json).source_reference == "\xF0\x9F\x98\x80",
           "surrogate pair must decode into UTF-8");
+    auto invalid_utf8 = manifest;
+    invalid_utf8.license = std::string("\xC0\xAF", 2);
+    expect_invalid([&invalid_utf8] { (void)manifest_to_json(invalid_utf8); });
+    auto invalid_json = json;
+    const std::string license_field = "\"license\": \"MIT\"";
+    const auto license_offset = invalid_json.find(license_field);
+    check(license_offset != std::string::npos, "serialized license must be present");
+    invalid_json.replace(license_offset, license_field.size(), "\"license\": \"" + std::string("\xC0\xAF", 2) + "\"");
+    expect_invalid([&invalid_json] { (void)manifest_from_json(invalid_json); });
     CompatibilityTarget target{.api_version = 1,
                                .formats = {{"kadoka.weights", 2}},
                                .runtime_id = "kadoka_shogi_runtime",
@@ -168,6 +177,17 @@ void test_registry_reload() {
     check(!reopened.remove(first.model_id, first.model_version) && !reopened.get(first.model_id, first.model_version),
           "removed version must stay absent");
     check(reopened.list().size() == 1, "other versions must survive remove");
+    auto recovered = first;
+    recovered.model_version = "1.4.0";
+    const auto stale_path = directory.path / "kadoka.shogi.sample@1.4.0.json.tmp";
+    {
+        std::ofstream abandoned(stale_path, std::ios::binary);
+        abandoned << "interrupted write";
+    }
+    reopened.add(recovered);
+    check(reopened.get(recovered.model_id, recovered.model_version).has_value(),
+          "registration must recover from a stale temporary file");
+    check(!std::filesystem::exists(stale_path), "recovered registration must remove stale temporary file");
     {
         std::ofstream damaged(directory.path / "kadoka.shogi.sample@1.3.0.json", std::ios::trunc);
         damaged << "{bad";

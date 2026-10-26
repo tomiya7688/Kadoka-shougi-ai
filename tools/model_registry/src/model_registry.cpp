@@ -36,6 +36,38 @@ bool valid_key(const std::string_view value) {
 }
 
 // {
+//   責務: [valid_utf8: JSON文字列の不正なUTF-8符号化を拒否する],
+//   引数: [value: 検証するbyte列],
+//   戻り値: [valid: Unicode scalar valueだけならtrue]
+// }
+bool valid_utf8(const std::string_view value) {
+    for (std::size_t offset = 0; offset < value.size();) {
+        const auto lead = static_cast<unsigned char>(value[offset]);
+        if (lead < 0x80U) {
+            ++offset;
+            continue;
+        }
+        const std::size_t followers = lead >= 0xC2U && lead <= 0xDFU   ? 1
+                                      : lead >= 0xE0U && lead <= 0xEFU ? 2
+                                      : lead >= 0xF0U && lead <= 0xF4U ? 3
+                                                                       : 0;
+        if (followers == 0 || followers >= value.size() - offset)
+            return false;
+        const auto second = static_cast<unsigned char>(value[offset + 1]);
+        if (second < 0x80U || second > 0xBFU || (lead == 0xE0U && second < 0xA0U) ||
+            (lead == 0xEDU && second > 0x9FU) || (lead == 0xF0U && second < 0x90U) || (lead == 0xF4U && second > 0x8FU))
+            return false;
+        for (std::size_t index = 2; index <= followers; ++index) {
+            const auto continuation = static_cast<unsigned char>(value[offset + index]);
+            if (continuation < 0x80U || continuation > 0xBFU)
+                return false;
+        }
+        offset += followers + 1;
+    }
+    return true;
+}
+
+// {
 //   責務: [append_utf8: JSONのUnicode scalar valueをUTF-8へ変換する],
 //   処理: [1: 値域に応じて1～4 byteを追加する],
 //   引数: [output: 文字列] [codepoint: Unicode値],
@@ -177,8 +209,11 @@ class JsonReader {
         std::string value;
         while (position_ < input_.size()) {
             const char c = input_[position_++];
-            if (c == '"')
+            if (c == '"') {
+                if (!valid_utf8(value))
+                    throw std::invalid_argument("invalid model manifest UTF-8");
                 return value;
+            }
             if (static_cast<unsigned char>(c) < 0x20U)
                 throw std::invalid_argument("unescaped control character");
             if (c != '\\') {
@@ -349,8 +384,9 @@ void validate_manifest(const ModelManifest& manifest) {
     if (!valid_key(manifest.model_id) || !valid_key(manifest.model_version) || !valid_key(manifest.model_type) ||
         !valid_key(manifest.artifact_format) || !valid_key(manifest.runtime_id) ||
         manifest.artifact_format_version == 0 || manifest.api_version == 0 || manifest.min_threads == 0 ||
-        manifest.source_reference.empty() || manifest.source_reference.size() > 4096 || manifest.license.empty() ||
-        manifest.license.size() > 4096)
+        manifest.source_reference.empty() || manifest.source_reference.size() > 4096 ||
+        !valid_utf8(manifest.source_reference) || manifest.license.empty() || manifest.license.size() > 4096 ||
+        !valid_utf8(manifest.license))
         throw std::invalid_argument("invalid model manifest required field");
     if (manifest.source_kind != "bundled" && manifest.source_kind != "downloaded" &&
         manifest.source_kind != "user_trained" && manifest.source_kind != "external")
@@ -459,10 +495,15 @@ LocalModelRegistry::LocalModelRegistry(std::filesystem::path directory) : direct
 void LocalModelRegistry::add(const ModelManifest& manifest) {
     const auto json = manifest_to_json(manifest);
     const auto path = manifest_path(directory_, manifest.model_id, manifest.model_version);
-    if (std::filesystem::exists(path))
+    if (std::filesystem::exists(std::filesystem::symlink_status(path)))
         throw std::invalid_argument("model version is already registered");
     const auto temporary = std::filesystem::path(path.string() + ".tmp");
-    {
+    // {
+    //   責務: [単一writerの前回異常終了で残った一時ファイルを回収する],
+    //   処理: [シンボリックリンクならリンク自体を削除する]
+    // }
+    std::filesystem::remove(temporary);
+    try {
         std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
         if (!output)
             throw std::runtime_error("cannot create model manifest temporary file");
@@ -470,8 +511,12 @@ void LocalModelRegistry::add(const ModelManifest& manifest) {
         output.close();
         if (!output)
             throw std::runtime_error("cannot write model manifest");
+        std::filesystem::rename(temporary, path);
+    } catch (...) {
+        std::error_code ignored;
+        std::filesystem::remove(temporary, ignored);
+        throw;
     }
-    std::filesystem::rename(temporary, path);
 }
 
 // {

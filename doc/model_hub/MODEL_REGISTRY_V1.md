@@ -24,7 +24,7 @@ download、学習テンプレート、GUI、実行sandboxはこのAPIには含�
 ID、version、type、artifact format、runtime IDはASCII英数字で始まり、
 以降はASCII英数字、dot、underscore、hyphenのみを許可します。
 長さは1～128文字、連続dotは許可しません。これらの制約は保存ファイル名の安全性にも使います。
-JSON parserは14フィールドを必須とし、重複、未知フィールド、型違い、余剰文字を拒否します。
+JSON parserは14フィールドを必須とし、重複、未知フィールド、型違い、不正なUTF-8、余剰文字を拒否します。
 source referenceとlicenseは各4096 byte以下です。
 
 既存の [`kadoka.ai_metadata.v1`](../specifications/AI_MODEL_METADATA.md) は兄弟プロジェクトと共有する説明用メタデータです。
@@ -42,7 +42,7 @@ source referenceとlicenseは各4096 byte以下です。
 破損したJSONとファイル名・内部IDの不一致はエラーとして通知します。
 
 registry保存先はアプリケーション専用ディレクトリとし、同時writerは1つに限定してください。
-一時ファイルは未確定として列挙時に無視します。OS・ストレージの電源断耐久性を保証するfsyncはありません。
+一時ファイルは未確定として列挙時に無視します。前回の異常終了で同じ版の一時ファイルが残った場合は破棄して登録を再開します。OS・ストレージの電源断耐久性を保証するfsyncはありません。
 このAPIは`artifact_sha256`の形式を検証します。モデル配布物の内容hash照合は
 [Issue #40](https://github.com/tomiya7688/Kadoka-shougi-ai/issues/40)のdownload・install側で行います。
 
