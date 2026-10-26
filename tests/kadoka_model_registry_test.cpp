@@ -1,5 +1,6 @@
 #include "kadoka/model_registry/model_registry.hpp"
 
+#include <array>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -115,15 +116,34 @@ void test_round_trip_and_compatibility() {
     escaped_json.replace(source_colon + 1, source_end - source_colon - 1, R"("\uD83D\uDE00")");
     check(manifest_from_json(escaped_json).source_reference == "\xF0\x9F\x98\x80",
           "surrogate pair must decode into UTF-8");
-    auto invalid_utf8 = manifest;
-    invalid_utf8.license = std::string("\xC0\xAF", 2);
-    expect_invalid([&invalid_utf8] { (void)manifest_to_json(invalid_utf8); });
-    auto invalid_json = json;
+    const std::array<std::string, 5> invalid_sequences{std::string("\xC0\xAF", 2), std::string("\xED\xA0\x80", 3),
+                                                       std::string("\xF4\x90\x80\x80", 4), std::string("\xE3\x81", 2),
+                                                       std::string("\x80", 1)};
     const std::string license_field = "\"license\": \"MIT\"";
-    const auto license_offset = invalid_json.find(license_field);
+    const auto license_offset = json.find(license_field);
     check(license_offset != std::string::npos, "serialized license must be present");
-    invalid_json.replace(license_offset, license_field.size(), "\"license\": \"" + std::string("\xC0\xAF", 2) + "\"");
-    expect_invalid([&invalid_json] { (void)manifest_from_json(invalid_json); });
+    for (const auto& sequence : invalid_sequences) {
+        auto invalid_utf8 = manifest;
+        invalid_utf8.license = sequence;
+        expect_invalid([&invalid_utf8] { (void)manifest_to_json(invalid_utf8); });
+        auto invalid_json = json;
+        invalid_json.replace(license_offset, license_field.size(), "\"license\": \"" + sequence + "\"");
+        expect_invalid([&invalid_json] { (void)manifest_from_json(invalid_json); });
+    }
+    auto invalid_utf8 = manifest;
+    invalid_utf8.license = std::string(1, '\0');
+    expect_invalid([&invalid_utf8] { (void)manifest_to_json(invalid_utf8); });
+    auto escaped_nul = json;
+    escaped_nul.replace(license_offset, license_field.size(), R"("license": "\u0000")");
+    expect_invalid([&escaped_nul] { (void)manifest_from_json(escaped_nul); });
+    auto japanese = manifest;
+    japanese.source_reference = "利用可";
+    check(manifest_from_json(manifest_to_json(japanese)).source_reference == japanese.source_reference,
+          "valid UTF-8 must survive JSON round trip");
+    auto two_byte = manifest;
+    two_byte.license = "\xC2\xA2";
+    check(manifest_from_json(manifest_to_json(two_byte)).license == two_byte.license,
+          "valid two-byte UTF-8 must survive JSON round trip");
     CompatibilityTarget target{.api_version = 1,
                                .formats = {{"kadoka.weights", 2}},
                                .runtime_id = "kadoka_shogi_runtime",

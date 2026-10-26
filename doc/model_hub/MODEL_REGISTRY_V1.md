@@ -25,7 +25,7 @@ ID、version、type、artifact format、runtime IDはASCII英数字で始まり�
 以降はASCII英数字、dot、underscore、hyphenのみを許可します。
 長さは1～128文字、連続dotは許可しません。これらの制約は保存ファイル名の安全性にも使います。
 JSON parserは14フィールドを必須とし、重複、未知フィールド、型違い、不正なUTF-8、余剰文字を拒否します。
-source referenceとlicenseは各4096 byte以下です。
+source referenceとlicenseは各4096 byte以下で、NUL文字を許可しません。
 
 既存の [`kadoka.ai_metadata.v1`](../specifications/AI_MODEL_METADATA.md) は兄弟プロジェクトと共有する説明用メタデータです。
 `kadoka.model_manifest.v1` はローカル登録と実行互換性を判断する追加契約です。

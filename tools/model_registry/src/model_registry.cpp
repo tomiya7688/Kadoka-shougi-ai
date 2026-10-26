@@ -385,8 +385,9 @@ void validate_manifest(const ModelManifest& manifest) {
         !valid_key(manifest.artifact_format) || !valid_key(manifest.runtime_id) ||
         manifest.artifact_format_version == 0 || manifest.api_version == 0 || manifest.min_threads == 0 ||
         manifest.source_reference.empty() || manifest.source_reference.size() > 4096 ||
-        !valid_utf8(manifest.source_reference) || manifest.license.empty() || manifest.license.size() > 4096 ||
-        !valid_utf8(manifest.license))
+        !valid_utf8(manifest.source_reference) || manifest.source_reference.find('\0') != std::string::npos ||
+        manifest.license.empty() || manifest.license.size() > 4096 || !valid_utf8(manifest.license) ||
+        manifest.license.find('\0') != std::string::npos)
         throw std::invalid_argument("invalid model manifest required field");
     if (manifest.source_kind != "bundled" && manifest.source_kind != "downloaded" &&
         manifest.source_kind != "user_trained" && manifest.source_kind != "external")
