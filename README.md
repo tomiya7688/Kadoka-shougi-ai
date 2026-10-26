@@ -85,6 +85,7 @@ Repository-level information stays in this README. Detailed documentation should
 - [手法移植の出典・ライセンス記録](doc/architecture/METHOD_PORTING_PROVENANCE.md)
 - [Engine runtime](doc/specifications/ENGINE_RUNTIME.md)
 - [Move generation specification](doc/specifications/MOVE_GENERATION.md)
+- [Dataset Registry v1（日本語）](doc/training/DATASET_REGISTRY_V1.md)
 - [C++安全性CI](doc/architecture/CPP_SAFETY_CI.md)
 - [1.0.0リリース到達条件](doc/release/1.0.0.md)
 - [Diagram area](doc/diagrams/README.md)
