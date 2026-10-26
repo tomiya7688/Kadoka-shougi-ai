@@ -150,6 +150,23 @@ int run() {
     check(rejects([&] { static_cast<void>(registry.add(bad_id)); }), "path traversal must be rejected");
     bad_id.dataset_id = "Root-1";
     check(rejects([&] { static_cast<void>(registry.add(bad_id)); }), "case-folding collision must be rejected");
+    for (const auto* reserved_id : {"con", "prn", "aux", "nul"}) {
+        bad_id.dataset_id = reserved_id;
+        check(rejects([&] { static_cast<void>(registry.add(bad_id)); }),
+              "Windows reserved device name must be rejected");
+    }
+    for (char digit = '1'; digit <= '9'; ++digit) {
+        for (const auto* prefix : {"com", "lpt"}) {
+            bad_id.dataset_id = std::string(prefix) + digit;
+            check(rejects([&] { static_cast<void>(registry.add(bad_id)); }),
+                  "Windows numbered device name must be rejected");
+        }
+    }
+    for (const auto* allowed_id : {"com0", "lpt0"}) {
+        auto allowed = make_root(allowed_id, DatasetRole::training);
+        check(registry.add(allowed), "non-reserved device-like ID must be accepted");
+        check(registry.remove(allowed.dataset_id), "device-like test record must be removable");
+    }
     auto bad_hash = root;
     bad_hash.dataset_id = "bad-hash";
     bad_hash.search_config_hash = "abc";
@@ -172,6 +189,14 @@ int run() {
     check(registry.add(unicode), "valid UTF-8 must be accepted");
     check(registry.get(unicode.dataset_id)->license == unicode.license, "UTF-8 must survive reload");
     check(registry.remove(unicode.dataset_id), "UTF-8 record must be removable");
+    auto stale = make_root("stale-tmp", DatasetRole::training);
+    {
+        std::ofstream abandoned(temp.path / "stale-tmp.tmp", std::ios::binary);
+        abandoned << "interrupted write";
+    }
+    check(registry.add(stale), "stale temporary file must not prevent registration");
+    check(registry.get(stale.dataset_id).has_value(), "recovered registration must be readable");
+    check(!std::filesystem::exists(temp.path / "stale-tmp.tmp"), "stale temporary file must be removed");
 
     {
         std::ofstream corrupt(temp.path / "corrupt.dataset", std::ios::binary);

@@ -18,12 +18,17 @@ constexpr std::string_view kMagic = "kadoka.dataset_registry.v1\n";
 constexpr std::uintmax_t kMaxRecordBytes = 1024ULL * 1024ULL;
 
 // {
-//   責務: [valid_id: 大小文字を区別しない環境でも衝突しないファイル名へ限定する],
+//   責務: [valid_id: 大小文字の衝突とWindows予約名を避けてファイル名を限定する],
 //   引数: [value: 候補],
 //   戻り値: [valid: 使用できる場合true]
 // }
 bool valid_id(std::string_view value) {
     if (value.empty() || value.size() > 128 || value == "." || value == "..") {
+        return false;
+    }
+    if (value == "con" || value == "prn" || value == "aux" || value == "nul" ||
+        (value.size() == 4 && (value.substr(0, 3) == "com" || value.substr(0, 3) == "lpt") && value[3] >= '1' &&
+         value[3] <= '9')) {
         return false;
     }
     return std::all_of(value.begin(), value.end(), [](unsigned char character) {
@@ -336,9 +341,11 @@ bool DatasetRegistry::add(const DatasetMetadata& metadata) {
         }
     }
     const auto temporary = directory_ / (metadata.dataset_id + ".tmp");
-    if (std::filesystem::exists(std::filesystem::symlink_status(temporary))) {
-        throw std::runtime_error("dataset temporary file already exists");
-    }
+    // {
+    //   責務: [前回の異常終了で残った一時ファイルを単一writerで回収する],
+    //   処理: [シンボリックリンクなら参照先ではなくリンク自体を削除する]
+    // }
+    std::filesystem::remove(temporary);
     try {
         std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
         if (!output) {
