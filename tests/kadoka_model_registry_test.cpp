@@ -171,7 +171,7 @@ void test_round_trip_and_compatibility() {
 // {
 //   責務: [test_registry_reload: 重複版・再読込・削除と破損拒否を確認する],
 //   処理: [1: 2版を登録する] [2: 新インスタンスで再読込する]
-//     [3: 重複版と改ざんした内容を拒否する],
+//     [3: 不正key・重複版・改ざんした内容を拒否する],
 //   引数: [],
 //   戻り値: []
 // }
@@ -197,6 +197,12 @@ void test_registry_reload() {
     check(!reopened.remove(first.model_id, first.model_version) && !reopened.get(first.model_id, first.model_version),
           "removed version must stay absent");
     check(reopened.list().size() == 1, "other versions must survive remove");
+    auto invalid = first;
+    invalid.model_id = "../escape";
+    expect_invalid([&reopened, &invalid] { reopened.add(invalid); });
+    expect_invalid([&reopened] { (void)reopened.get("../escape", "1.0.0"); });
+    expect_invalid([&reopened] { (void)reopened.remove("../escape", "1.0.0"); });
+    expect_invalid([&reopened] { (void)reopened.remove("kadoka.shogi.sample", "../1.0.0"); });
     auto recovered = first;
     recovered.model_version = "1.4.0";
     const auto stale_path = directory.path / "kadoka.shogi.sample@1.4.0.json.tmp";

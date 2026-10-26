@@ -1,7 +1,7 @@
 # Model Registry v1
 
 Issue #10 のローカル登録APIは `kadoka/model_registry/model_registry.hpp` にあります。
-bundled、downloaded、user-trained、externalのmanifestを同じ形式で保存します。
+bundled、downloaded、user_trained、externalのmanifestを同じ形式で保存します。
 download、学習テンプレート、GUI、実行sandboxはこのAPIには含みません。
 
 ## manifest
@@ -16,7 +16,7 @@ download、学習テンプレート、GUI、実行sandboxはこのAPIには含�
 | `artifact_format` / `artifact_format_version` | 重み・book等の実際の配布形式と版 |
 | `api_version` | 実行APIの版 |
 | `artifact_sha256` | 配布物のSHA-256、64桁小文字hex |
-| `source_kind` / `source_reference` | 出典の種類と識別子 |
+| `source_kind` / `source_reference` | 出典の種類と識別子。`source_kind` は `bundled`、`downloaded`、`user_trained`、`external` のいずれか |
 | `license` | 配布物の利用ライセンス |
 | `runtime_id` | 必要なruntime |
 | `min_memory_mb` / `min_threads` | 実行に必要な最小資源 |
