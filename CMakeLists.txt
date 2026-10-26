@@ -140,6 +140,19 @@ target_link_libraries(kadoka_shogi_training_parser
 )
 
 # {
+#   責務: [kadoka_shogi_dataset_registry: 出自と用途を検証してDataset recordを保存する],
+#   依存: [kadoka_rule_check]
+# }
+add_library(kadoka_shogi_dataset_registry
+    tools/dataset_registry/src/dataset_registry.cpp
+)
+add_dependencies(kadoka_shogi_dataset_registry kadoka_rule_check)
+target_include_directories(kadoka_shogi_dataset_registry
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/dataset_registry/include
+)
+
+# {
 #   責務: [kadoka_shogi_checkpoint_store: 学習checkpointの保存と復元を提供する]
 #   引数: [checkpoint_store.cpp: 保存形式と公開処理の実装]
 #   戻り値: [kadoka_shogi_checkpoint_store: C++20ライブラリtarget]
@@ -291,6 +304,14 @@ add_test(
     NAME recursive_training_importer_test
     COMMAND recursive_training_importer_test
 )
+
+# {
+#   責務: [dataset_registry_test: 登録・再読込・参照整合性の回帰検証をCTestに登録する],
+#   依存: [kadoka_shogi_dataset_registry]
+# }
+add_executable(dataset_registry_test tests/dataset_registry_test.cpp)
+target_link_libraries(dataset_registry_test PRIVATE kadoka_shogi_dataset_registry)
+add_test(NAME dataset_registry_test COMMAND dataset_registry_test)
 
 # {
 #   責務: [checkpoint_manager_test: pointer公開とretentionの回帰検証をCTestに登録する],
