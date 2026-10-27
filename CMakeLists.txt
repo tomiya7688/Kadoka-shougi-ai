@@ -140,10 +140,13 @@ target_link_libraries(kadoka_shogi_training_parser
 )
 
 # {
-#   責務: [kadoka_shogi_best_manifest: 3層構成manifestの検証とJSON変換を提供する],
+#   責務: [kadoka_shogi_best_manifest: 3層構成manifestと競技個体Registryを提供する],
 #   依存: [kadoka_rule_check]
 # }
-add_library(kadoka_shogi_best_manifest tools/kadoka_best/src/manifest.cpp)
+add_library(kadoka_shogi_best_manifest
+    tools/kadoka_best/src/manifest.cpp
+    tools/kadoka_best/src/participant_registry.cpp
+)
 add_dependencies(kadoka_shogi_best_manifest kadoka_rule_check)
 target_include_directories(kadoka_shogi_best_manifest PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tools/kadoka_best/include)
 
@@ -244,6 +247,13 @@ enable_testing()
 add_executable(kadoka_best_manifest_test tests/kadoka_best_manifest_test.cpp)
 target_link_libraries(kadoka_best_manifest_test PRIVATE kadoka_shogi_best_manifest)
 add_test(NAME kadoka_best_manifest_test COMMAND kadoka_best_manifest_test)
+# {
+#   責務: [kadoka_participant_registry_test: 競技個体のID・登録・保存復元を検証する],
+#   依存: [kadoka_shogi_best_manifest]
+# }
+add_executable(kadoka_participant_registry_test tests/kadoka_participant_registry_test.cpp)
+target_link_libraries(kadoka_participant_registry_test PRIVATE kadoka_shogi_best_manifest)
+add_test(NAME kadoka_participant_registry_test COMMAND kadoka_participant_registry_test)
 
 # {
 #   責務: [kadoka_model_registry_test: manifest・互換判定・再読込の回帰検証をCTestへ登録する],
