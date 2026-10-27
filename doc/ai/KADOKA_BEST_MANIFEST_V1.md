@@ -46,6 +46,7 @@
 - Fullにはorchestratorとevaluationまたはsearchのcomponentが必要です。
 - すべての参照にIDとversionが必要です。checkpointはmodelを参照する構成に含めます。
 - component roleは重複できません。未知のroleやmanifest fieldは拒否します。
+- JSON文字列とC++ APIの文字列は正しいUTF-8を使用してください。不正なUTF-8は拒否します。
 - source / target layerは同時に指定し、既知の3層名を使います。
 - `config_hash` は、config keyを昇順に並べてJSON objectを生成し、そのUTF-8 byte列をSHA-256で計算します。空config `{}` の値は `sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a` です。
 

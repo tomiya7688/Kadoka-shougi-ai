@@ -39,6 +39,10 @@ This repository contributes the following back to the siblings:
 - narrow core/runtime/protocol dependency direction
 - small reproducible position-based regression tests
 
+## 手法移植の出典とライセンス
+
+兄弟プロジェクトや外部研究から手法を取り込む場合は、出典、対象ごとのライセンス、ゲーム固有の変更、判断理由を[移植記録形式](METHOD_PORTING_PROVENANCE.md)に残します。出典や利用条件が未確認の場合は採用を保留します。
+
 ## Cross-project review trigger
 
 Inspect sibling implementations before introducing or redesigning:
