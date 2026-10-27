@@ -81,7 +81,7 @@ struct KadokaBestManifest {
 
 // {
 //   責務: [refresh_config_hash: manifestの設定からconfig_hashを更新する]
-//   引数: [manifest: hashを更新するmanifest]
+//   引数: [manifest: hashを更新するmanifest。不正UTF-8の設定はinvalid_argumentで拒否し、hashは変更しない]
 //   処理: [1: 設定から再計算したhashを代入する]
 //   戻り値: [なし]
 // }
@@ -98,7 +98,7 @@ void refresh_config_hash(KadokaBestManifest& manifest);
 // {
 //   責務: [serialize_manifest: 検証済みmanifestを安定順序のJSONへ変換する]
 //   引数: [manifest: JSON化するmanifest]
-//   戻り値: [manifest JSON]
+//   戻り値: [manifest JSON。不正なmanifestならinvalid_argument]
 //   処理: [1: 制約を検査し固定順のJSONを組み立てる]
 // }
 [[nodiscard]] std::string serialize_manifest(const KadokaBestManifest& manifest);
@@ -106,7 +106,7 @@ void refresh_config_hash(KadokaBestManifest& manifest);
 // {
 //   責務: [deserialize_manifest: JSONからmanifestを復元し構造と参照を検証する]
 //   引数: [json: 読み込むmanifest JSON]
-//   戻り値: [復元した検証済みmanifest]
+//   戻り値: [復元したmanifest。構文・型・必須fieldの不正はruntime_error、manifest制約違反はinvalid_argument]
 //   処理: [1: JSON構文とmanifestの制約を順に検査する]
 // }
 [[nodiscard]] KadokaBestManifest deserialize_manifest(std::string_view json);

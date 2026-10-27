@@ -48,7 +48,11 @@
 - component roleは重複できません。未知のroleやmanifest fieldは拒否します。
 - JSON文字列とC++ APIの文字列は正しいUTF-8を使用してください。不正なUTF-8は拒否します。
 - source / target layerは同時に指定し、既知の3層名を使います。
-- `config_hash` は、config keyを昇順に並べてJSON objectを生成し、そのUTF-8 byte列をSHA-256で計算します。空config `{}` の値は `sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a` です。
+- `config_hash` は、config keyをUTF-8 byte列の符号なし辞書順に並べ、空白なしのJSON objectを生成し、そのUTF-8 byte列をSHA-256で計算します。値は `sha256:` 接頭辞と小文字16進数64桁です。
+  - 文字列中の `"` と `\` はそれぞれ `\"`、`\\` にします。
+  - U+0008、U+000C、U+000A、U+000D、U+0009 はそれぞれ `\b`、`\f`、`\n`、`\r`、`\t` にします。その他の U+0000〜U+001F は小文字16進数の `\u00xx` にします。
+  - `/` と U+0020 以上の文字はescapeせず、UTF-8のまま出力します。ただし `"` と `\` は上記のとおりescapeします。
+  - 空config `{}` の値は `sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a` です。
 
 Hashは構成の再現性確認に使います。modelやpackageの内容完全性を保証する署名・trust情報ではありません。
 
