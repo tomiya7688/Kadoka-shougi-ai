@@ -106,7 +106,7 @@ void refresh_config_hash(KadokaBestManifest& manifest);
 // {
 //   責務: [deserialize_manifest: JSONからmanifestを復元し構造と参照を検証する]
 //   引数: [json: 読み込むmanifest JSON]
-//   戻り値: [復元したmanifest。構文・型・必須fieldの不正はruntime_error、manifest制約違反はinvalid_argument]
+//   戻り値: [復元したmanifest。構文・UTF-8・型・必須fieldの不正はruntime_error、manifest制約違反はinvalid_argument]
 //   処理: [1: JSON構文とmanifestの制約を順に検査する]
 // }
 [[nodiscard]] KadokaBestManifest deserialize_manifest(std::string_view json);

@@ -1,5 +1,6 @@
 #include "kadoka/best/manifest.hpp"
 
+#include <algorithm>
 #include <locale>
 #include <stdexcept>
 #include <string>
@@ -174,7 +175,10 @@ int main() {
     }
     auto invalid_config = raw;
     invalid_config.config["seed"] = "\x80";
-    expect(!kadoka::best::validate_manifest(invalid_config).empty(), "invalid UTF-8 config must return errors");
+    const auto invalid_config_errors = kadoka::best::validate_manifest(invalid_config);
+    expect(std::find(invalid_config_errors.begin(), invalid_config_errors.end(),
+                     "config key and value must be valid UTF-8") != invalid_config_errors.end(),
+           "invalid UTF-8 config must report an encoding error");
     bool hash_rejected = false;
     try {
         (void)kadoka::best::compute_config_hash(invalid_config.config);
@@ -193,7 +197,10 @@ int main() {
            "failed hash refresh must preserve the existing hash");
     auto invalid_config_key = raw;
     invalid_config_key.config["\x80"] = "value";
-    expect(!kadoka::best::validate_manifest(invalid_config_key).empty(), "invalid UTF-8 config key must return errors");
+    const auto invalid_key_errors = kadoka::best::validate_manifest(invalid_config_key);
+    expect(std::find(invalid_key_errors.begin(), invalid_key_errors.end(),
+                     "config key and value must be valid UTF-8") != invalid_key_errors.end(),
+           "invalid UTF-8 config key must report an encoding error");
     bool key_hash_rejected = false;
     try {
         (void)kadoka::best::compute_config_hash(invalid_config_key.config);
