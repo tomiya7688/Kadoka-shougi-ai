@@ -24,10 +24,10 @@
 
 RegistryはUTF-8のtab区切りテキスト `kadoka.participant_registry.v1` で保存します。1行目はversion headerです。以後の行はID、kind、family、layer、model ID、model version、search hash、orchestrator hash、time-control hashの9 fieldをtabで区切ります。ID順に出力するため、同じRegistryのserializationは常に同じbyte列です。fieldは単一行のASCII tokenまたはhashに制限し、tabや改行を含めません。
 
-`deserialize_registry()` は未知のheader、列数不一致、不正field、ID不一致、重複IDを拒否します。空Registryはheaderだけで表します。
+`deserialize_registry()` は未知のheader、列数不一致、不正field、ID不一致、重複IDを拒否します。空Registryはheaderだけで表します。 改行はLF（`0x0A`）に固定し、headerと各行には終端のLFが必要です。CRLF、途中や末尾の空行は拒否します。 形式や種別・層の解析エラーは `std::runtime_error`、値の検証・ID不一致・重複は `std::invalid_argument` を送出します。バイト列をそのまま読み書きする場合はバイナリモードを使用してください。
 
 ## C++ API
 
-`tools/kadoka_best/include/kadoka/best/participant_registry.hpp` が個体型、Registry、ID生成、検証、保存・復元APIを提供します。登録前に `participant_id()` でIDを設定します。`register_participant()` は設定とIDの一致を再検査し、重複IDを例外で拒否します。
+`tools/kadoka_best/include/kadoka/best/participant_registry.hpp` が個体型、Registry、ID生成、検証、保存・復元APIを提供します。既定構築した個体は必須fieldが空のため無効です。各fieldを設定してから `participant_id()` でIDを生成します。`register_participant()` は設定とIDの一致を再検査し、重複IDを例外で拒否します。
 
 `register_participant()` は値渡しです。左辺値はコピーされ、`std::move` した右辺値は検証・重複の失敗時も呼出し時にmoveされ得ます。失敗時に元の個体を保持する場合は左辺値を渡してください。

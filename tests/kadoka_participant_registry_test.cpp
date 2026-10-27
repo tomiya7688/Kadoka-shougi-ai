@@ -84,6 +84,16 @@ int main() {
     expect(participant.id == kadoka::best::participant_id(participant) && registry.participants().size() == 3,
            "duplicate registration must preserve lvalue and registry");
 
+    expect(!kadoka::best::validate_participant(kadoka::best::Participant{}).empty(),
+           "default participant must require mandatory fields");
+    for (const std::string& disallowed :
+         {std::string("\xe6\x97\xa5"), std::string("bad\tfield"), std::string("bad\nfield"), std::string()}) {
+        auto invalid_token = participant;
+        invalid_token.family = disallowed;
+        expect(!kadoka::best::validate_participant(invalid_token).empty(),
+               "valid non-ASCII, delimiters and empty ASCII tokens must be rejected");
+    }
+
     auto invalid_utf8 = participant;
     invalid_utf8.family = "\xc0\xaf";
     expect(!kadoka::best::validate_participant(invalid_utf8).empty(), "non-ASCII token must be rejected");
@@ -122,6 +132,26 @@ int main() {
         mismatch_rejected = true;
     }
     expect(mismatch_rejected, "ID inconsistent with settings should be rejected");
+
+    bool unknown_header_rejected = false;
+    try {
+        (void)kadoka::best::deserialize_registry("kadoka.participant_registry.v2\n");
+    } catch (const std::runtime_error&) {
+        unknown_header_rejected = true;
+    }
+    expect(unknown_header_rejected, "unknown registry version must be rejected");
+    const auto empty_registry = kadoka::best::deserialize_registry("kadoka.participant_registry.v1\n");
+    expect(empty_registry.participants().empty(), "header alone must restore an empty registry");
+    for (const std::string& malformed : {std::string("kadoka.participant_registry.v1\r\n"), serialized + "\n",
+                                         serialized.substr(0, serialized.size() - 1)}) {
+        bool wire_rejected = false;
+        try {
+            (void)kadoka::best::deserialize_registry(malformed);
+        } catch (const std::runtime_error&) {
+            wire_rejected = true;
+        }
+        expect(wire_rejected, "CRLF, empty records and missing terminal LF must be rejected");
+    }
 
     bool malformed_rejected = false;
     try {

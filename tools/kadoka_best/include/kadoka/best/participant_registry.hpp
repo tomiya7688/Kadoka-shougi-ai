@@ -33,6 +33,7 @@ struct ParticipantId {
 
 // {
 //   責務: [Participant: 競技個体の由来、層、モデル、実行設定hashを保持する]
+//   制約: [既定構築時は必須fieldが空のため不正。設定後にIDを生成する]
 //   フィールド: [id・kind・family・layer: 個体の識別と系統 / model_id・model_version: モデル参照 / 各config_hash:
 //   実行設定]
 // }
@@ -59,7 +60,7 @@ struct Participant {
 // {
 //   責務: [participant_id: 個体の再現に必要な全設定から安定したSHA-256 IDを作る]
 //   引数: [participant: IDを作る個体]
-//   戻り値: [sha256:接頭辞を含む再現可能な識別子]
+//   戻り値: [sha256:接頭辞を含む識別子。不正な個体はinvalid_argument]
 //   処理: [1: 項目を検証し正規化mapのhashを計算する]
 // }
 [[nodiscard]] ParticipantId participant_id(const Participant& participant);
@@ -117,7 +118,7 @@ class ParticipantRegistry {
 // {
 //   責務: [deserialize_registry: version付き文書を復元しIDと重複を検証する]
 //   引数: [serialized: 読み込む文書]
-//   戻り値: [復元したRegistry]
+//   戻り値: [復元したRegistry。構文不正はruntime_error、個体やIDの不正・重複はinvalid_argument]
 //   処理: [1: headerと行を解析し登録APIで検証する]
 // }
 [[nodiscard]] ParticipantRegistry deserialize_registry(std::string_view serialized);
