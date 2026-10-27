@@ -142,8 +142,10 @@ int main() {
     expect(unknown_header_rejected, "unknown registry version must be rejected");
     const auto empty_registry = kadoka::best::deserialize_registry("kadoka.participant_registry.v1\n");
     expect(empty_registry.participants().empty(), "header alone must restore an empty registry");
-    for (const std::string& malformed : {std::string("kadoka.participant_registry.v1\r\n"), serialized + "\n",
-                                         serialized.substr(0, serialized.size() - 1)}) {
+    auto crlf_record = serialized;
+    crlf_record.insert(crlf_record.size() - 1, 1, '\r');
+    for (const std::string& malformed : {std::string("kadoka.participant_registry.v1\r\n"), crlf_record,
+                                         serialized + "\n", serialized.substr(0, serialized.size() - 1)}) {
         bool wire_rejected = false;
         try {
             (void)kadoka::best::deserialize_registry(malformed);

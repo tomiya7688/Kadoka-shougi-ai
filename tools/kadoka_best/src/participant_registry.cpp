@@ -262,6 +262,9 @@ ParticipantRegistry deserialize_registry(std::string_view serialized) {
         remaining.remove_prefix(newline + 1);
         if (line.empty())
             throw std::runtime_error("participant record must not be empty");
+        // 保存形式はLF固定のため、CRは値の検証に渡す前に形式エラーとする。
+        if (line.find('\r') != std::string_view::npos)
+            throw std::runtime_error("participant record must not contain carriage return");
         const auto fields = split_fields(line);
         if (fields.size() != 9)
             throw std::runtime_error("participant record must contain exactly nine fields");
