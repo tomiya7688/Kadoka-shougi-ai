@@ -19,6 +19,7 @@
 
 各設定hashは `kadoka.best_manifest.v1` と同じ `sha256:` + 小文字hex 64桁形式です。個体IDはfield名と値を含む正規化config mapを同じSHA-256実装で計算するため、同一設定は同一IDになり、どの設定を変えても別IDになります。モデル内容の署名や完全性を証明するものではありません。
 
+個体IDの計算対象は `family`、`kind`、`layer`、`model_id`、`model_version`、`orchestrator_config_hash`、`search_config_hash`、`time_control_config_hash` の8キーとそれぞれの文字列値です。`id` 自体は計算に含めません。正規化とハッシュのbyte規則は [Kadoka Best構成manifest v1](KADOKA_BEST_MANIFEST_V1.md) と共通です。
 ## 保存形式
 
 RegistryはUTF-8のtab区切りテキスト `kadoka.participant_registry.v1` で保存します。1行目はversion headerです。以後の行はID、kind、family、layer、model ID、model version、search hash、orchestrator hash、time-control hashの9 fieldをtabで区切ります。ID順に出力するため、同じRegistryのserializationは常に同じbyte列です。fieldは単一行のASCII tokenまたはhashに制限し、tabや改行を含めません。
@@ -29,3 +30,4 @@ RegistryはUTF-8のtab区切りテキスト `kadoka.participant_registry.v1` で
 
 `tools/kadoka_best/include/kadoka/best/participant_registry.hpp` が個体型、Registry、ID生成、検証、保存・復元APIを提供します。登録前に `participant_id()` でIDを設定します。`register_participant()` は設定とIDの一致を再検査し、重複IDを例外で拒否します。
 
+`register_participant()` は値渡しです。左辺値はコピーされ、`std::move` した右辺値は検証・重複の失敗時も呼出し時にmoveされ得ます。失敗時に元の個体を保持する場合は左辺値を渡してください。

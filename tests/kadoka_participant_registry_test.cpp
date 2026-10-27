@@ -8,6 +8,8 @@ namespace {
 // {
 //   責務: [expect: 失敗した契約検証を位置と共にテスト失敗へ変換する]
 //   引数: [condition: 成立を期待する条件] [message: 失敗理由]
+//   処理: [1: 条件が偽なら例外を送出する]
+//   戻り値: [なし]
 // }
 void expect(bool condition, const char* message) {
     if (!condition)
@@ -17,6 +19,8 @@ void expect(bool condition, const char* message) {
 // {
 //   責務: [make_participant: 再現可能なIDを設定した外部AI個体を作る]
 //   戻り値: [登録可能な外部AI個体]
+//   処理: [1: 設定hashと再現可能なIDを作る]
+//   引数: [なし]
 // }
 kadoka::best::Participant make_participant() {
     kadoka::best::Participant participant;
@@ -37,6 +41,8 @@ kadoka::best::Participant make_participant() {
 // {
 //   責務: [main: ID再現性、変更分離、Registry登録、重複拒否、保存復元を確認する]
 //   戻り値: [全検証成功時0]
+//   処理: [1: ID・登録・不正値・保存復元の契約を検証する]
+//   引数: [なし]
 // }
 int main() {
     using kadoka::best::ParticipantKind;
@@ -44,6 +50,8 @@ int main() {
 
     const auto participant = make_participant();
     expect(participant.id == kadoka::best::participant_id(participant), "same settings should produce the same ID");
+    expect(participant.id.value == "sha256:2977ce445333fb76c6941d11369ec6de14b06290efd90398143766b8f033b42e",
+           "participant identity must match the independent canonical SHA-256 golden value");
 
     auto changed = participant;
     changed.time_control_config_hash = kadoka::best::compute_config_hash({{"byoyomi_ms", "2000"}});
@@ -73,12 +81,36 @@ int main() {
         duplicate_rejected = true;
     }
     expect(duplicate_rejected, "duplicate ID should be rejected");
+    expect(participant.id == kadoka::best::participant_id(participant) && registry.participants().size() == 3,
+           "duplicate registration must preserve lvalue and registry");
+
+    auto invalid_utf8 = participant;
+    invalid_utf8.family = "\xc0\xaf";
+    expect(!kadoka::best::validate_participant(invalid_utf8).empty(), "non-ASCII token must be rejected");
+    bool invalid_rejected = false;
+    try {
+        registry.register_participant(invalid_utf8);
+    } catch (const std::invalid_argument&) {
+        invalid_rejected = true;
+    }
+    expect(invalid_rejected && registry.participants().size() == 3, "invalid UTF-8 must not alter the registry");
 
     const std::string serialized = kadoka::best::serialize_registry(registry);
     const auto restored = kadoka::best::deserialize_registry(serialized);
     expect(kadoka::best::serialize_registry(restored) == serialized, "registry serialization should be stable");
     expect(restored.find(participant.id) != nullptr, "restored registry should contain the participant");
     expect(restored.participants().size() == 3, "all participant kinds should survive serialization");
+    auto invalid_document = serialized;
+    const auto family_position = invalid_document.find("usi-engine");
+    expect(family_position != std::string::npos, "fixture family must exist");
+    invalid_document.replace(family_position, std::string("usi-engine").size(), "\xed\xa0\x80");
+    bool invalid_document_rejected = false;
+    try {
+        (void)kadoka::best::deserialize_registry(invalid_document);
+    } catch (const std::invalid_argument&) {
+        invalid_document_rejected = true;
+    }
+    expect(invalid_document_rejected, "serialized record with non-ASCII token must be rejected");
 
     auto bad_id = participant;
     bad_id.id.value = "sha256:0000000000000000000000000000000000000000000000000000000000000000";

@@ -8,6 +8,46 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+# {
+#   責務: [KADOKA_ENABLE_SANITIZERS: Linux上のGCCまたはClangで安全性検査を有効にする]
+#   処理: [
+#     1: ASanとUBSanをコンパイル・リンクへ設定する
+#     2: libstdc++のassertionとchecked iteratorを有効にする
+#     3: 対応しない環境で有効化された場合は構成を失敗させる
+#   ]
+#   引数: [KADOKA_ENABLE_SANITIZERS: 検査を有効にするかどうか]
+#   戻り値: [なし: CMakeのコンパイル設定とリンク設定を変更する]
+# }
+option(
+    KADOKA_ENABLE_SANITIZERS
+    "Linux上のGCCまたはClangでsanitizer検査を有効にする"
+    OFF
+)
+
+if(KADOKA_ENABLE_SANITIZERS)
+    # 未定義動作とメモリ破壊を検出できるLinux環境に限定する。
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang"
+        AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_compile_options(
+            -fsanitize=address,undefined
+            -fno-omit-frame-pointer
+            -fno-sanitize-recover=all
+            -D_GLIBCXX_ASSERTIONS
+            -D_GLIBCXX_DEBUG
+        )
+        add_link_options(
+            -fsanitize=address,undefined
+            -fno-omit-frame-pointer
+            -fno-sanitize-recover=all
+        )
+    else()
+        # 対応環境を誤認したまま検査なしで続行しない。
+        message(FATAL_ERROR
+            "KADOKA_ENABLE_SANITIZERS はLinux上のGCCまたはClangが必要です"
+        )
+    endif()
+endif()
+
 add_custom_target(kadoka_rule_check
     COMMAND
         ${Python3_EXECUTABLE}
@@ -57,10 +97,15 @@ target_link_libraries(kadoka_shogi_runtime
         kadoka_shogi_core
 )
 
+# {
+#   責務: [kadoka_shogi_ai_package: AI向け局面観測と経路履歴をライブラリにまとめる],
+#   追加: [path_history.cpp: 現在局面と着手経路の保存形式を提供する]
+# }
 add_library(kadoka_shogi_ai_package
     ai_package/src/board_recognition.cpp
     ai_package/src/json_player_observation_parser.cpp
     ai_package/src/observation.cpp
+    ai_package/src/path_history.cpp
 )
 
 add_dependencies(kadoka_shogi_ai_package kadoka_rule_check)
@@ -94,16 +139,76 @@ target_link_libraries(kadoka_shogi_training_parser
         kadoka_shogi_runtime
 )
 
+# {
+#   責務: [kadoka_shogi_best_manifest: 3層構成manifestと競技個体Registryを提供する],
+#   依存: [kadoka_rule_check]
+# }
 add_library(kadoka_shogi_best_manifest
     tools/kadoka_best/src/manifest.cpp
     tools/kadoka_best/src/participant_registry.cpp
 )
-
 add_dependencies(kadoka_shogi_best_manifest kadoka_rule_check)
+target_include_directories(kadoka_shogi_best_manifest PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tools/kadoka_best/include)
 
-target_include_directories(kadoka_shogi_best_manifest
+# {
+#   責務: [kadoka_shogi_dataset_registry: 出自と用途を検証してDataset recordを保存する],
+#   依存: [kadoka_rule_check]
+# }
+add_library(kadoka_shogi_dataset_registry
+    tools/dataset_registry/src/dataset_registry.cpp
+)
+add_dependencies(kadoka_shogi_dataset_registry kadoka_rule_check)
+target_include_directories(kadoka_shogi_dataset_registry
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/tools/kadoka_best/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/dataset_registry/include
+)
+
+# {
+#   責務: [kadoka_shogi_checkpoint_store: 学習checkpointの保存と復元を提供する]
+#   引数: [checkpoint_store.cpp: 保存形式と公開処理の実装]
+#   戻り値: [kadoka_shogi_checkpoint_store: C++20ライブラリtarget]
+# }
+add_library(kadoka_shogi_checkpoint_store
+    tools/checkpoint_store/src/checkpoint_store.cpp
+)
+
+add_dependencies(kadoka_shogi_checkpoint_store kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_checkpoint_store
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/checkpoint_store/include
+)
+
+# {
+#   責務: [kadoka_shogi_checkpoint_manager: checkpoint store上のlatest・periodic・best管理をビルドする],
+#   依存: [kadoka_rule_check] [kadoka_shogi_checkpoint_store]
+# }
+add_library(kadoka_shogi_checkpoint_manager
+    tools/checkpoint_manager/src/checkpoint_manager.cpp
+)
+
+add_dependencies(kadoka_shogi_checkpoint_manager kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_checkpoint_manager
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/checkpoint_manager/include
+)
+
+target_link_libraries(kadoka_shogi_checkpoint_manager PUBLIC kadoka_shogi_checkpoint_store)
+
+# {
+#   責務: [kadoka_shogi_model_registry: model manifest の保存と実行互換判定を提供する],
+#   依存: [kadoka_rule_check]
+# }
+add_library(kadoka_shogi_model_registry
+    tools/model_registry/src/model_registry.cpp
+)
+
+add_dependencies(kadoka_shogi_model_registry kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_model_registry
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/model_registry/include
 )
 
 add_executable(kadoka_shogi
@@ -135,14 +240,29 @@ install(
 )
 
 enable_testing()
-
+# {
+#   責務: [kadoka_best_manifest_test: 3層構成とmanifest変換をCTestで検証する],
+#   依存: [kadoka_shogi_best_manifest]
+# }
 add_executable(kadoka_best_manifest_test tests/kadoka_best_manifest_test.cpp)
 target_link_libraries(kadoka_best_manifest_test PRIVATE kadoka_shogi_best_manifest)
 add_test(NAME kadoka_best_manifest_test COMMAND kadoka_best_manifest_test)
-
+# {
+#   責務: [kadoka_participant_registry_test: 競技個体のID・登録・保存復元を検証する],
+#   依存: [kadoka_shogi_best_manifest]
+# }
 add_executable(kadoka_participant_registry_test tests/kadoka_participant_registry_test.cpp)
 target_link_libraries(kadoka_participant_registry_test PRIVATE kadoka_shogi_best_manifest)
 add_test(NAME kadoka_participant_registry_test COMMAND kadoka_participant_registry_test)
+
+# {
+#   責務: [kadoka_model_registry_test: manifest・互換判定・再読込の回帰検証をCTestへ登録する],
+#   依存: [kadoka_shogi_model_registry]
+# }
+add_executable(kadoka_model_registry_test tests/kadoka_model_registry_test.cpp)
+target_link_libraries(kadoka_model_registry_test PRIVATE kadoka_shogi_model_registry)
+add_test(NAME kadoka_model_registry_test
+    COMMAND kadoka_model_registry_test ${CMAKE_CURRENT_SOURCE_DIR}/models/examples/model_manifest_v1.json)
 
 add_executable(core_smoke_test tests/core_smoke_test.cpp)
 target_link_libraries(core_smoke_test PRIVATE kadoka_shogi_core)
@@ -202,6 +322,14 @@ add_test(
     COMMAND board_recognition_adapter_test
 )
 
+# {
+#   責務: [path_history_test: 経路識別・保持上限・保存形式の回帰検証を登録する],
+#   依存: [kadoka_shogi_ai_package]
+# }
+add_executable(path_history_test tests/path_history_test.cpp)
+target_link_libraries(path_history_test PRIVATE kadoka_shogi_ai_package)
+add_test(NAME path_history_test COMMAND path_history_test)
+
 add_executable(game_history_test tests/game_history_test.cpp)
 target_link_libraries(game_history_test PRIVATE kadoka_shogi_runtime)
 add_test(NAME game_history_test COMMAND game_history_test)
@@ -225,6 +353,31 @@ add_test(
     NAME recursive_training_importer_test
     COMMAND recursive_training_importer_test
 )
+
+# {
+#   責務: [dataset_registry_test: 登録・再読込・参照整合性の回帰検証をCTestに登録する],
+#   依存: [kadoka_shogi_dataset_registry]
+# }
+add_executable(dataset_registry_test tests/dataset_registry_test.cpp)
+target_link_libraries(dataset_registry_test PRIVATE kadoka_shogi_dataset_registry)
+add_test(NAME dataset_registry_test COMMAND dataset_registry_test)
+
+# {
+#   責務: [checkpoint_manager_test: pointer公開とretentionの回帰検証をCTestに登録する],
+#   依存: [kadoka_shogi_checkpoint_manager]
+# }
+add_executable(checkpoint_manager_test tests/checkpoint_manager_test.cpp)
+target_link_libraries(checkpoint_manager_test PRIVATE kadoka_shogi_checkpoint_manager)
+add_test(NAME checkpoint_manager_test COMMAND checkpoint_manager_test)
+
+# {
+#   責務: [checkpoint_store_test: checkpoint形式と破損・上書き拒否の回帰検証を登録する]
+#   引数: [checkpoint_store_test.cpp: 独立した回帰テスト]
+#   戻り値: [CTestのcheckpoint_store_test]
+# }
+add_executable(checkpoint_store_test tests/checkpoint_store_test.cpp)
+target_link_libraries(checkpoint_store_test PRIVATE kadoka_shogi_checkpoint_store)
+add_test(NAME checkpoint_store_test COMMAND checkpoint_store_test)
 
 add_executable(semantic_action_test tests/semantic_action_test.cpp)
 target_link_libraries(semantic_action_test PRIVATE kadoka_shogi_runtime)
