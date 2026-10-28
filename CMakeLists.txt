@@ -211,6 +211,26 @@ target_include_directories(kadoka_shogi_model_registry
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/model_registry/include
 )
 
+# {
+#   責務: [kadoka_shogi_rating_store: 対局結果からratingを更新し履歴を保存する],
+#   依存: [kadoka_shogi_best_manifest]
+# }
+add_library(kadoka_shogi_rating_store
+    tools/ai_league/src/rating_store.cpp
+)
+
+add_dependencies(kadoka_shogi_rating_store kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_rating_store
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/ai_league/include
+)
+
+target_link_libraries(kadoka_shogi_rating_store
+    PUBLIC
+        kadoka_shogi_best_manifest
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -255,6 +275,13 @@ add_executable(kadoka_participant_registry_test tests/kadoka_participant_registr
 target_link_libraries(kadoka_participant_registry_test PRIVATE kadoka_shogi_best_manifest)
 add_test(NAME kadoka_participant_registry_test COMMAND kadoka_participant_registry_test)
 
+# {
+#   責務: [kadoka_rating_store_test: rating更新と保存復元を検証する],
+#   依存: [kadoka_shogi_rating_store]
+# }
+add_executable(kadoka_rating_store_test tests/kadoka_rating_store_test.cpp)
+target_link_libraries(kadoka_rating_store_test PRIVATE kadoka_shogi_rating_store)
+add_test(NAME kadoka_rating_store_test COMMAND kadoka_rating_store_test)
 # {
 #   責務: [kadoka_model_registry_test: manifest・互換判定・再読込の回帰検証をCTestへ登録する],
 #   依存: [kadoka_shogi_model_registry]
