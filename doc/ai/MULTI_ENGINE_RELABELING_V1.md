@@ -11,7 +11,8 @@
 RelabelRecordは以下をまとめて返します。
 
 - 評価前のdataset ID、revision、sample ID、SFEN、観測着手、観測評価値
-- 各評価個体のParticipantId、model version、config hash、および共通のSearchLimits
+- 各評価個体のParticipantId、model version、config hash
+- record単位で共通の要求SearchLimits（backendでの遵守は保証しない）
 - 成功時のTurnStatus、SearchResult、決定時間
 - backend例外または違法手のエラー
 

@@ -122,7 +122,8 @@ int main() {
         const bool moves_remain_distinct = first_move_usi != second_move_usi;
         check(moves_remain_distinct, "engine disagreement should remain observable in the appended results");
 
-        const bool source_is_preserved = record.source.sample_id == source.sample_id &&
+        const bool source_is_preserved = record.source.dataset_id == source.dataset_id &&
+                                         record.source.sample_id == source.sample_id &&
                                          record.source.dataset_revision == source.dataset_revision &&
                                          record.source.observed_move_usi == source.observed_move_usi &&
                                          record.source.observed_score_cp == source.observed_score_cp &&
@@ -139,13 +140,39 @@ int main() {
 
         const bool failure_is_stored = partial.evaluations[1].status == relabel::RelabelEvaluationStatus::failed &&
                                        partial.evaluations[1].error == "evaluation transport failed";
-        check(failure_is_stored, "backend failure should be retained with evaluator provenance");
+        check(failure_is_stored && partial.evaluations[1].participant.value == make_participant_id('3').value &&
+                  partial.evaluations[1].model_version == "model-v3" &&
+                  partial.evaluations[1].config_hash == "config-c",
+              "backend failure should be retained with evaluator provenance");
         check(partial.evaluations[2].status == relabel::RelabelEvaluationStatus::completed,
               "evaluation should continue after a backend failure");
 
+        unsigned calls = 0;
+        shogi::runtime::FunctionAIBackend spy(
+            shogi::runtime::AIBackendKind::Native, "spy",
+            [&](const shogi::Position& observed, const shogi::SearchLimits& received) {
+                ++calls;
+                check(observed.to_sfen() == source.position_sfen && received.depth_limit == limits.depth_limit &&
+                          received.node_limit == limits.node_limit,
+                      "each backend should receive the original position and requested limits");
+                shogi::SearchResult result;
+                result.best_move = shogi::runtime::move_from_usi("7g7f");
+                return result;
+            });
+        const std::vector<relabel::RelabelEvaluator> spy_evaluators{
+            {make_participant_id('4'), "model-v4", "config-d", &spy},
+            {make_participant_id('5'), "model-v5", "config-e", &spy},
+        };
+        const auto spied = relabel::evaluate_relabel_sample(source, spy_evaluators, limits);
+        check(calls == 2 && spied.evaluations[0].status == relabel::RelabelEvaluationStatus::completed &&
+                  spied.evaluations[1].status == relabel::RelabelEvaluationStatus::completed,
+              "both evaluators should receive the requested inputs");
+
         auto terminal_source = source;
         terminal_source.position_sfen = "9/9/9/9/9/9/9/9/9 b - 1";
-        const auto terminal = relabel::evaluate_relabel_sample(terminal_source, evaluators);
+        calls = 0;
+        const auto terminal = relabel::evaluate_relabel_sample(terminal_source, spy_evaluators, limits);
+        check(calls == 0, "backend must not run for a position with no legal moves");
         for (const auto& item : terminal.evaluations) {
             check(item.status == relabel::RelabelEvaluationStatus::failed &&
                       item.turn_status == shogi::runtime::TurnStatus::NoLegalMoves && !item.search_result &&
