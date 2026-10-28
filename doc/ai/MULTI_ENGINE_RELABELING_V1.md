@@ -24,6 +24,7 @@ RelabelRecordは以下をまとめて返します。
 - evaluatorごとにmodel version、config hash、backendが必要
 - 不正局面や呼び出し全体の契約違反は評価開始前に失敗
 - 個々のbackend実行失敗や違法手はその評価結果だけをfailedにする
+- 合法手のない局面ではRuntimeはbackendを呼ばず、各評価を `NoLegalMoves` とfailedで記録する
 - Runtimeが返す元Positionは変更せず、各AIは同じ初期局面から評価する
 
 ## 完了確認

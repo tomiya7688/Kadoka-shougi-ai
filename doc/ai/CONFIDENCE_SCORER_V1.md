@@ -20,7 +20,7 @@ Scorerは、保存済みの探索・評価要素から学習サンプルのconfi
 | engine_disagreement | disagreementの正規化値 [0,1] | 1 - disagreement |
 | result_consistency | 結果との整合度 [0,1] | その値 |
 
-探索深さ、nodes、時間、gapは基準値を超えても1を超えないよう飽和します。全ての提供根拠を同じ重みで平均し、uncertainty = 1 - confidence とします。正規化済みの入力は利用側で算出し、Scorerは生のentropyやengine差の意味を推測しません。
+探索深さ、nodes、時間、gapは基準値を超えても1を超えないよう飽和します。全ての提供根拠を同じ重みで平均し、uncertainty = 1 - confidence とします。根拠が1件だけでも値が1ならconfidenceは1です。指標の組み合わせによって各指標の実質的な重みは変わり、探索量の複数指標は相関し得ます。正規化済みの入力は利用側で算出し、Scorerは生のentropyやengine差の意味を推測しません。
 
 NaN、無限値、負の実数、正規化範囲外はstd::invalid_argumentで拒否します。根拠がない入力（source ratingのみを含む）は同じく拒否します。全ての変換と集約は固定順・固定式で行い、同じ入力から同じ結果を返します。
 
@@ -31,4 +31,4 @@ RD 350、depth 8、1,000,000 nodes、30,000 ms、100 cpはv1の正規化基準�
 ## 完了確認
 
 kadoka_confidence_scorer_testはgolden値、欠損指標、元入力保持、rating値非依存性、境界外と非有限値の拒否を検査します。
-kadoka_confidence_scorerは通常のC++ビルドへ含まれます。
+kadoka_shogi_confidence_scorerは通常のC++ビルドへ含まれます。

@@ -138,6 +138,16 @@ int main() {
         check(partial.evaluations[2].status == relabel::RelabelEvaluationStatus::completed,
               "evaluation should continue after a backend failure");
 
+        auto terminal_source = source;
+        terminal_source.position_sfen = "9/9/9/9/9/9/9/9/9 b - 1";
+        const auto terminal = relabel::evaluate_relabel_sample(terminal_source, evaluators);
+        for (const auto& item : terminal.evaluations) {
+            check(item.status == relabel::RelabelEvaluationStatus::failed &&
+                      item.turn_status == shogi::runtime::TurnStatus::NoLegalMoves && !item.search_result &&
+                      item.error == "position has no legal moves; backend was not called",
+                  "no-legal-move positions should not be marked as evaluated");
+        }
+
         const std::vector<relabel::RelabelEvaluator> one_evaluator{evaluators[0]};
         const std::vector<relabel::RelabelEvaluator> duplicate_evaluators{evaluators[0], evaluators[0]};
         expect_invalid(source, one_evaluator);

@@ -92,6 +92,8 @@ Add new subdirectories instead of accumulating unrelated documents at the root o
 
 ## Dependency direction
 
+具体的な依存許可表、現行ソース配置、native/external/script境界、headless経路、seed所有者は[Runtime / Core / Adapter依存境界](RUNTIME_CORE_ADAPTER_BOUNDARY.md)に記載します。
+
 Keep dependencies simple and one-way where practical:
 
 ```text
@@ -113,6 +115,10 @@ Creator / Training / Analysis
 The shared `engine` layer must not import a concrete AI implementation or runtime behavior. AI implementations may depend on the engine core. Runtime depends on the common engine contract and authoritative legal-move APIs, but not on a concrete AI family. Frontends may depend on runtime and adapters but should not become a second rules engine.
 
 Runtime must not depend upward on Creator/Training/Analysis. This mirrors the sibling-project direction used by Kadoka Othello AI and Kadoka Tetris AI: match-time code stays lightweight, while model creation and heavy data work remain outside the hot path.
+
+## Documentation language
+
+この文書には現時点で日本語版がなく、各節の英語原文が暫定正本です。改定時は[文書言語方針と移行手順](DOCUMENTATION_POLICY.md)に従ってください。節を移行したときは、この案内と該当節に日本語正本へのリンクを追加します。
 
 ## Codex implementation conventions
 

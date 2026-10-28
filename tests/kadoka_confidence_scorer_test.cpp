@@ -1,6 +1,7 @@
 #include "kadoka/confidence/confidence_scorer.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -37,7 +38,8 @@ void expect_invalid(const kadoka::confidence::ConfidenceScorer& scorer,
 //   処理: [
 //     1: 指標平均と補数のgolden値を確認する,
 //     2: source ratingがスコアを歪めないことを確認する,
-//     3: 欠損根拠と不正値の拒否を確認する
+//     3: 欠損根拠と不正値の拒否を確認する,
+//     4: 最大値と微小値の境界を確認する
 //   ],
 //   引数: [],
 //   戻り値: [0: 成功] [1: 検査失敗]
@@ -77,6 +79,32 @@ int main() {
         check(sparse.evidence_count == 1 && sparse.confidence == 0.0,
               "zero search depth should remain valid, explicit evidence");
 
+        const auto maximum = scorer.score(ConfidenceInputs{.source_uncertainty = std::numeric_limits<double>::max(),
+                                                           .search_depth = std::numeric_limits<std::uint32_t>::max(),
+                                                           .search_nodes = std::numeric_limits<std::uint64_t>::max(),
+                                                           .search_time_ms = std::numeric_limits<std::uint64_t>::max(),
+                                                           .candidate_gap_cp = std::numeric_limits<double>::max(),
+                                                           .policy_entropy = 0.0,
+                                                           .engine_disagreement = 1.0,
+                                                           .result_consistency = 1.0});
+        check(std::isfinite(maximum.confidence) && maximum.confidence >= 0.0 && maximum.confidence <= 1.0 &&
+                  maximum.evidence_count == 8,
+              "maximum finite inputs should produce bounded confidence");
+        check(maximum.inputs.search_nodes == std::numeric_limits<std::uint64_t>::max() &&
+                  maximum.inputs.source_uncertainty == std::numeric_limits<double>::max(),
+              "result should retain extreme original inputs");
+        const auto tiny_gap = scorer.score(ConfidenceInputs{.candidate_gap_cp = 1e-307});
+        check(tiny_gap.confidence > 0.0 && tiny_gap.confidence == 1e-307 / (1e-307 + 100.0),
+              "small positive gap should not vanish due to intermediate overflow");
+        const auto single_consistency = scorer.score(ConfidenceInputs{.result_consistency = 1.0});
+        check(single_consistency.evidence_count == 1 && single_consistency.confidence == 1.0,
+              "one perfect evidence value should yield confidence one");
+        expect_invalid(scorer, ConfidenceInputs{.source_uncertainty = -1.0});
+        expect_invalid(scorer, ConfidenceInputs{.result_consistency = -0.1});
+        expect_invalid(scorer, ConfidenceInputs{.engine_disagreement = 1.1});
+        expect_invalid(scorer,
+                       ConfidenceInputs{.source_rating = std::numeric_limits<double>::infinity(), .search_depth = 1});
+        expect_invalid(scorer, ConfidenceInputs{.candidate_gap_cp = std::numeric_limits<double>::infinity()});
         expect_invalid(scorer, ConfidenceInputs{.source_rating = 1500.0});
         expect_invalid(scorer, ConfidenceInputs{.candidate_gap_cp = -1.0});
         expect_invalid(scorer, ConfidenceInputs{.policy_entropy = 1.1});
