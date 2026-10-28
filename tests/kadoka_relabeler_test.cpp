@@ -101,10 +101,12 @@ int main() {
             {make_participant_id('2'), "model-v2", "config-b", &second_backend},
         };
         shogi::SearchLimits limits;
+        limits.time_limit = std::chrono::milliseconds{500};
         limits.depth_limit = 8;
         limits.node_limit = 1000;
         const auto record = relabel::evaluate_relabel_sample(source, evaluators, limits);
-        check(record.limits.depth_limit == limits.depth_limit && record.limits.node_limit == limits.node_limit,
+        check(record.limits.time_limit == limits.time_limit && record.limits.depth_limit == limits.depth_limit &&
+                  record.limits.node_limit == limits.node_limit,
               "relabel output should retain search limits");
         check(record.evaluations.size() == 2, "both evaluator results should be appended");
 
@@ -152,8 +154,8 @@ int main() {
             shogi::runtime::AIBackendKind::Native, "spy",
             [&](const shogi::Position& observed, const shogi::SearchLimits& received) {
                 ++calls;
-                check(observed.to_sfen() == source.position_sfen && received.depth_limit == limits.depth_limit &&
-                          received.node_limit == limits.node_limit,
+                check(observed.to_sfen() == source.position_sfen && received.time_limit == limits.time_limit &&
+                          received.depth_limit == limits.depth_limit && received.node_limit == limits.node_limit,
                       "each backend should receive the original position and requested limits");
                 shogi::SearchResult result;
                 result.best_move = shogi::runtime::move_from_usi("7g7f");
@@ -172,7 +174,8 @@ int main() {
         terminal_source.position_sfen = "9/9/9/9/9/9/9/9/9 b - 1";
         calls = 0;
         const auto terminal = relabel::evaluate_relabel_sample(terminal_source, spy_evaluators, limits);
-        check(calls == 0, "backend must not run for a position with no legal moves");
+        check(calls == 0 && terminal.evaluations.size() == spy_evaluators.size(),
+              "all evaluations should be recorded without calling backends for a terminal position");
         for (const auto& item : terminal.evaluations) {
             check(item.status == relabel::RelabelEvaluationStatus::failed &&
                       item.turn_status == shogi::runtime::TurnStatus::NoLegalMoves && !item.search_result &&
