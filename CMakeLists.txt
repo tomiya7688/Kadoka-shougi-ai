@@ -246,6 +246,27 @@ target_include_directories(kadoka_shogi_confidence_scorer
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/confidence_scorer/include
 )
 
+# {
+#   責務: [kadoka_shogi_relabeler: 同一局面の複数AI評価を記録する],
+#   依存: [kadoka_shogi_runtime] [kadoka_shogi_best_manifest]
+# }
+add_library(kadoka_shogi_relabeler
+    tools/relabeler/src/relabeler.cpp
+)
+
+add_dependencies(kadoka_shogi_relabeler kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_relabeler
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/relabeler/include
+)
+
+target_link_libraries(kadoka_shogi_relabeler
+    PUBLIC
+        kadoka_shogi_runtime
+        kadoka_shogi_best_manifest
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -313,6 +334,14 @@ add_test(NAME kadoka_model_registry_test
 add_executable(kadoka_confidence_scorer_test tests/kadoka_confidence_scorer_test.cpp)
 target_link_libraries(kadoka_confidence_scorer_test PRIVATE kadoka_shogi_confidence_scorer)
 add_test(NAME kadoka_confidence_scorer_test COMMAND kadoka_confidence_scorer_test)
+
+# {
+#   責務: [kadoka_relabeler_test: 複数AI評価と失敗処理を検証する],
+#   依存: [kadoka_shogi_relabeler]
+# }
+add_executable(kadoka_relabeler_test tests/kadoka_relabeler_test.cpp)
+target_link_libraries(kadoka_relabeler_test PRIVATE kadoka_shogi_relabeler)
+add_test(NAME kadoka_relabeler_test COMMAND kadoka_relabeler_test)
 
 add_executable(core_smoke_test tests/core_smoke_test.cpp)
 target_link_libraries(core_smoke_test PRIVATE kadoka_shogi_core)
