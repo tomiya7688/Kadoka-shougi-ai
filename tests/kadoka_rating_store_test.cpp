@@ -139,6 +139,24 @@ int main() {
     }
     expect(extra_fields_rejected, "excessive fields should be rejected");
 
+    const std::string header = "kadoka.rating_store.v1\n";
+    const std::string first_record = "P\t" + first.value + "\n";
+    const std::string second_record = "P\t" + second.value + "\n";
+    const std::string unknown_id = "sha256:" + std::string(64, '0');
+    for (const auto& invalid :
+         {header + first_record + first_record,
+          header + first_record + second_record + "G\t1\t" + first.value + "\t" + unknown_id +
+              "\tdraw\t1500\t350\t1500\t350\n",
+          header + first_record + "G\t1\t" + first.value + "\t" + first.value + "\tdraw\t1500\t350\t1500\t350\n"}) {
+        bool rejected = false;
+        try {
+            (void)kadoka::league::deserialize_rating_store(invalid);
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        expect(rejected, "invalid stored participants or games should throw runtime_error");
+    }
+
     std::string record_crlf = serialized;
     const std::size_t first_record_end = record_crlf.find('\n', record_crlf.find('\n') + 1);
     record_crlf.insert(first_record_end, 1, '\r');

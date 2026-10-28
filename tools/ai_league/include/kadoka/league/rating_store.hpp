@@ -97,6 +97,7 @@ class RatingStore {
 //   責務: [deserialize_rating_store: participant一覧と結果履歴からratingを再計算して復元する]
 //   引数: [serialized: 読み込むrating文書]
 //   戻り値: [復元したRatingStore]
+//   例外: [std::runtime_error: 保存形式または保存内容が不正]
 // }
 [[nodiscard]] RatingStore deserialize_rating_store(std::string_view serialized);
 

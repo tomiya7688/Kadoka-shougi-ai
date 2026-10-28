@@ -345,7 +345,13 @@ RatingStore deserialize_rating_store(std::string_view serialized) {
         }
     }
 
-    RatingStore result(ids);
+    RatingStore result = [&ids] {
+        try {
+            return RatingStore(ids);
+        } catch (const std::invalid_argument& error) {
+            throw std::runtime_error(std::string("invalid rating participants: ") + error.what());
+        }
+    }();
     remaining = serialized.substr(games_offset);
     while (!remaining.empty()) {
         const std::size_t newline = remaining.find('\n');
@@ -358,7 +364,11 @@ RatingStore deserialize_rating_store(std::string_view serialized) {
         const GameResult game_result = parse_result(fields[4]);
         if (sequence != result.history().size() + 1)
             throw std::runtime_error("rating history sequence is not contiguous");
-        result.record_result({std::string(fields[2])}, {std::string(fields[3])}, game_result);
+        try {
+            result.record_result({std::string(fields[2])}, {std::string(fields[3])}, game_result);
+        } catch (const std::invalid_argument& error) {
+            throw std::runtime_error(std::string("invalid rating game: ") + error.what());
+        }
         const RatingHistoryEntry& actual = result.history().back();
         if (!ratings_match(actual.black_rating_after, parse_double(fields[5])) ||
             !ratings_match(actual.black_uncertainty_after, parse_double(fields[6])) ||
