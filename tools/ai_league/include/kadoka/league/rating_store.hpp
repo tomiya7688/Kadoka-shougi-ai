@@ -16,7 +16,7 @@ namespace kadoka::league {
 enum class GameResult { black_win, draw, white_win };
 
 // {
-//   責務: [RatingSnapshot: 参加者のGlicko rating、RD、不確実性、対局数を保持する]
+//   責務: [RatingSnapshot: 参加者のGlicko rating、RD（不確実性）、対局数を保持する]
 // }
 struct RatingSnapshot {
     best::ParticipantId participant;

@@ -83,6 +83,12 @@ int main() {
     expect(restored.find(second)->uncertainty == store.find(second)->uncertainty,
            "replay should reproduce rating uncertainty");
 
+    kadoka::league::RatingStore white_win_store(registry);
+    white_win_store.record_result(first, second, kadoka::league::GameResult::white_win);
+    expect(std::abs(white_win_store.find(second)->rating - 1662.2120014703455) < 1e-8 &&
+               std::abs(white_win_store.find(first)->rating - (3000.0 - 1662.2120014703455)) < 1e-8,
+           "white win should increase white rating and decrease black rating");
+
     kadoka::league::RatingStore draw_store(registry);
     draw_store.record_result(first, second, kadoka::league::GameResult::draw);
     expect(draw_store.find(first)->rating == 1500.0 && draw_store.find(second)->rating == 1500.0,
