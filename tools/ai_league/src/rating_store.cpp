@@ -76,6 +76,8 @@ std::vector<std::string_view> split_fields(std::string_view line) {
             fields.push_back(line.substr(start));
             return fields;
         }
+        if (fields.size() == 8)
+            throw std::runtime_error("too many rating fields");
         fields.push_back(line.substr(start, separator - start));
         start = separator + 1;
     }
@@ -164,7 +166,6 @@ void append_field(std::string& output, double value) {
 // }
 std::pair<double, double> glicko_update(const RatingSnapshot& current, const RatingSnapshot& opponent, double score) {
     constexpr double scale = 173.7178;
-    constexpr double q = 0.005756462732485114;
     constexpr double minimum_uncertainty = 30.0;
     constexpr double pi = 3.14159265358979323846;
 
@@ -176,10 +177,10 @@ std::pair<double, double> glicko_update(const RatingSnapshot& current, const Rat
     const double exponent = -g * (mu - opponent_mu);
     const double expected =
         exponent >= 0.0 ? std::exp(-exponent) / (1.0 + std::exp(-exponent)) : 1.0 / (1.0 + std::exp(exponent));
-    const double information = q * q * g * g * expected * (1.0 - expected);
+    const double information = g * g * expected * (1.0 - expected);
     const double phi_squared = 1.0 / (1.0 / (phi * phi) + information);
     const double next_phi = std::sqrt(phi_squared);
-    const double next_mu = mu + phi_squared * q * g * (score - expected);
+    const double next_mu = mu + phi_squared * g * (score - expected);
     const double next_rating = 1500.0 + scale * next_mu;
     const double next_uncertainty = std::max(minimum_uncertainty, scale * next_phi);
     if (!std::isfinite(next_rating) || !std::isfinite(next_uncertainty))
@@ -315,8 +316,8 @@ RatingStore deserialize_rating_store(std::string_view serialized) {
     if (!serialized.starts_with(header))
         throw std::runtime_error("unsupported rating store format");
     std::vector<best::ParticipantId> ids;
-    std::vector<std::vector<std::string_view>> game_records;
     bool reading_games = false;
+    std::size_t games_offset = serialized.size();
     std::string_view remaining = serialized.substr(header.size());
     while (!remaining.empty()) {
         const std::size_t newline = remaining.find('\n');
@@ -337,14 +338,22 @@ RatingStore deserialize_rating_store(std::string_view serialized) {
             reading_games = true;
             if (fields.size() != 9)
                 throw std::runtime_error("rating game record must contain nine fields");
-            game_records.emplace_back(fields.begin(), fields.end());
+            if (games_offset == serialized.size())
+                games_offset = static_cast<std::size_t>(line.data() - serialized.data());
         } else {
             throw std::runtime_error("unknown rating record type");
         }
     }
 
     RatingStore result(ids);
-    for (const auto& fields : game_records) {
+    remaining = serialized.substr(games_offset);
+    while (!remaining.empty()) {
+        const std::size_t newline = remaining.find('\n');
+        std::string_view line = remaining.substr(0, newline);
+        remaining.remove_prefix(newline + 1);
+        if (!line.empty() && line.back() == '\r')
+            line.remove_suffix(1);
+        const auto fields = split_fields(line);
         const std::uint64_t sequence = parse_unsigned(fields[1]);
         const GameResult game_result = parse_result(fields[4]);
         if (sequence != result.history().size() + 1)

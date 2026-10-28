@@ -1,5 +1,6 @@
 #include "kadoka/league/rating_store.hpp"
 
+#include <cmath>
 #include <iterator>
 #include <stdexcept>
 #include <string>
@@ -60,6 +61,9 @@ int main() {
     store.record_result(first, second, kadoka::league::GameResult::black_win);
     const auto* after_first_win = store.find(first);
     const auto* after_second_loss = store.find(second);
+    expect(std::abs(after_first_win->rating - 1662.2120014703455) < 1e-8 &&
+               std::abs(after_first_win->uncertainty - 290.23050778223865) < 1e-8,
+           "single-game update should match independently calculated Glicko-1 values");
     expect(after_first_win->rating > 1500.0, "winner rating should increase");
     expect(after_second_loss->rating < 1500.0, "loser rating should decrease");
     expect(after_first_win->uncertainty < 350.0 && after_second_loss->uncertainty < 350.0,
@@ -120,4 +124,28 @@ int main() {
         corruption_rejected = true;
     }
     expect(corruption_rejected, "unknown persisted results should be rejected");
+
+    bool extra_fields_rejected = false;
+    try {
+        (void)kadoka::league::deserialize_rating_store(serialized + "G\t1\t2\t3\t4\t5\t6\t7\t8\t9\n");
+    } catch (const std::runtime_error&) {
+        extra_fields_rejected = true;
+    }
+    expect(extra_fields_rejected, "excessive fields should be rejected");
+
+    std::string record_crlf = serialized;
+    const std::size_t first_record_end = record_crlf.find('\n', record_crlf.find('\n') + 1);
+    record_crlf.insert(first_record_end, 1, '\r');
+    expect(kadoka::league::deserialize_rating_store(record_crlf).history().size() == 2,
+           "record CRLF should be accepted");
+    for (const auto& invalid :
+         {serialized.substr(0, serialized.size() - 1), serialized + "\n", std::string("kadoka.rating_store.v1\r\n")}) {
+        bool rejected = false;
+        try {
+            (void)kadoka::league::deserialize_rating_store(invalid);
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        expect(rejected, "invalid line endings or empty records should be rejected");
+    }
 }
