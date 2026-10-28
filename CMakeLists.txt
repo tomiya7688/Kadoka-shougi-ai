@@ -231,6 +231,21 @@ target_link_libraries(kadoka_shogi_rating_store
         kadoka_shogi_best_manifest
 )
 
+# {
+#   責務: [kadoka_shogi_confidence_scorer: 探索根拠から信頼度を計算する],
+#   依存: [kadoka_rule_check]
+# }
+add_library(kadoka_shogi_confidence_scorer
+    tools/confidence_scorer/src/confidence_scorer.cpp
+)
+
+add_dependencies(kadoka_shogi_confidence_scorer kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_confidence_scorer
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/confidence_scorer/include
+)
+
 add_executable(kadoka_shogi
     protocol/cli/main.cpp
 )
@@ -290,6 +305,14 @@ add_executable(kadoka_model_registry_test tests/kadoka_model_registry_test.cpp)
 target_link_libraries(kadoka_model_registry_test PRIVATE kadoka_shogi_model_registry)
 add_test(NAME kadoka_model_registry_test
     COMMAND kadoka_model_registry_test ${CMAKE_CURRENT_SOURCE_DIR}/models/examples/model_manifest_v1.json)
+
+# {
+#   責務: [kadoka_confidence_scorer_test: 信頼度の計算と入力境界を検証する],
+#   依存: [kadoka_shogi_confidence_scorer]
+# }
+add_executable(kadoka_confidence_scorer_test tests/kadoka_confidence_scorer_test.cpp)
+target_link_libraries(kadoka_confidence_scorer_test PRIVATE kadoka_shogi_confidence_scorer)
+add_test(NAME kadoka_confidence_scorer_test COMMAND kadoka_confidence_scorer_test)
 
 add_executable(core_smoke_test tests/core_smoke_test.cpp)
 target_link_libraries(core_smoke_test PRIVATE kadoka_shogi_core)
