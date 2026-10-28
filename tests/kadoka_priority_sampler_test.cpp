@@ -121,7 +121,9 @@ int main() {
 
         const std::vector<PrioritySamplingCandidate> boundaries = {make_candidate("low-edge", 0.4),
                                                                    make_candidate("high-edge", 0.8)};
-        for (const auto& choice : sample_relabel_candidates(boundaries, {.count = 2, .seed = 42}))
+        const auto boundary_choices = sample_relabel_candidates(boundaries, {.count = 2, .seed = 42});
+        require(boundary_choices.size() == 2, "both threshold boundaries should be selected");
+        for (const auto& choice : boundary_choices)
             require(choice.band == (choice.candidate_index == 0 ? ConfidenceBand::medium : ConfidenceBand::high),
                     "confidence threshold equality was classified incorrectly");
 
@@ -167,13 +169,17 @@ int main() {
             ++boost_counts
                 [sample_relabel_candidates(boost_candidates, {.count = 1, .seed = seed}).front().candidate_index];
         require(boost_counts[1] > 2 * boost_counts[0], "disagreement did not increase selection probability");
-        for (const auto& choice : sample_relabel_candidates(boost_candidates, {.count = 2, .seed = 42}))
+        const auto boost_choices = sample_relabel_candidates(boost_candidates, {.count = 2, .seed = 42});
+        require(boost_choices.size() == 2, "both boost candidates should be selected");
+        for (const auto& choice : boost_choices)
             require(choice.tickets == (choice.candidate_index == 0 ? 3072 : 7168),
                     "disagreement tickets do not match the documented scale");
         policy = {};
         policy.medium_weight = std::numeric_limits<std::uint32_t>::max();
         policy.disagreement_boost = std::numeric_limits<std::uint32_t>::max();
-        for (const auto& choice : sample_relabel_candidates(boost_candidates, {.count = 2, .seed = 42}, policy)) {
+        const auto max_weight_choices = sample_relabel_candidates(boost_candidates, {.count = 2, .seed = 42}, policy);
+        require(max_weight_choices.size() == 2, "both maximum weight candidates should be selected");
+        for (const auto& choice : max_weight_choices) {
             const std::uint64_t scale = choice.candidate_index == 0 ? 1024 : 2048;
             require(choice.tickets == static_cast<std::uint64_t>(policy.medium_weight) * scale,
                     "maximum configured weight overflowed before widening to uint64_t");
