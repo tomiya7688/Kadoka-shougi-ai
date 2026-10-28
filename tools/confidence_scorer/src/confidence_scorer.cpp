@@ -36,6 +36,13 @@ void require_probability(const std::optional<double>& value, const std::string_v
 
 namespace kadoka::confidence {
 
+// {
+//   責務: [score: 利用可能な根拠を正規化して信頼度を算出する],
+//   処理: [1: 入力を検証する] [2: 各指標を集約する] [3: 平均と補数を返す],
+//   引数: [inputs: 未加工の出典情報と根拠],
+//   戻り値: [元入力を保持したconfidenceとuncertainty],
+//   エラー: [無効な値または根拠がない場合はstd::invalid_argument]
+// }
 ConfidenceResult DefaultConfidenceScorer::score(const ConfidenceInputs& inputs) const {
     if (inputs.source_rating && !std::isfinite(*inputs.source_rating))
         throw std::invalid_argument("source_rating must be finite");
@@ -47,6 +54,11 @@ ConfidenceResult DefaultConfidenceScorer::score(const ConfidenceInputs& inputs) 
 
     double total = 0.0;
     std::size_t evidence_count = 0;
+    // {
+    //   責務: [add_evidence: 正規化した指標を合計と件数に追加する],
+    //   引数: [value: 集約する指標],
+    //   戻り値: []
+    // }
     const auto add_evidence = [&total, &evidence_count](const double value) {
         total += std::clamp(value, 0.0, 1.0);
         ++evidence_count;
@@ -71,7 +83,7 @@ ConfidenceResult DefaultConfidenceScorer::score(const ConfidenceInputs& inputs) 
     }
     if (inputs.candidate_gap_cp) {
         const double gap = *inputs.candidate_gap_cp;
-        add_evidence(gap == 0.0 ? 0.0 : 1.0 / (1.0 + 100.0 / gap));
+        add_evidence(gap / (gap + 100.0));
     }
     if (inputs.policy_entropy)
         add_evidence(1.0 - *inputs.policy_entropy);
