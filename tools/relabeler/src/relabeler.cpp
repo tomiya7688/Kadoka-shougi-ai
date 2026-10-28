@@ -51,7 +51,7 @@ RelabelRecord evaluate_relabel_sample(const RelabelSource& source, std::span<con
     validate_relabel_inputs(source, evaluators);
     const shogi::Position position = shogi::Position::from_sfen(source.position_sfen);
 
-    RelabelRecord record{source, {}};
+    RelabelRecord record{source, {}, limits};
     record.evaluations.reserve(evaluators.size());
     for (const RelabelEvaluator& evaluator : evaluators) {
         RelabelEvaluation evaluation{

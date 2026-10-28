@@ -11,9 +11,11 @@
 RelabelRecordは以下をまとめて返します。
 
 - 評価前のdataset ID、revision、sample ID、SFEN、観測着手、観測評価値
-- 各評価個体のParticipantId、model version、config hash
+- 各評価個体のParticipantId、model version、config hash、および共通のSearchLimits
 - 成功時のTurnStatus、SearchResult、決定時間
 - backend例外または違法手のエラー
+
+評価は渡された順に実行し、backendの状態や共有資源は隔離・リセットしません。呼び出し側がbackend間の独立性と、自己申告された個体ID・設定情報と実体の一致を管理します。failedのSearchResultは診断用であり、有効なラベルとして利用しないでください。
 
 各AI結果を独立した行として保持するため、異なる候補手や評価値によるdisagreementを元データと併せて確認できます。失敗したbackendも失敗理由とprovenanceを残し、残りのbackendを続けて実行します。
 

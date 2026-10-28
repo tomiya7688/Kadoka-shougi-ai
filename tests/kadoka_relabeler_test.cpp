@@ -100,7 +100,12 @@ int main() {
             {make_participant_id('1'), "model-v1", "config-a", &first_backend},
             {make_participant_id('2'), "model-v2", "config-b", &second_backend},
         };
-        const auto record = relabel::evaluate_relabel_sample(source, evaluators);
+        shogi::SearchLimits limits;
+        limits.depth_limit = 8;
+        limits.node_limit = 1000;
+        const auto record = relabel::evaluate_relabel_sample(source, evaluators, limits);
+        check(record.limits.depth_limit == limits.depth_limit && record.limits.node_limit == limits.node_limit,
+              "relabel output should retain search limits");
         check(record.evaluations.size() == 2, "both evaluator results should be appended");
 
         const bool evaluations_completed =
