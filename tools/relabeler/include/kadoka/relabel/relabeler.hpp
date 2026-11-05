@@ -81,12 +81,14 @@ struct RelabelEvaluation {
 //   責務: [RelabelRecord: 元サンプルを保持したまま複数evaluatorの結果を追加する],
 //   フィールド: [
 //     source: 評価前の識別子・盤面・元ラベル・provenance,
-//     evaluations: 個体ごとに追記する再評価結果
+//     evaluations: 個体ごとに追記する再評価結果,
+//     limits: 全backendに指定した探索制限
 //   ]
 // }
 struct RelabelRecord {
     RelabelSource source;
     std::vector<RelabelEvaluation> evaluations;
+    shogi::SearchLimits limits{};
 };
 
 // {

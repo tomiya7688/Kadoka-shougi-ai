@@ -49,9 +49,10 @@ sinkが例外を投げた場合はそのまま伝播します。保存の成否�
 
 `RelabelBatchFileStore(directory, queue.revision)` はqueue専用ディレクトリを作成し、
 `0000000000000000.batch` から始まる連続した確定ファイルを読んでcursorを復元します。
-各ファイルは形式version、queue revision、次cursor、元source、全AI評価結果を含みます。
+各ファイルは形式version、queue revision、次cursor、元source、探索制限、全AI評価結果を含みます。
+新規保存は探索制限を含む `KRB2` 形式です。旧 `KRB1` は読み取れますが、探索制限は保存されていないため未指定として復元します。
 16MiBを超えるrecord、欠番、不正形式、revision不一致は復元時に拒否します。
-評価個体数の読み取り上限は1024です。
+評価個体数の保存・読み取り上限は1024です。超過したrecordは確定前に例外で拒否し、cursorを進めません。
 
 初回は `store.cursor()` をrequestへ渡し、sinkから `store.save(record, next)` を呼びます。
 再起動後は同じディレクトリ・revisionでstoreを開き、復元したcursorから再開します。

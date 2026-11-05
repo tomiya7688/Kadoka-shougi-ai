@@ -7,6 +7,7 @@
 #include <initializer_list>
 #include <iomanip>
 #include <limits>
+#include <locale>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -17,13 +18,48 @@ namespace kadoka::best {
 namespace {
 
 // {
+//   責務: [valid_utf8: JSON文字列のUTF-8 byte列を検証する],
+//   引数: [value: 検証する文字列],
+//   戻り値: [妥当なUnicode scalar value列ならtrue]
+//   処理: [1: 先頭byteと継続byteの範囲を照合する]
+// }
+bool valid_utf8(const std::string_view value) {
+    for (std::size_t offset = 0; offset < value.size();) {
+        const auto lead = static_cast<unsigned char>(value[offset]);
+        if (lead < 0x80U) {
+            ++offset;
+            continue;
+        }
+        const std::size_t followers = lead >= 0xC2U && lead <= 0xDFU   ? 1
+                                      : lead >= 0xE0U && lead <= 0xEFU ? 2
+                                      : lead >= 0xF0U && lead <= 0xF4U ? 3
+                                                                       : 0;
+        if (followers == 0 || followers >= value.size() - offset)
+            return false;
+        const auto second = static_cast<unsigned char>(value[offset + 1]);
+        if (second < 0x80U || second > 0xBFU || (lead == 0xE0U && second < 0xA0U) ||
+            (lead == 0xEDU && second > 0x9FU) || (lead == 0xF0U && second < 0x90U) || (lead == 0xF4U && second > 0x8FU))
+            return false;
+        for (std::size_t index = 2; index <= followers; ++index) {
+            const auto continuation = static_cast<unsigned char>(value[offset + index]);
+            if (continuation < 0x80U || continuation > 0xBFU)
+                return false;
+        }
+        offset += followers + 1;
+    }
+    return true;
+}
+
+// {
 //   責務: [JsonValue: JSON値を型を保って解析・検証する]
+//   フィールド: [value: JSONの型付き値]
 // }
 struct JsonValue {
     using Array = std::vector<JsonValue>;
     using Object = std::map<std::string, JsonValue>;
     // {
     //   責務: [Number: JSON numberの構文を解析後も文字列表記で保持する]
+    //   フィールド: [spelling: JSON数値の元表記]
     // }
     struct Number {
         std::string spelling;
@@ -35,18 +71,23 @@ struct JsonValue {
 
 // {
 //   責務: [JsonParser: v1 manifestのJSONを完全に読み取り重複keyや不正構文を拒否する]
+//   フィールド: [input_: 入力view / position_: 読取位置 / depth_: 入れ子の深さ]
 // }
 class JsonParser {
   public:
     // {
     //   責務: [JsonParser: 入力JSONのviewと初期位置を保持する]
     //   引数: [input: 解析対象のJSON]
+    //   処理: [1: 入力viewと開始位置を保持する]
+    //   戻り値: [なし]
     // }
     explicit JsonParser(std::string_view input) : input_(input) {}
 
     // {
     //   責務: [parse: JSON値を解析し末尾以降の余分な文字を拒否する]
     //   戻り値: [解析済みJSON値]
+    //   処理: [1: 値を読み、後続に余分な文字がないか確認する]
+    //   引数: [なし]
     // }
     JsonValue parse() {
         skip_space();
@@ -61,6 +102,9 @@ class JsonParser {
   private:
     // {
     //   責務: [skip_space: JSONで許可された空白を読み飛ばす]
+    //   処理: [1: JSONの空白文字の間だけ位置を進める]
+    //   引数: [なし]
+    //   戻り値: [なし]
     // }
     void skip_space() {
         while (position_ < input_.size()) {
@@ -75,6 +119,8 @@ class JsonParser {
     // {
     //   責務: [fail: 現在位置を含むJSON解析エラーを送出する]
     //   引数: [message: エラー理由]
+    //   処理: [1: 現在のbyte位置と理由を含む例外を送出する]
+    //   戻り値: [なし]
     // }
     [[noreturn]] void fail(std::string_view message) const {
         throw std::runtime_error("manifest JSON at byte " + std::to_string(position_) + ": " + std::string(message));
@@ -84,6 +130,7 @@ class JsonParser {
     //   責務: [consume: 指定文字が次にあるときだけ入力位置を進める]
     //   引数: [expected: 確認する文字]
     //   戻り値: [文字を消費した場合true]
+    //   処理: [1: 一致する文字だけを消費して位置を進める]
     // }
     bool consume(char expected) {
         if (position_ >= input_.size() || input_[position_] != expected) {
@@ -96,6 +143,8 @@ class JsonParser {
     // {
     //   責務: [require: 指定された構文文字が無い場合に解析を停止する]
     //   引数: [expected: 必須の構文文字]
+    //   処理: [1: 指定文字がなければ解析エラーを送出する]
+    //   戻り値: [なし]
     // }
     void require(char expected) {
         if (!consume(expected)) {
@@ -106,6 +155,8 @@ class JsonParser {
     // {
     //   責務: [append_utf8: Unicode code pointをUTF-8文字列へ追加する]
     //   引数: [output: 追加先文字列] [code_point: 追加する文字]
+    //   処理: [1: Unicode値を1〜4 byteへ符号化して追加する]
+    //   戻り値: [なし]
     // }
     void append_utf8(std::string& output, std::uint32_t code_point) {
         if (code_point <= 0x7fU) {
@@ -130,6 +181,8 @@ class JsonParser {
     // {
     //   責務: [read_hex4: JSONのunicode escapeから16bit値を読む]
     //   戻り値: [読み取った16bit値]
+    //   処理: [1: 4桁の16進文字を16 bit値へ変換する]
+    //   引数: [なし]
     // }
     std::uint32_t read_hex4() {
         std::uint32_t result = 0;
@@ -155,6 +208,8 @@ class JsonParser {
     // {
     //   責務: [parse_string: escapeとUTF-8を検査しJSON文字列を読む]
     //   戻り値: [復号した文字列]
+    //   処理: [1: escapeを復号しUTF-8と制御文字を検査する]
+    //   引数: [なし]
     // }
     std::string parse_string() {
         require('"');
@@ -162,6 +217,8 @@ class JsonParser {
         while (position_ < input_.size()) {
             const unsigned char current = static_cast<unsigned char>(input_[position_++]);
             if (current == '"') {
+                if (!valid_utf8(output))
+                    fail("invalid UTF-8 in JSON string");
                 return output;
             }
             if (current < 0x20U) {
@@ -228,6 +285,8 @@ class JsonParser {
     // {
     //   責務: [parse_object: 重複keyを拒否しJSON objectを読み取る]
     //   戻り値: [keyと値のmap]
+    //   処理: [1: 深さを制限しkeyと値を読み重複を拒否する]
+    //   引数: [なし]
     // }
     JsonValue::Object parse_object() {
         require('{');
@@ -264,6 +323,8 @@ class JsonParser {
     // {
     //   責務: [parse_array: JSON arrayの要素を順番どおりに読み取る]
     //   戻り値: [解析した要素一覧]
+    //   処理: [1: 深さを制限し要素を順に読み取る]
+    //   引数: [なし]
     // }
     JsonValue::Array parse_array() {
         require('[');
@@ -291,6 +352,8 @@ class JsonParser {
     // {
     //   責務: [parse_number: JSON numberの文法を検査して数値表記を保持する]
     //   戻り値: [解析済み数値表記]
+    //   処理: [1: 整数・小数・指数の構文を検査する]
+    //   引数: [なし]
     // }
     JsonValue parse_number() {
         const std::size_t start = position_;
@@ -333,6 +396,8 @@ class JsonParser {
     // {
     //   責務: [parse_value: JSONのobject、array、scalar値を再帰的に解析する]
     //   戻り値: [解析済みJSON値]
+    //   処理: [1: 先頭文字に応じて各JSON型へ振り分ける]
+    //   引数: [なし]
     // }
     JsonValue parse_value() {
         if (position_ >= input_.size())
@@ -370,8 +435,11 @@ class JsonParser {
 //   責務: [escape_json: JSON文字列の特殊文字を安全にescapeする]
 //   引数: [value: escape対象文字列]
 //   戻り値: [JSON文字列リテラル]
+//   処理: [1: UTF-8を検査し引用符と制御文字をescapeする]
 // }
 std::string escape_json(std::string_view value) {
+    if (!valid_utf8(value))
+        throw std::invalid_argument("JSON string is not valid UTF-8");
     std::string output;
     output.reserve(value.size() + 2);
     output.push_back('"');
@@ -417,6 +485,7 @@ std::string escape_json(std::string_view value) {
 //   責務: [require_object: JSON値がobjectであることを確認する]
 //   引数: [value: 型を確認するJSON値] [field: error表示用field名]
 //   戻り値: [objectへの参照]
+//   処理: [1: 型がobjectでなければ例外を送出する]
 // }
 const JsonValue::Object& require_object(const JsonValue& value, std::string_view field) {
     const auto* result = std::get_if<JsonValue::Object>(&value.value);
@@ -429,6 +498,7 @@ const JsonValue::Object& require_object(const JsonValue& value, std::string_view
 //   責務: [require_array: JSON値がarrayであることを確認する]
 //   引数: [value: 型を確認するJSON値] [field: error表示用field名]
 //   戻り値: [arrayへの参照]
+//   処理: [1: 型がarrayでなければ例外を送出する]
 // }
 const JsonValue::Array& require_array(const JsonValue& value, std::string_view field) {
     const auto* result = std::get_if<JsonValue::Array>(&value.value);
@@ -441,6 +511,7 @@ const JsonValue::Array& require_array(const JsonValue& value, std::string_view f
 //   責務: [require_string: JSON値がstringであることを確認する]
 //   引数: [value: 型を確認するJSON値] [field: error表示用field名]
 //   戻り値: [文字列への参照]
+//   処理: [1: 型がstringでなければ例外を送出する]
 // }
 const std::string& require_string(const JsonValue& value, std::string_view field) {
     const auto* result = std::get_if<std::string>(&value.value);
@@ -453,6 +524,7 @@ const std::string& require_string(const JsonValue& value, std::string_view field
 //   責務: [require_field: object内の必須fieldを取得する]
 //   引数: [object: 検索するobject] [name: 必須field名]
 //   戻り値: [field値への参照]
+//   処理: [1: 指定keyを検索し欠損時は例外を送出する]
 // }
 const JsonValue& require_field(const JsonValue::Object& object, std::string_view name) {
     const auto found = object.find(std::string(name));
@@ -464,6 +536,8 @@ const JsonValue& require_field(const JsonValue::Object& object, std::string_view
 // {
 //   責務: [reject_unknown_fields: schema外のfieldによるsilent data lossを防ぐ]
 //   引数: [object: 検査するobject] [allowed: 許可field名一覧]
+//   処理: [1: 許可一覧にないkeyを検出して拒否する]
+//   戻り値: [なし]
 // }
 void reject_unknown_fields(const JsonValue::Object& object, std::initializer_list<std::string_view> allowed) {
     for (const auto& [key, value] : object) {
@@ -480,6 +554,7 @@ void reject_unknown_fields(const JsonValue::Object& object, std::initializer_lis
 //   責務: [parse_layer: manifestのlayer文字列をLayerTypeへ変換する]
 //   引数: [value: layer名]
 //   戻り値: [変換した層]
+//   処理: [1: 文字列を3種類の層に対応付ける]
 // }
 LayerType parse_layer(std::string_view value) {
     if (value == "raw")
@@ -495,6 +570,7 @@ LayerType parse_layer(std::string_view value) {
 //   責務: [parse_role: manifestのcomponent roleをenumへ変換する]
 //   引数: [value: role名]
 //   戻り値: [変換した役割]
+//   処理: [1: 文字列を5種類の役割に対応付ける]
 // }
 ComponentRole parse_role(std::string_view value) {
     if (value == "evaluation")
@@ -514,6 +590,7 @@ ComponentRole parse_role(std::string_view value) {
 //   責務: [parse_artifact: IDとversionを持つartifact objectを復元する]
 //   引数: [value: artifact JSON値] [field: error表示用field名]
 //   戻り値: [復元したartifact参照]
+//   処理: [1: objectの必須keyと型を確認して参照を作る]
 // }
 ArtifactReference parse_artifact(const JsonValue& value, std::string_view field) {
     const auto& object = require_object(value, field);
@@ -526,6 +603,7 @@ ArtifactReference parse_artifact(const JsonValue& value, std::string_view field)
 //   責務: [canonical_config: config mapを安定key順のJSON objectにする]
 //   引数: [config: 正規化する設定map]
 //   戻り値: [canonical JSON]
+//   処理: [1: key順に文字列をescapeしてobjectを作る]
 // }
 std::string canonical_config(const std::map<std::string, std::string>& config) {
     std::string output = "{";
@@ -546,6 +624,7 @@ std::string canonical_config(const std::map<std::string, std::string>& config) {
 //   責務: [sha256: canonical configのbyte列をSHA-256で要約する]
 //   引数: [input: hash対象byte列]
 //   戻り値: [小文字hex 64桁]
+//   処理: [1: paddingと64回の圧縮を行い小文字16進数へ変換する]
 // }
 std::string sha256(std::string_view input) {
     constexpr std::array<std::uint32_t, 64> constants = {
@@ -613,6 +692,7 @@ std::string sha256(std::string_view input) {
         state[7] += h;
     }
     std::ostringstream output;
+    output.imbue(std::locale::classic());
     output << std::hex << std::setfill('0');
     for (const std::uint32_t word : state)
         output << std::setw(8) << word;
@@ -622,6 +702,8 @@ std::string sha256(std::string_view input) {
 // {
 //   責務: [append_artifact: artifact参照を安定順序のJSONへ追加する]
 //   引数: [output: JSON出力先] [artifact: 追加する参照]
+//   処理: [1: IDとversionをescapeして固定順に追加する]
+//   戻り値: [なし]
 // }
 void append_artifact(std::string& output, const ArtifactReference& artifact) {
     output += "{\"id\":" + escape_json(artifact.id) + ",\"version\":" + escape_json(artifact.version) + "}";
@@ -631,6 +713,7 @@ void append_artifact(std::string& output, const ArtifactReference& artifact) {
 //   責務: [parse_manifest_object: JSON objectをmanifest構造へ復元する]
 //   引数: [root: manifest root object]
 //   戻り値: [復元したmanifest]
+//   処理: [1: 必須fieldと型を確認して各値を復元する]
 // }
 KadokaBestManifest parse_manifest_object(const JsonValue::Object& root) {
     reject_unknown_fields(root, {"format", "layer", "package_version", "model", "checkpoint", "source_layer",
@@ -670,6 +753,12 @@ KadokaBestManifest parse_manifest_object(const JsonValue::Object& root) {
 
 } // namespace
 
+// {
+//   責務: [layer_type_name: 層のenumをcanonical名へ変換する],
+//   引数: [layer: 対象の層],
+//   戻り値: [層名またはinvalid]
+//   処理: [1: 各enum値を固定の層名に対応付ける]
+// }
 std::string_view layer_type_name(LayerType layer) noexcept {
     switch (layer) {
     case LayerType::raw:
@@ -682,6 +771,12 @@ std::string_view layer_type_name(LayerType layer) noexcept {
     return "invalid";
 }
 
+// {
+//   責務: [component_role_name: 役割のenumをcanonical名へ変換する],
+//   引数: [role: 対象の役割],
+//   戻り値: [役割名またはinvalid]
+//   処理: [1: 各enum値を固定の役割名に対応付ける]
+// }
 std::string_view component_role_name(ComponentRole role) noexcept {
     switch (role) {
     case ComponentRole::evaluation:
@@ -698,14 +793,32 @@ std::string_view component_role_name(ComponentRole role) noexcept {
     return "invalid";
 }
 
+// {
+//   責務: [compute_config_hash: 設定を正規化してSHA-256を計算する],
+//   引数: [config: 設定map],
+//   戻り値: [sha256接頭辞付きhash]
+//   処理: [1: 設定をcanonical JSONにしSHA-256を計算する]
+// }
 std::string compute_config_hash(const std::map<std::string, std::string>& config) {
     return "sha256:" + sha256(canonical_config(config));
 }
 
+// {
+//   責務: [refresh_config_hash: 現在の設定からhashを更新する],
+//   引数: [manifest: 更新対象],
+//   戻り値: [なし]
+//   処理: [1: 設定から再計算したhashを代入する]
+// }
 void refresh_config_hash(KadokaBestManifest& manifest) {
     manifest.config_hash = compute_config_hash(manifest.config);
 }
 
+// {
+//   責務: [validate_manifest: 層・参照・文字列・hashの整合性を確認する],
+//   引数: [manifest: 検証対象],
+//   戻り値: [検証エラー一覧]
+//   処理: [1: 層・参照・UTF-8・設定hashの制約を検査する]
+// }
 std::vector<std::string> validate_manifest(const KadokaBestManifest& manifest) {
     std::vector<std::string> errors;
     if (manifest.format != "kadoka.best_manifest.v1")
@@ -764,17 +877,35 @@ std::vector<std::string> validate_manifest(const KadokaBestManifest& manifest) {
             roles[index] = true;
         }
     }
+    bool config_utf8_valid = true;
     for (const auto& [key, value] : manifest.config) {
         if (key.empty())
             errors.emplace_back("config key must not be empty");
-        (void)value;
+        if (!valid_utf8(key) || !valid_utf8(value)) {
+            errors.emplace_back("config key and value must be valid UTF-8");
+            config_utf8_valid = false;
+        }
     }
-    if (manifest.config_hash != compute_config_hash(manifest.config)) {
+    if (!valid_utf8(manifest.package_version) ||
+        (manifest.model && (!valid_utf8(manifest.model->id) || !valid_utf8(manifest.model->version))) ||
+        (manifest.checkpoint && (!valid_utf8(manifest.checkpoint->id) || !valid_utf8(manifest.checkpoint->version))))
+        errors.emplace_back("manifest references must be valid UTF-8");
+    for (const auto& component : manifest.components) {
+        if (!valid_utf8(component.component_id) || !valid_utf8(component.version))
+            errors.emplace_back("component reference must be valid UTF-8");
+    }
+    if (config_utf8_valid && manifest.config_hash != compute_config_hash(manifest.config)) {
         errors.emplace_back("config_hash does not match canonical config");
     }
     return errors;
 }
 
+// {
+//   責務: [serialize_manifest: 検証済みmanifestをJSONへ変換する],
+//   引数: [manifest: 変換対象],
+//   戻り値: [JSON文字列]
+//   処理: [1: 制約を検査し固定順のJSONを組み立てる]
+// }
 std::string serialize_manifest(const KadokaBestManifest& manifest) {
     const std::vector<std::string> errors = validate_manifest(manifest);
     if (!errors.empty())
@@ -822,6 +953,12 @@ std::string serialize_manifest(const KadokaBestManifest& manifest) {
     return output;
 }
 
+// {
+//   責務: [deserialize_manifest: JSONを解析しmanifestの契約を確認する],
+//   引数: [json: 入力JSON],
+//   戻り値: [検証済みmanifest]
+//   処理: [1: JSON構文とmanifestの制約を順に検査する]
+// }
 KadokaBestManifest deserialize_manifest(std::string_view json) {
     JsonValue root = JsonParser(json).parse();
     KadokaBestManifest result = parse_manifest_object(require_object(root, "manifest"));

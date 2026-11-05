@@ -117,6 +117,9 @@ void test_resume_and_budgets() {
     relabel::RelabelBatchRequest request;
     request.cursor = store.cursor();
     request.max_samples = 2;
+    request.search_limits.time_limit = std::chrono::milliseconds{123};
+    request.search_limits.node_limit = 456;
+    request.search_limits.depth_limit = 7;
     const auto save = [&store](const relabel::RelabelRecord& record, const relabel::RelabelBatchCursor& next) {
         return store.save(record, next);
     };
@@ -127,6 +130,9 @@ void test_resume_and_budgets() {
     relabel::RelabelBatchFileStore reopened(directory.path / "main", queue.revision);
     check(reopened.cursor().next_index == 2, "restart must recover committed cursor");
     const auto saved = reopened.load(0);
+    check(saved.limits.time_limit == std::chrono::milliseconds{123} && saved.limits.node_limit == 456 &&
+              saved.limits.depth_limit == 7,
+          "file store must preserve search limits");
     check(saved.evaluations.size() == 2, "both evaluator records must persist");
     const auto& first_search = saved.evaluations[0].search_result;
     const auto& second_search = saved.evaluations[1].search_result;
@@ -148,6 +154,7 @@ void test_resume_and_budgets() {
     relabel::RelabelBatchFileStore node_store(directory.path / "nodes", queue.revision);
     request.cursor = node_store.cursor();
     request.max_samples = 3;
+    request.search_limits = {};
     request.max_nodes = 20;
     observed_limits.clear();
     const auto nodes = relabel::evaluate_relabel_batch(
@@ -241,6 +248,48 @@ void test_failure_and_corruption() {
     std::filesystem::remove(blocked_temp);
     check(io_store.save(persisted, {queue.revision, 1}) && io_store.cursor().next_index == 1,
           "retry after file write failure must succeed");
+    relabel::RelabelBatchFileStore limit_store(directory.path / "limit", queue.revision);
+    auto limit_record = persisted;
+    limit_record.evaluations.resize(1025);
+    bool too_many_rejected = false;
+    try {
+        (void)limit_store.save(limit_record, {queue.revision, 1});
+    } catch (const std::invalid_argument&) {
+        too_many_rejected = true;
+    }
+    check(too_many_rejected && limit_store.cursor().next_index == 0,
+          "too many evaluations must be rejected without advancing the cursor");
+    check(std::filesystem::is_empty(directory.path / "limit"), "rejected evaluation count must not create any files");
+    limit_record.evaluations.resize(1024);
+    check(limit_store.save(limit_record, {queue.revision, 1}), "evaluation limit must be accepted");
+    relabel::RelabelBatchFileStore limit_reopened(directory.path / "limit", queue.revision);
+    check(limit_reopened.load(0).evaluations.size() == 1024, "evaluation limit must survive reopening");
+    const auto oversized_path = directory.path / "oversized";
+    std::filesystem::create_directory(oversized_path);
+    {
+        std::ofstream oversized(oversized_path / "0000000000000000.batch", std::ios::binary);
+        oversized << "KRB1 \"batch-revision-1\" 1\n\"dataset\" \"revision\" \"sample\" \"position\" 0 0 1025\n";
+    }
+    bool oversized_rejected = false;
+    try {
+        relabel::RelabelBatchFileStore broken(oversized_path, queue.revision);
+    } catch (const std::runtime_error&) {
+        oversized_rejected = true;
+    }
+    check(oversized_rejected, "oversized evaluation count in a record must fail recovery");
+    const auto legacy_path = directory.path / "legacy";
+    std::filesystem::create_directory(legacy_path);
+    {
+        std::ofstream legacy(legacy_path / "0000000000000000.batch", std::ios::binary);
+        legacy << "KRB1 \"batch-revision-1\" 1\n\"dataset\" \"source-revision\" \"sample-0\" "
+                  "\"position\" 0 0 1\n\"participant\" \"model\" \"config\" 0 0 0 0 0\n";
+    }
+    relabel::RelabelBatchFileStore legacy_store(legacy_path, queue.revision);
+    const auto legacy_record = legacy_store.load(0);
+    check(legacy_record.evaluations.size() == 1 && legacy_record.evaluations[0].participant.value == "participant",
+          "legacy evaluator must survive reopening");
+    check(!legacy_record.limits.time_limit && !legacy_record.limits.node_limit && !legacy_record.limits.depth_limit,
+          "legacy records must load with unspecified limits");
     bool wrong_revision_rejected = false;
     try {
         relabel::RelabelBatchFileStore wrong(directory.path / "failure", "changed-revision");

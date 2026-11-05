@@ -104,14 +104,14 @@ std::optional<std::string> read_optional_string(std::istream& input) {
 
 // {
 //   責務: [serialize: revision・cursor・record全体を同じバイト列へ格納する],
-//   処理: [1: versionと識別子を書く] [2: sourceを書く] [3: AIごとの結果を書く],
+//   処理: [1: versionと識別子を書く] [2: sourceと探索制限を書く] [3: AIごとの結果を書く],
 //   引数: [revision: queue識別子] [next_index: 保存後cursor] [record: 評価結果],
 //   戻り値: [payload: 完全なrecord表現]
 // }
 std::string serialize(const std::string& revision, const std::size_t next_index, const RelabelRecord& record) {
     std::ostringstream output;
     output.imbue(std::locale::classic());
-    output << "KRB1 " << std::quoted(revision) << ' ' << next_index << '\n';
+    output << "KRB2 " << std::quoted(revision) << ' ' << next_index << '\n';
     const auto& source = record.source;
     output << std::quoted(source.dataset_id) << ' ' << std::quoted(source.dataset_revision) << ' '
            << std::quoted(source.sample_id) << ' ' << std::quoted(source.position_sfen) << ' ';
@@ -119,6 +119,15 @@ std::string serialize(const std::string& revision, const std::size_t next_index,
     output << source.observed_score_cp.has_value() << ' ';
     if (source.observed_score_cp)
         output << *source.observed_score_cp << ' ';
+    output << record.limits.time_limit.has_value() << ' ';
+    if (record.limits.time_limit)
+        output << record.limits.time_limit->count() << ' ';
+    output << record.limits.node_limit.has_value() << ' ';
+    if (record.limits.node_limit)
+        output << *record.limits.node_limit << ' ';
+    output << record.limits.depth_limit.has_value() << ' ';
+    if (record.limits.depth_limit)
+        output << *record.limits.depth_limit << ' ';
     output << record.evaluations.size() << '\n';
     for (const auto& evaluation : record.evaluations) {
         output << std::quoted(evaluation.participant.value) << ' ' << std::quoted(evaluation.model_version) << ' '
@@ -148,7 +157,7 @@ std::string serialize(const std::string& revision, const std::size_t next_index,
 
 // {
 //   責務: [deserialize: 保存ファイルを厳格に読み元recordとcursorを復元する],
-//   処理: [1: version・revision・indexを照合する] [2: sourceとAI結果を読む]
+//   処理: [1: version・revision・indexを照合する] [2: source・探索制限・AI結果を読む]
 //     [3: 余剰データを拒否する],
 //   引数: [payload: 保存ファイル内容] [expected: 期待revisionとcursor],
 //   戻り値: [record: 元sourceと全AI結果]
@@ -157,7 +166,7 @@ RelabelRecord deserialize(const std::string& payload, const RecordReadExpectatio
     std::istringstream input(payload);
     input.imbue(std::locale::classic());
     std::string magic;
-    if (!(input >> magic) || magic != "KRB1" || read_string(input) != expected.revision ||
+    if (!(input >> magic) || (magic != "KRB1" && magic != "KRB2") || read_string(input) != expected.revision ||
         read_value<std::uint64_t>(input) != expected.next_index)
         throw std::runtime_error("relabel batch revision or index mismatch");
     RelabelRecord record;
@@ -169,6 +178,14 @@ RelabelRecord deserialize(const std::string& payload, const RecordReadExpectatio
     source.observed_move_usi = read_optional_string(input);
     if (read_flag(input))
         source.observed_score_cp = read_value<std::int32_t>(input);
+    if (magic == "KRB2") {
+        if (read_flag(input))
+            record.limits.time_limit = std::chrono::milliseconds{read_value<std::int64_t>(input)};
+        if (read_flag(input))
+            record.limits.node_limit = read_value<std::uint64_t>(input);
+        if (read_flag(input))
+            record.limits.depth_limit = read_value<unsigned>(input);
+    }
     const auto count = read_value<std::size_t>(input);
     if (count > max_evaluations)
         throw std::runtime_error("too many relabel evaluations");
@@ -305,6 +322,8 @@ bool RelabelBatchFileStore::save(const RelabelRecord& record, const RelabelBatch
     if (next.queue_revision != revision_ || next_index_ == std::numeric_limits<std::size_t>::max() ||
         next.next_index != next_index_ + 1)
         throw std::invalid_argument("relabel batch cursor is out of order");
+    if (record.evaluations.size() > max_evaluations)
+        throw std::invalid_argument("too many relabel evaluations");
     const auto final_path = record_path(directory_, next_index_);
     const auto temporary_path = final_path.string() + ".tmp";
     if (std::filesystem::exists(final_path))

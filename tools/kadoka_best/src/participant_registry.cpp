@@ -11,6 +11,7 @@ namespace {
 //   責務: [is_token: 安全な単一フィールド用ASCII tokenか検査する]
 //   引数: [value: 検査する文字列]
 //   戻り値: [英数字で始まり英数字・dot・underscore・hyphenだけならtrue]
+//   処理: [1: 先頭と各文字が許可されたASCII文字か確認する]
 // }
 bool is_token(std::string_view value) {
     if (value.empty())
@@ -32,6 +33,7 @@ bool is_token(std::string_view value) {
 //   責務: [is_config_hash: v1 config hashの固定表記を検証する]
 //   引数: [value: 検査するhash]
 //   戻り値: [sha256:と小文字hex 64桁の形式ならtrue]
+//   処理: [1: 接頭辞と64桁の小文字hexを確認する]
 // }
 bool is_config_hash(std::string_view value) {
     if (value.size() != 71 || value.substr(0, 7) != "sha256:")
@@ -47,6 +49,7 @@ bool is_config_hash(std::string_view value) {
 //   責務: [parse_kind: 保存形式の種別名をParticipantKindへ変換する]
 //   引数: [value: 保存形式の種別名]
 //   戻り値: [復元した種別]
+//   処理: [1: 3種の文字列をenumへ変換する]
 // }
 ParticipantKind parse_kind(std::string_view value) {
     if (value == "classical")
@@ -62,6 +65,7 @@ ParticipantKind parse_kind(std::string_view value) {
 //   責務: [parse_layer: 保存形式の層名をLayerTypeへ変換する]
 //   引数: [value: 保存形式の層名]
 //   戻り値: [復元した層]
+//   処理: [1: 3層の文字列をenumへ変換する]
 // }
 LayerType parse_layer(std::string_view value) {
     if (value == "raw")
@@ -77,6 +81,7 @@ LayerType parse_layer(std::string_view value) {
 //   責務: [split_fields: 1行をtab区切りのfieldへ分割する]
 //   引数: [line: 分割する行]
 //   戻り値: [空fieldを保持したfield一覧]
+//   処理: [1: tab位置で区切り空fieldを保持する]
 // }
 std::vector<std::string_view> split_fields(std::string_view line) {
     std::vector<std::string_view> fields;
@@ -95,6 +100,8 @@ std::vector<std::string_view> split_fields(std::string_view line) {
 // {
 //   責務: [append_field: tokenとtabで区切られたfieldを1行へ追加する]
 //   引数: [output: 書き込み先] [value: 追加するfield]
+//   処理: [1: 値とtabを出力末尾へ追加する]
+//   戻り値: [なし]
 // }
 void append_field(std::string& output, std::string_view value) {
     output.append(value);
@@ -107,6 +114,7 @@ void append_field(std::string& output, std::string_view value) {
 //   責務: [participant_kind_name: ParticipantKindを保存形式の名前へ変換する]
 //   引数: [kind: 変換する個体種別]
 //   戻り値: [種別名]
+//   処理: [1: 既知のenum値を固定名に対応付ける]
 // }
 std::string_view participant_kind_name(ParticipantKind kind) noexcept {
     switch (kind) {
@@ -124,6 +132,7 @@ std::string_view participant_kind_name(ParticipantKind kind) noexcept {
 //   責務: [validate_participant: 登録可能な個体情報と設定hashを検査する]
 //   引数: [participant: 検査する個体]
 //   戻り値: [問題がなければ空、それ以外は人間向けエラー一覧]
+//   処理: [1: 種別・層・ASCII token・hashを検査する]
 // }
 std::vector<std::string> validate_participant(const Participant& participant) {
     std::vector<std::string> errors;
@@ -150,6 +159,7 @@ std::vector<std::string> validate_participant(const Participant& participant) {
 //   責務: [participant_id: 個体の再現に必要な全設定から安定したSHA-256 IDを作る]
 //   引数: [participant: IDを作る個体]
 //   戻り値: [sha256:接頭辞を含む再現可能な識別子]
+//   処理: [1: 項目を検証し正規化mapのhashを計算する]
 // }
 ParticipantId participant_id(const Participant& participant) {
     const auto errors = validate_participant(participant);
@@ -171,6 +181,8 @@ ParticipantId participant_id(const Participant& participant) {
 // {
 //   責務: [register_participant: IDと内容を検証して個体をRegistryへ追加する]
 //   引数: [participant: 登録する個体]
+//   処理: [1: 入力とIDを検証し未登録の場合だけ追加する]
+//   戻り値: [なし]
 // }
 void ParticipantRegistry::register_participant(Participant participant) {
     const auto errors = validate_participant(participant);
@@ -180,7 +192,7 @@ void ParticipantRegistry::register_participant(Participant participant) {
     if (participant.id.value != expected.value)
         throw std::invalid_argument("participant ID does not match its reproducible identity");
     const std::string id = participant.id.value;
-    const auto [entry, inserted] = participants_.emplace(id, std::move(participant));
+    const auto [entry, inserted] = participants_.try_emplace(id, std::move(participant));
     (void)entry;
     if (!inserted)
         throw std::invalid_argument("duplicate participant ID");
@@ -190,6 +202,7 @@ void ParticipantRegistry::register_participant(Participant participant) {
 //   責務: [find: IDから登録済み個体を検索する]
 //   引数: [id: 検索する識別子]
 //   戻り値: [見つかった個体、または未登録ならnullptr]
+//   処理: [1: IDでmapを検索し登録済み要素を返す]
 // }
 const Participant* ParticipantRegistry::find(const ParticipantId& id) const noexcept {
     const auto found = participants_.find(id.value);
@@ -199,6 +212,8 @@ const Participant* ParticipantRegistry::find(const ParticipantId& id) const noex
 // {
 //   責務: [participants: 登録内容を安定したID順で参照する]
 //   戻り値: [IDをkeyにした登録済み個体map]
+//   処理: [1: ID順に保持するmapへの参照を返す]
+//   引数: [なし]
 // }
 const std::map<std::string, Participant>& ParticipantRegistry::participants() const noexcept {
     return participants_;
@@ -208,6 +223,7 @@ const std::map<std::string, Participant>& ParticipantRegistry::participants() co
 //   責務: [serialize_registry: Registryを再現可能なversion付きテキストへ変換する]
 //   引数: [registry: 保存するRegistry]
 //   戻り値: [UTF-8のkadoka.participant_registry.v1文書]
+//   処理: [1: headerとID順のtab区切り行を作る]
 // }
 std::string serialize_registry(const ParticipantRegistry& registry) {
     std::string output = "kadoka.participant_registry.v1\n";
@@ -230,6 +246,7 @@ std::string serialize_registry(const ParticipantRegistry& registry) {
 //   責務: [deserialize_registry: version付き文書を復元しIDと重複を検証する]
 //   引数: [serialized: 読み込む文書]
 //   戻り値: [復元したRegistry]
+//   処理: [1: headerと行を解析し登録APIで検証する]
 // }
 ParticipantRegistry deserialize_registry(std::string_view serialized) {
     constexpr std::string_view header = "kadoka.participant_registry.v1\n";
@@ -245,6 +262,9 @@ ParticipantRegistry deserialize_registry(std::string_view serialized) {
         remaining.remove_prefix(newline + 1);
         if (line.empty())
             throw std::runtime_error("participant record must not be empty");
+        // 保存形式はLF固定のため、CRは値の検証に渡す前に形式エラーとする。
+        if (line.find('\r') != std::string_view::npos)
+            throw std::runtime_error("participant record must not contain carriage return");
         const auto fields = split_fields(line);
         if (fields.size() != 9)
             throw std::runtime_error("participant record must contain exactly nine fields");

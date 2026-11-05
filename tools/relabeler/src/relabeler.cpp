@@ -39,12 +39,19 @@ void validate_relabel_inputs(const RelabelSource& source, std::span<const Relabe
 
 } // namespace
 
+// {
+//   責務: [evaluate_relabel_sample: 各AIの再評価を独立して記録する],
+//   処理: [1: 入力を検証する] [2: 同じ局面を各AIへ渡す] [3: 成否を記録する],
+//   引数: [source: 元サンプル] [evaluators: 評価個体] [limits: 探索制限],
+//   戻り値: [元サンプルと各個体の評価結果],
+//   エラー: [入力不正時は例外を送出する]
+// }
 RelabelRecord evaluate_relabel_sample(const RelabelSource& source, std::span<const RelabelEvaluator> evaluators,
                                       const shogi::SearchLimits& limits) {
     validate_relabel_inputs(source, evaluators);
     const shogi::Position position = shogi::Position::from_sfen(source.position_sfen);
 
-    RelabelRecord record{source, {}};
+    RelabelRecord record{source, {}, limits};
     record.evaluations.reserve(evaluators.size());
     for (const RelabelEvaluator& evaluator : evaluators) {
         RelabelEvaluation evaluation{
@@ -60,6 +67,9 @@ RelabelRecord evaluate_relabel_sample(const RelabelSource& source, std::span<con
             if (result.status == shogi::runtime::TurnStatus::IllegalMove) {
                 evaluation.status = RelabelEvaluationStatus::failed;
                 evaluation.error = "backend proposed an illegal move";
+            } else if (result.status == shogi::runtime::TurnStatus::NoLegalMoves) {
+                evaluation.status = RelabelEvaluationStatus::failed;
+                evaluation.error = "position has no legal moves; backend was not called";
             } else {
                 evaluation.status = RelabelEvaluationStatus::completed;
             }
