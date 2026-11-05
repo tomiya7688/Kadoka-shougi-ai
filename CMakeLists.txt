@@ -251,6 +251,8 @@ target_include_directories(kadoka_shogi_confidence_scorer
 #   依存: [kadoka_shogi_runtime] [kadoka_shogi_best_manifest]
 # }
 add_library(kadoka_shogi_relabeler
+    tools/relabeler/src/batch.cpp
+    tools/relabeler/src/batch_file_store.cpp
     tools/relabeler/src/relabeler.cpp
 )
 
@@ -317,6 +319,10 @@ install(
 )
 
 enable_testing()
+
+add_executable(kadoka_relabel_batch_test tests/kadoka_relabel_batch_test.cpp)
+target_link_libraries(kadoka_relabel_batch_test PRIVATE kadoka_shogi_relabeler)
+add_test(NAME kadoka_relabel_batch_test COMMAND kadoka_relabel_batch_test)
 
 # {
 #   責務: [kadoka_priority_sampler_test: 抽選の再現性と境界を検証する],
