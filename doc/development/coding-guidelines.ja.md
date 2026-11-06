@@ -36,8 +36,8 @@ python -m pip install --no-deps -r tools/requirements-format.txt
 対象ファイルを指定して整形・確認します。
 
 ```sh
-mdformat --number path/to/changed.md
-mdformat --number --check path/to/changed.md
+mdformat --number --end-of-line keep path/to/changed.md
+mdformat --number --end-of-line keep --check path/to/changed.md
 ```
 
-Windowsでは必要に応じて `--end-of-line keep` を付け、対象文書の既存改行を保持します。文書全体を一括整形しません。
+両コマンドで `--end-of-line keep` を指定し、対象文書の既存改行を保持します。CIでも同じ指定を使います。文書全体を一括整形しません。
