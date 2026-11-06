@@ -15,6 +15,7 @@ This is the compact entrypoint for AI-assisted work. Do not preload the whole re
 - Move generation: `doc/specifications/MOVE_GENERATION.md`
 - Context/validation routing: `doc/architecture/CONTEXT_ROUTING.md`
 - Documentation language and migration: `doc/architecture/DOCUMENTATION_POLICY.md`
+- Coding rules: `doc/development/coding-guidelines.ja.md` (Japanese canonical for migrated sections) and `doc/development/coding-guidelines.md` (English originals for unmigrated sections)
 - PR review and merge: `doc/development/PR_WORKFLOW.md`
 - Sibling-project engineering policy: `doc/architecture/SIBLING_PROJECT_ALIGNMENT.md`
 - Current task: GitHub Issue or explicit user request

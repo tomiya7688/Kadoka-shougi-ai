@@ -1,5 +1,7 @@
 # Coding Guidelines
 
+The Japanese document [コーディング規約](coding-guidelines.ja.md) is canonical for the inheritance section below. This English section is a supplemental translation; all other sections remain the English originals until they are migrated.
+
 This document defines the default implementation rules for Kadoka Shougi AI. The goal is to keep the codebase easy to extend while preserving direct, low-overhead implementations in performance-critical engine code.
 
 ## 1. Language and build baseline
@@ -269,14 +271,35 @@ If performance is part of the feature contract:
 
 Use this checklist before submitting code:
 
-1. Core rules remain centralized in the shogi core.
-2. A new AI connects through an interface/adapter rather than editing rule code.
-3. Commander/Messenger/Processing is used for non-hot-path application flows where it improves separation.
-4. Search, move generation, evaluation, and inference hot paths may use direct low-level code.
-5. Names follow repository conventions.
-6. Ownership is explicit; `unique_ptr` is preferred over shared ownership.
-7. Expected failures use explicit status/result handling where practical.
-8. No uncontrolled `std::cout` is added to library code.
-9. New rule behavior has a compact regression test.
+01. Core rules remain centralized in the shogi core.
+02. A new AI connects through an interface/adapter rather than editing rule code.
+03. Commander/Messenger/Processing is used for non-hot-path application flows where it improves separation.
+04. Search, move generation, evaluation, and inference hot paths may use direct low-level code.
+05. Names follow repository conventions.
+06. Ownership is explicit; `unique_ptr` is preferred over shared ownership.
+07. Expected failures use explicit status/result handling where practical.
+08. No uncontrolled `std::cout` is added to library code.
+09. New rule behavior has a compact regression test.
 10. Touched C/C++ files are formatted and major clang-tidy findings are addressed or justified.
 11. README stays concise; detailed specifications belong under `doc/`.
+
+## Inheritance conventions (required review criteria)
+
+### Prohibition: multi-level inheritance rooted in a concrete class
+
+- **A class C must not inherit from a class B that inherits from a concrete class A.** In other words, `concrete A → B → C` is prohibited whether B is concrete or abstract.
+- **`abstract A → concrete B → C` does not violate this prohibition.** It still requires design and readability review.
+- This rule alone does not prohibit a single inheritance step such as `concrete A → B`. Always follow stricter existing project rules, such as a rule that prohibits inheriting from concrete classes at all.
+- Implicit root types such as `Object`, `System.Object`, and `java.lang.Object`, along with interface inheritance and implementation, are outside this violation check.
+
+### Design principles before choosing inheritance
+
+- **Avoid inheriting from classes with concrete behavior by default.** The same applies to abstract classes that contain concrete implementations. Prefer delegation or composition when the inheritance relationship has no meaning of its own and exists only to reuse behavior.
+- Consider inheritance only when the base and derived types share a meaningful shape or contract, or when there is a reasonable expectation that more types with the same shape will be needed. Do not create an abstraction or hierarchy merely because it might be useful someday.
+- Reject inheritance in review when the hierarchy is hard to follow, responsibilities are unclear, changes have excessive impact, or substitutability does not hold, even if it is formally permitted. Passing the prohibition check does not mean the design is approved.
+
+### Scope and exceptions
+
+- A deliberately adopted inheritance structure is exempt only when its rationale and scope are documented in the project's design source of truth. Existing code with the same structure is not, by itself, a reason for an exception.
+- Distinguish the inheritance rules of languages accepted as input by compilers or analyzers, samples, and test fixtures from this project's own implementation rules.
+- Apply this rule to new and modified project-owned code. It does not require mass changes to unrelated existing code.
