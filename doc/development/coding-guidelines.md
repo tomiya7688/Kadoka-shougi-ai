@@ -1,5 +1,7 @@
 # Coding Guidelines
 
+The Japanese document [コーディング規約](coding-guidelines.ja.md) is canonical for the inheritance section below. This English section is a supplemental translation; all other sections remain the English originals until they are migrated.
+
 This document defines the default implementation rules for Kadoka Shougi AI. The goal is to keep the codebase easy to extend while preserving direct, low-overhead implementations in performance-critical engine code.
 
 ## 1. Language and build baseline
@@ -269,35 +271,35 @@ If performance is part of the feature contract:
 
 Use this checklist before submitting code:
 
-1. Core rules remain centralized in the shogi core.
-2. A new AI connects through an interface/adapter rather than editing rule code.
-3. Commander/Messenger/Processing is used for non-hot-path application flows where it improves separation.
-4. Search, move generation, evaluation, and inference hot paths may use direct low-level code.
-5. Names follow repository conventions.
-6. Ownership is explicit; `unique_ptr` is preferred over shared ownership.
-7. Expected failures use explicit status/result handling where practical.
-8. No uncontrolled `std::cout` is added to library code.
-9. New rule behavior has a compact regression test.
+01. Core rules remain centralized in the shogi core.
+02. A new AI connects through an interface/adapter rather than editing rule code.
+03. Commander/Messenger/Processing is used for non-hot-path application flows where it improves separation.
+04. Search, move generation, evaluation, and inference hot paths may use direct low-level code.
+05. Names follow repository conventions.
+06. Ownership is explicit; `unique_ptr` is preferred over shared ownership.
+07. Expected failures use explicit status/result handling where practical.
+08. No uncontrolled `std::cout` is added to library code.
+09. New rule behavior has a compact regression test.
 10. Touched C/C++ files are formatted and major clang-tidy findings are addressed or justified.
 11. README stays concise; detailed specifications belong under `doc/`.
 
-## 継承の共通規約（必須・レビュー基準）
+## Inheritance conventions (required review criteria)
 
-### 禁止：具象クラス起点の連続継承
+### Prohibition: multi-level inheritance rooted in a concrete class
 
-- **具象クラス A を継承するクラス B を、クラス C がさらに継承してはならない。** すなわち `具象 A → B → C` を禁止する。中間の B が具象か抽象かは問わない。
-- **`抽象 A → 具象 B → C` は、この禁止規則の違反ではない。** ただし設計・可読性のレビューは必要とする。
-- この規則単独では `具象 A → B` の一段の継承を一律には禁止しない。ただし、既存の「具象クラスの継承そのものを禁止」など、より厳しいプロジェクト規則を常に優先する。
-- 言語に暗黙で存在する `Object` / `System.Object` / `java.lang.Object` 等の最上位基底型、インターフェースの継承・実装はこの違反判定の対象外とする。
+- **A class C must not inherit from a class B that inherits from a concrete class A.** In other words, `concrete A → B → C` is prohibited whether B is concrete or abstract.
+- **`abstract A → concrete B → C` does not violate this prohibition.** It still requires design and readability review.
+- This rule alone does not prohibit a single inheritance step such as `concrete A → B`. Always follow stricter existing project rules, such as a rule that prohibits inheriting from concrete classes at all.
+- Implicit root types such as `Object`, `System.Object`, and `java.lang.Object`, along with interface inheritance and implementation, are outside this violation check.
 
-### 継承を選ぶ前の設計原則
+### Design principles before choosing inheritance
 
-- **具体的な処理を持つクラスの継承は原則として避ける。** 抽象クラスであっても具体的な実装を持つなら同じ。継承関係そのものに意味がなく、処理の再利用だけが目的なら委譲・合成を優先する。
-- 基底型と派生型に共通する意味のある形・契約が実際に存在する、または同じ形の型が今後必要になると合理的に予想できる場合に限って継承を検討する。抽象化・継承階層を「いつか使うかもしれない」というだけで作らない。
-- 形式上許可される継承でも、階層が読みづらい、責務の理解が難しい、変更の波及が過大、置換可能性が成立しない等の問題があれば**レビューで不合格**とする。「禁止規則に抵触しない」は設計の承認を意味しない。
+- **Avoid inheriting from classes with concrete behavior by default.** The same applies to abstract classes that contain concrete implementations. Prefer delegation or composition when the inheritance relationship has no meaning of its own and exists only to reuse behavior.
+- Consider inheritance only when the base and derived types share a meaningful shape or contract, or when there is a reasonable expectation that more types with the same shape will be needed. Do not create an abstraction or hierarchy merely because it might be useful someday.
+- Reject inheritance in review when the hierarchy is hard to follow, responsibilities are unclear, changes have excessive impact, or substitutability does not hold, even if it is formally permitted. Passing the prohibition check does not mean the design is approved.
 
-### 適用範囲と例外
+### Scope and exceptions
 
-- 当該プロジェクトが意図的にその継承構造を採用し、設計正本に理由・適用範囲を明記している箇所は例外とする。単に既存コードに同じ形があることを例外の根拠にしない。
-- コンパイラ・解析器が入力として扱う言語の継承仕様、サンプル、検証用fixtureと、プロジェクト自身の実装規約を区別する。
-- 新規・変更するプロジェクト所有コードへ適用し、無関係な既存コードの一斉書き換えを要求しない。
+- A deliberately adopted inheritance structure is exempt only when its rationale and scope are documented in the project's design source of truth. Existing code with the same structure is not, by itself, a reason for an exception.
+- Distinguish the inheritance rules of languages accepted as input by compilers or analyzers, samples, and test fixtures from this project's own implementation rules.
+- Apply this rule to new and modified project-owned code. It does not require mass changes to unrelated existing code.
