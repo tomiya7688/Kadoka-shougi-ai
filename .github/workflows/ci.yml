@@ -42,7 +42,8 @@ jobs:
       - name: Check Markdown formatting
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: git diff --diff-filter=ACMR --name-only -z "$BASE_SHA...$GITHUB_SHA" -- '*.md' | xargs -0 --no-run-if-empty mdformat --number --end-of-line keep --check
+          HEAD_SHA: ${{ github.sha }}
+        run: python tools/check_markdown_format.py
 
       - name: Validate family model metadata
         run: python tools/family_metadata/script/validate_metadata.py --game shogi models/examples/family_metadata.json

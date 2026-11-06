@@ -36,8 +36,8 @@ python -m pip install --no-deps -r tools/requirements-format.txt
 対象ファイルを指定して整形・確認します。
 
 ```sh
-mdformat --number --end-of-line keep path/to/changed.md
-mdformat --number --end-of-line keep --check path/to/changed.md
+mdformat --number --end-of-line keep --extensions gfm -- path/to/changed.md
+mdformat --number --end-of-line keep --extensions gfm --check -- path/to/changed.md
 ```
 
-両コマンドで `--end-of-line keep` を指定し、対象文書の既存改行を保持します。CIでも同じ指定を使います。文書全体を一括整形しません。
+整形・確認では `--end-of-line keep` と `--extensions gfm` を指定し、既存改行とGitHub Flavored Markdownの表を保持します。CIも同じ設定で差分中の通常Markdownファイルを確認します。文書全体を一括整形しません。
