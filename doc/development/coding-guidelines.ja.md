@@ -22,3 +22,22 @@
 - 意図的にその継承構造を採用し、設計の正本に理由と適用範囲を明記している箇所は例外にできます。同じ形の既存コードがあるだけでは、例外の根拠になりません。
 - コンパイラや解析器が入力として扱う言語の継承仕様、サンプル、検証用fixtureと、このプロジェクト自身の実装規約を区別します。
 - この規約は、新規作成・変更するプロジェクト所有コードに適用します。無関係な既存コードの一斉変更は求めません。
+
+## Markdown文書の整形
+
+変更したMarkdown文書だけを整形します。整形ツールのバージョンは `tools/requirements-format.txt` で固定し、CIは差分に含まれるMarkdown文書を同じ設定で検査します。
+
+リポジトリのルートでツールを準備します。
+
+```sh
+python -m pip install --no-deps -r tools/requirements-format.txt
+```
+
+対象ファイルを指定して整形・確認します。
+
+```sh
+mdformat --number path/to/changed.md
+mdformat --number --check path/to/changed.md
+```
+
+Windowsでは必要に応じて `--end-of-line keep` を付け、対象文書の既存改行を保持します。文書全体を一括整形しません。
