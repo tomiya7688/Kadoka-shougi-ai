@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install C++ and Markdown quality tools
+      - name: Install C++, CMake, and Markdown quality tools
         run: |
           python -m pip install --no-deps -r tools/requirements-format.txt
           sudo apt-get update && sudo apt-get install --yes clang-tidy
@@ -38,6 +38,9 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: git diff --diff-filter=ACMR --name-only -z "$BASE_SHA...$GITHUB_SHA" -- '*.cpp' '*.hpp' '*.h' | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
+
+      - name: Check CMake formatting
+        run: cmake-format --check CMakeLists.txt
 
       - name: Check Markdown formatting
         env:
