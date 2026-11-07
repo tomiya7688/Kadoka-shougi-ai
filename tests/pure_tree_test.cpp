@@ -139,6 +139,13 @@ int main() {
     const PureTree decoded = deserialize_pure_tree(serialized);
     assert_same_tree(expected, decoded);
 
+    const std::string edge_before_nodes =
+        "KADOKA_PURE_TREE\t1\nROOT\troot\nEDGE\tedge\troot\tchild\t7g7f\t0\t0\t0\t0\t0\n"
+        "NODE\troot\tp0\troot\t0\t0\t0\t0\t0\nNODE\tchild\tp1\tchild\t0\t0\t0\t0\t0\n";
+    const PureTree reordered_records = deserialize_pure_tree(edge_before_nodes);
+    assert(reordered_records.nodes().size() == 2);
+    assert(reordered_records.edges().size() == 1);
+
     const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
     const std::filesystem::path path =
         std::filesystem::temp_directory_path() / ("kadoka_pure_tree_" + std::to_string(stamp) + ".tree");
@@ -159,6 +166,28 @@ int main() {
     nul_identity.add_edge(PureTreeEdge{"nul-edge", "nul-a", "nul-b", "7g7f"});
     validate_pure_tree(nul_identity);
     assert_same_tree(nul_identity, deserialize_pure_tree(serialize_pure_tree(nul_identity)));
+
+    PureTree invalid_utf8 = PureTree::empty();
+    const std::string invalid_utf8_id = "bad-\xff-\xe0\x80\x80-\xed\xa0\x80-\xf5-\xf0\x9f";
+    invalid_utf8.add_node(PureTreeNode{invalid_utf8_id, "position", "path"});
+    invalid_utf8.set_root(invalid_utf8_id);
+    const std::string invalid_utf8_serialized = serialize_pure_tree(invalid_utf8);
+    assert(invalid_utf8_serialized.find("\\xff") != std::string::npos);
+    assert(invalid_utf8_serialized.find("\\xe0\\x80\\x80") != std::string::npos);
+    assert(invalid_utf8_serialized.find("\\xed\\xa0\\x80") != std::string::npos);
+    assert(invalid_utf8_serialized.find("\\xf5") != std::string::npos);
+    assert(invalid_utf8_serialized.find("\\xf0\\x9f") != std::string::npos);
+    assert(invalid_utf8_serialized.find(static_cast<char>(0xff)) == std::string::npos);
+    assert_same_tree(invalid_utf8, deserialize_pure_tree(invalid_utf8_serialized));
+
+    PureTree valid_utf8 = PureTree::empty();
+    const std::string valid_utf8_id = "valid-\xe3\x81\x82-\xf0\x9f\x8c\x8d";
+    valid_utf8.add_node(PureTreeNode{valid_utf8_id, "position", "path"});
+    valid_utf8.set_root(valid_utf8_id);
+    const std::string valid_utf8_serialized = serialize_pure_tree(valid_utf8);
+    assert(valid_utf8_serialized.find("\\xe3") == std::string::npos);
+    assert(valid_utf8_serialized.find("\\xf0") == std::string::npos);
+    assert_same_tree(valid_utf8, deserialize_pure_tree(valid_utf8_serialized));
 
     // USI形式の着手でも、NULを含む親ノードIDを保持できる。
     PureTree nul_parent_move = PureTree::empty();
@@ -199,6 +228,19 @@ int main() {
     PureTree missing_root = PureTree::empty();
     missing_root.add_node(PureTreeNode{"node", "position", "path"});
     expect_invalid([&] { validate_pure_tree(missing_root); });
+
+    const std::filesystem::path preserved_path = path.string() + ".preserve";
+    {
+        std::ofstream existing(preserved_path, std::ios::binary | std::ios::trunc);
+        existing << "keep existing contents";
+    }
+    expect_invalid([&] { save_pure_tree(preserved_path, missing_root); });
+    {
+        std::ifstream existing(preserved_path, std::ios::binary);
+        const std::string contents{std::istreambuf_iterator<char>{existing}, std::istreambuf_iterator<char>{}};
+        assert(contents == "keep existing contents");
+    }
+    std::filesystem::remove(preserved_path);
 
     PureTree disconnected = PureTree::empty();
     disconnected.add_node(PureTreeNode{"root", "p0", "root"});

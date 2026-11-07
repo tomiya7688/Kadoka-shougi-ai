@@ -90,6 +90,7 @@ target_include_directories(kadoka_shogi_training_parser
 target_link_libraries(kadoka_shogi_training_parser PUBLIC kadoka_shogi_runtime)
 
 add_library(kadoka_shogi_pure_tree tools/pure_tree/src/pure_tree.cpp)
+set_target_properties(kadoka_shogi_pure_tree PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 add_dependencies(kadoka_shogi_pure_tree kadoka_rule_check)
 

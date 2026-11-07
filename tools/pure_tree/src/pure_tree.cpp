@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 namespace kadoka::shogi::tree {
 namespace {
@@ -86,19 +87,24 @@ void validate_stats(std::uint64_t visits, std::uint64_t wins, std::uint64_t loss
 */
 std::string escape_field(std::string_view value) {
     std::string result;
-    for (const unsigned char ch : value) {
+    for (std::size_t index = 0; index < value.size();) {
+        const auto ch = static_cast<unsigned char>(value[index]);
         switch (ch) {
         case '\\':
             result += "\\\\";
+            ++index;
             break;
         case '\t':
             result += "\\t";
+            ++index;
             break;
         case '\n':
             result += "\\n";
+            ++index;
             break;
         case '\r':
             result += "\\r";
+            ++index;
             break;
         default:
             if (ch < 0x20U || ch == 0x7fU) {
@@ -106,8 +112,41 @@ std::string escape_field(std::string_view value) {
                 result += "\\x";
                 result += digits[ch >> 4];
                 result += digits[ch & 0x0fU];
-            } else {
+                ++index;
+            } else if (ch < 0x80U) {
                 result += static_cast<char>(ch);
+                ++index;
+            } else {
+                std::size_t sequence_length = 0;
+                if (ch >= 0xc2U && ch <= 0xdfU)
+                    sequence_length = 2;
+                else if (ch >= 0xe0U && ch <= 0xefU)
+                    sequence_length = 3;
+                else if (ch >= 0xf0U && ch <= 0xf4U)
+                    sequence_length = 4;
+
+                bool valid_sequence = sequence_length != 0 && index + sequence_length <= value.size();
+                for (std::size_t offset = 1; valid_sequence && offset < sequence_length; ++offset) {
+                    const auto continuation = static_cast<unsigned char>(value[index + offset]);
+                    valid_sequence = continuation >= 0x80U && continuation <= 0xbfU;
+                }
+                if (valid_sequence && sequence_length >= 3) {
+                    const auto second = static_cast<unsigned char>(value[index + 1]);
+                    if ((ch == 0xe0U && second < 0xa0U) || (ch == 0xedU && second > 0x9fU) ||
+                        (ch == 0xf0U && second < 0x90U) || (ch == 0xf4U && second > 0x8fU)) {
+                        valid_sequence = false;
+                    }
+                }
+                if (valid_sequence) {
+                    result.append(value.data() + index, sequence_length);
+                    index += sequence_length;
+                } else {
+                    constexpr char digits[] = "0123456789abcdef";
+                    result += "\\x";
+                    result += digits[ch >> 4];
+                    result += digits[ch & 0x0fU];
+                    ++index;
+                }
             }
         }
     }
@@ -705,7 +744,13 @@ std::string serialize_pure_tree(const PureTree& tree) {
 }
 */
 PureTree deserialize_pure_tree(std::string_view data) {
+    struct PendingEdge {
+        std::size_t line_number;
+        PureTreeEdge edge;
+    };
+
     PureTree tree = PureTree::empty();
+    std::vector<PendingEdge> pending_edges;
     std::size_t line_number = 0;
     std::size_t start = 0;
     bool saw_header = false;
@@ -760,16 +805,19 @@ PureTree deserialize_pure_tree(std::string_view data) {
                 if (fields.size() != 10) {
                     throw std::invalid_argument("EDGE record has wrong field count");
                 }
-                tree.add_edge(PureTreeEdge{
-                    unescape_field(fields[1]),
-                    unescape_field(fields[2]),
-                    unescape_field(fields[3]),
-                    unescape_field(fields[4]),
-                    parse_integer<std::uint64_t>(fields[5], "visits"),
-                    parse_integer<std::uint64_t>(fields[6], "wins"),
-                    parse_integer<std::uint64_t>(fields[7], "losses"),
-                    parse_integer<std::uint64_t>(fields[8], "draws"),
-                    parse_double(fields[9]),
+                pending_edges.push_back(PendingEdge{
+                    line_number,
+                    PureTreeEdge{
+                        unescape_field(fields[1]),
+                        unescape_field(fields[2]),
+                        unescape_field(fields[3]),
+                        unescape_field(fields[4]),
+                        parse_integer<std::uint64_t>(fields[5], "visits"),
+                        parse_integer<std::uint64_t>(fields[6], "wins"),
+                        parse_integer<std::uint64_t>(fields[7], "losses"),
+                        parse_integer<std::uint64_t>(fields[8], "draws"),
+                        parse_double(fields[9]),
+                    },
                 });
             } else {
                 throw std::invalid_argument("unknown Pure Tree record type");
@@ -780,6 +828,14 @@ PureTree deserialize_pure_tree(std::string_view data) {
     }
     if (!saw_header || !saw_root) {
         throw std::invalid_argument("Pure Tree data is missing header or root record");
+    }
+    for (const PendingEdge& pending : pending_edges) {
+        try {
+            tree.add_edge(pending.edge);
+        } catch (const std::exception& error) {
+            throw std::invalid_argument("invalid Pure Tree line " + std::to_string(pending.line_number) + ": " +
+                                        error.what());
+        }
     }
     if (root_id.has_value())
         tree.set_root(*root_id);
@@ -852,10 +908,13 @@ PureTree read_pure_tree(std::istream& input) {
 }
 */
 void save_pure_tree(const std::filesystem::path& path, const PureTree& tree) {
+    const std::string data = serialize_pure_tree(tree);
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output)
         throw std::runtime_error("failed to open Pure Tree output file");
-    write_pure_tree(output, tree);
+    output.write(data.data(), static_cast<std::streamsize>(data.size()));
+    if (!output)
+        throw std::runtime_error("failed to write Pure Tree data");
     output.flush();
     if (!output) {
         throw std::runtime_error("failed to flush Pure Tree output file");
