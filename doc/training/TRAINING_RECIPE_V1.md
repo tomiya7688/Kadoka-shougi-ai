@@ -36,6 +36,7 @@ The v1 document is UTF-8 JSON with these fields:
 - `datasets` is a non-empty array. Every entry has a `dataset_id`, an immutable non-empty `dataset_revision`, and a finite positive `weight`. The revision is a content digest or immutable registry snapshot ID and must never be retargeted.
 - `source_weights` records the configured proportions for `self`, `external`, `league`, and `human`. All four keys are required.
 - `architecture_id` and `architecture_version` identify the model architecture.
+- Strings use valid UTF-8; readers and writers reject malformed UTF-8.
 - `effective_config` is the canonical, effective architecture/training configuration object stored in the manifest. It contains the values needed to reproduce the generation.
 - `config_hash` is `sha256:` followed by the lowercase SHA-256 digest of the UTF-8 bytes of canonical `effective_config`. The producer computes the digest; this library validates its spelling and preserves both values so a consumer can verify them.
 - `champion_generation` is an unsigned 64-bit integer in the inclusive range `0` to `18446744073709551615`. Fractions, exponents, negative values, and values above the bound are rejected.
@@ -49,6 +50,7 @@ A recipe is valid only when:
 - dataset IDs are unique and every `(dataset_id, dataset_revision)` pair exists in the supplied Dataset Registry view;
 - each revision is pinned and each dataset weight is finite and greater than zero;
 - `effective_config` is a canonical JSON object;
+- JSON object/array nesting is limited to 64 containers, including the root object; deeper input is rejected;
 - `config_hash` has the `sha256:` prefix and exactly 64 lowercase hexadecimal digits. The producer is responsible for computing the digest, which consumers can verify from the stored configuration;
 - each source weight is finite and in `[0, 1]`, and the four source weights sum to one within `1e-9`;
 - `champion_generation` is an unsigned 64-bit integer in the documented range; fractions, exponents, negatives, and overflow are rejected;
@@ -61,11 +63,12 @@ Validation resolves references against caller-provided registry data. It does no
 The v1 writer emits compact UTF-8 JSON with no byte-order mark, insignificant whitespace, or trailing newline. Property order is fixed:
 
 - top-level: `schema_version`, `datasets`, `source_weights`, `architecture_id`, `architecture_version`, `effective_config`, `config_hash`, `champion_generation`, `autotune_config_id`, `evaluation_result_id`;
+- datasets: entries in ascending UTF-8 byte order of `dataset_id`;
 - dataset entry: `dataset_id`, `dataset_revision`, `weight`;
 - source weights: `external`, `human`, `league`, `self`;
 - object properties inside `effective_config`: ascending UTF-8 byte order; array elements retain their input order.
 
-Strings use UTF-8. The writer escapes quotation marks as `\\"`, backslashes as `\\\\`, and the control characters backspace, form feed, newline, carriage return, and tab as `\\b`, `\\f`, `\\n`, `\\r`, and `\\t`. Other control bytes use lowercase `\\u00hh`. Slash and non-ASCII UTF-8 bytes are emitted without escaping. Null is `null`; booleans are lowercase. Dataset weights and source weights use a locale-independent shortest round-trippable decimal representation. Integer fields use unsigned decimal with no sign, fraction, or exponent.
+Strings use UTF-8. The writer escapes quotation marks as `\"`, backslashes as `\`, and the control characters backspace, form feed, newline, carriage return, and tab as `\b`, `\f`, `\n`, `\r`, and `\t`. Other control bytes use lowercase `\u00hh`. Slash and non-ASCII UTF-8 bytes are emitted without escaping. Null is `null`; booleans are lowercase. Dataset weights and source weights use a locale-independent shortest round-trippable decimal representation. Integer fields use unsigned decimal with no sign, fraction, or exponent.
 
 `effective_config` must itself use compact JSON, sorted object keys, and the string escaping above. Its numeric token spelling is retained as part of the exact configuration bytes. Serialization rejects a non-canonical in-memory configuration string. The `config_hash` is SHA-256 over those exact canonical UTF-8 bytes.
 

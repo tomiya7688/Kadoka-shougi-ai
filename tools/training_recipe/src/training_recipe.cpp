@@ -19,15 +19,89 @@ namespace {
 enum class JsonKind { Null, Boolean, Number, String, Object, Array };
 
 // {
+//   責務: [Utf8ByteLess: UTF-8文字列を符号なしバイト順で比較する]
+//   引数: [lhs/rhs: 比較する文字列]
+//   戻り値: [lhsがrhsより辞書順で前ならtrue]
+// }
+struct Utf8ByteLess {
+    bool operator()(std::string_view lhs, std::string_view rhs) const {
+        return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), [](char left, char right) {
+            return static_cast<unsigned char>(left) < static_cast<unsigned char>(right);
+        });
+    }
+};
+
+// {
 //   責務: [JsonValue: JSON tokenを型と値に分けて保持する]
-//   フィールド: [kind: JSON型 / scalar: scalar値 / object: keyと値 / array: 要素]
+//   フィールド: [kind: JSON型 / scalar: scalar値 / raw: 入力範囲 / object: keyと値 / array: 要素]
 // }
 struct JsonValue {
     JsonKind kind{JsonKind::Null};
     std::string scalar{};
-    std::map<std::string, JsonValue> object{};
+    std::string raw{};
+    std::map<std::string, JsonValue, Utf8ByteLess> object{};
     std::vector<JsonValue> array{};
 };
+
+// {
+//   責務: [is_valid_utf8: UTF-8のバイト列がUnicode scalar valueとして有効か判定する]
+//   引数: [text: 検証対象]
+//   戻り値: [有効なUTF-8ならtrue]
+// }
+bool is_valid_utf8(std::string_view text) {
+    std::size_t index = 0;
+    while (index < text.size()) {
+        const auto lead = static_cast<unsigned char>(text[index]);
+        if (lead <= 0x7fU) {
+            ++index;
+            continue;
+        }
+
+        std::size_t continuation_count = 0;
+        unsigned char second_min = 0x80U;
+        unsigned char second_max = 0xbfU;
+        if (lead >= 0xc2U && lead <= 0xdfU) {
+            continuation_count = 1;
+        } else if (lead >= 0xe0U && lead <= 0xefU) {
+            continuation_count = 2;
+            if (lead == 0xe0U)
+                second_min = 0xa0U;
+            else if (lead == 0xedU)
+                second_max = 0x9fU;
+        } else if (lead >= 0xf0U && lead <= 0xf4U) {
+            continuation_count = 3;
+            if (lead == 0xf0U)
+                second_min = 0x90U;
+            else if (lead == 0xf4U)
+                second_max = 0x8fU;
+        } else {
+            return false;
+        }
+
+        if (text.size() - index <= continuation_count)
+            return false;
+        const auto second = static_cast<unsigned char>(text[index + 1]);
+        if (second < second_min || second > second_max)
+            return false;
+        for (std::size_t offset = 2; offset <= continuation_count; ++offset) {
+            const auto continuation = static_cast<unsigned char>(text[index + offset]);
+            if (continuation < 0x80U || continuation > 0xbfU)
+                return false;
+        }
+        index += continuation_count + 1;
+    }
+    return true;
+}
+
+// {
+//   責務: [require_valid_utf8: UTF-8文字列の不正値を検証エラーにする]
+//   引数: [text: 検証対象 / field: フィールド名]
+//   戻り値: [なし。不正な場合はinvalid_argument]
+// }
+void require_valid_utf8(std::string_view text, const char* field) {
+    if (!is_valid_utf8(text))
+        throw std::invalid_argument(std::string(field) + " must be valid UTF-8");
+}
 
 // {
 //   責務: [JsonParser: JSON文字列をrecipe用の値木へ解析する]
@@ -123,30 +197,40 @@ class JsonParser {
 
     // {
     //   責務: [parse_value: 次のJSON値を型に応じて解析する]
-    //   処理: [先頭文字からstring/object/array/literal/numberへ分岐する]
+    //   処理: [先頭文字から値を解析し、containerの深さと入力raw範囲を記録する]
     //   引数: [なし]
     //   戻り値: [JsonValue。不正入力ならinvalid_argument]
     // }
-    JsonValue parse_value() {
+    JsonValue parse_value(std::size_t depth = 0) {
+        const std::size_t start = position_;
         skip_space();
         if (position_ >= input_.size())
             fail("missing value");
         const char ch = input_[position_];
-        if (ch == '"')
-            return parse_string_value();
-        if (ch == '{')
-            return parse_object();
-        if (ch == '[')
-            return parse_array();
-        if (ch == 'n')
-            return parse_literal("null", JsonKind::Null);
-        if (ch == 't')
-            return parse_literal("true", JsonKind::Boolean);
-        if (ch == 'f')
-            return parse_literal("false", JsonKind::Boolean);
-        if (ch == '-' || (ch >= '0' && ch <= '9'))
-            return parse_number();
-        fail("invalid value");
+        JsonValue result;
+        if (ch == '"') {
+            result = parse_string_value();
+        } else if (ch == '{') {
+            if (depth >= 64)
+                fail("maximum nesting depth exceeded");
+            result = parse_object(depth);
+        } else if (ch == '[') {
+            if (depth >= 64)
+                fail("maximum nesting depth exceeded");
+            result = parse_array(depth);
+        } else if (ch == 'n') {
+            result = parse_literal("null", JsonKind::Null);
+        } else if (ch == 't') {
+            result = parse_literal("true", JsonKind::Boolean);
+        } else if (ch == 'f') {
+            result = parse_literal("false", JsonKind::Boolean);
+        } else if (ch == '-' || (ch >= '0' && ch <= '9')) {
+            result = parse_number();
+        } else {
+            fail("invalid value");
+        }
+        result.raw = std::string(input_.substr(start, position_ - start));
+        return result;
     }
 
     // {
@@ -224,8 +308,11 @@ class JsonParser {
         std::string result;
         while (true) {
             const unsigned char ch = static_cast<unsigned char>(take());
-            if (ch == '"')
+            if (ch == '"') {
+                if (!is_valid_utf8(result))
+                    fail("invalid UTF-8 string");
                 return result;
+            }
             if (ch < 0x20U)
                 fail("unescaped control character");
             if (ch != '\\') {
@@ -339,7 +426,7 @@ class JsonParser {
     //   引数: [なし]
     //   戻り値: [Object型JsonValue]
     // }
-    JsonValue parse_object() {
+    JsonValue parse_object(std::size_t depth) {
         expect('{');
         JsonValue result;
         result.kind = JsonKind::Object;
@@ -354,7 +441,7 @@ class JsonParser {
             std::string key = parse_string();
             skip_space();
             expect(':');
-            JsonValue value = parse_value();
+            JsonValue value = parse_value(depth + 1);
             if (!result.object.emplace(std::move(key), std::move(value)).second) {
                 fail("duplicate object key");
             }
@@ -371,7 +458,7 @@ class JsonParser {
     //   引数: [なし]
     //   戻り値: [Array型JsonValue]
     // }
-    JsonValue parse_array() {
+    JsonValue parse_array(std::size_t depth) {
         expect('[');
         JsonValue result;
         result.kind = JsonKind::Array;
@@ -379,7 +466,7 @@ class JsonParser {
         if (consume(']'))
             return result;
         while (true) {
-            result.array.push_back(parse_value());
+            result.array.push_back(parse_value(depth + 1));
             skip_space();
             if (consume(']'))
                 return result;
@@ -476,6 +563,8 @@ std::optional<std::string> optional_string(const JsonValue& value, const char* n
 //   戻り値: [なし]
 // }
 void append_json_string(std::string& output, std::string_view value) {
+    if (!is_valid_utf8(value))
+        throw std::invalid_argument("training recipe string is not valid UTF-8");
     constexpr char hex[] = "0123456789abcdef";
     output.push_back('"');
     for (const unsigned char ch : value) {
@@ -648,6 +737,12 @@ double parse_source_weight(const JsonValue& source, const char* name) {
 
 } // namespace
 
+// {
+//   責務: [validate_training_recipe: 公式学習Recipeの値と不変条件を検証する]
+//   処理: [必須文字列、dataset、weight、hash、canonical設定を検査する]
+//   引数: [recipe: 検証する公式Recipe]
+//   戻り値: [なし。契約違反はinvalid_argument]
+// }
 void validate_training_recipe(const OfficialTrainingRecipe& recipe) {
     if (recipe.schema_version != 1)
         throw std::invalid_argument("unsupported training recipe schema version");
@@ -655,11 +750,15 @@ void validate_training_recipe(const OfficialTrainingRecipe& recipe) {
         throw std::invalid_argument("training recipe requires at least one dataset");
     require_nonempty(recipe.architecture_id, "architecture_id");
     require_nonempty(recipe.architecture_version, "architecture_version");
+    require_valid_utf8(recipe.architecture_id, "architecture_id");
+    require_valid_utf8(recipe.architecture_version, "architecture_version");
     require_nonempty(recipe.effective_config_json, "effective_config_json");
+    require_valid_utf8(recipe.effective_config_json, "effective_config_json");
     if (canonicalize_effective_config(recipe.effective_config_json) != recipe.effective_config_json) {
         throw std::invalid_argument("effective_config must use canonical JSON encoding");
     }
     require_nonempty(recipe.config_hash, "config_hash");
+    require_valid_utf8(recipe.config_hash, "config_hash");
     if (!valid_config_hash(recipe.config_hash)) {
         throw std::invalid_argument("config_hash must be sha256: followed by 64 lowercase hex digits");
     }
@@ -669,6 +768,8 @@ void validate_training_recipe(const OfficialTrainingRecipe& recipe) {
     for (const auto& dataset : recipe.datasets) {
         require_nonempty(dataset.dataset_id, "dataset_id");
         require_nonempty(dataset.dataset_revision, "dataset_revision");
+        require_valid_utf8(dataset.dataset_id, "dataset_id");
+        require_valid_utf8(dataset.dataset_revision, "dataset_revision");
         if (!std::isfinite(dataset.weight) || dataset.weight <= 0.0) {
             throw std::invalid_argument("dataset weight must be finite and greater than zero");
         }
@@ -689,12 +790,22 @@ void validate_training_recipe(const OfficialTrainingRecipe& recipe) {
     if (std::abs(total - 1.0) > 1e-9) {
         throw std::invalid_argument("training recipe source weights must sum to one");
     }
-    if (recipe.autotune_config_id)
+    if (recipe.autotune_config_id) {
         require_nonempty(*recipe.autotune_config_id, "autotune_config_id");
-    if (recipe.evaluation_result_id)
+        require_valid_utf8(*recipe.autotune_config_id, "autotune_config_id");
+    }
+    if (recipe.evaluation_result_id) {
         require_nonempty(*recipe.evaluation_result_id, "evaluation_result_id");
+        require_valid_utf8(*recipe.evaluation_result_id, "evaluation_result_id");
+    }
 }
 
+// {
+//   責務: [validate_training_recipe: 参照されるdataset revisionの登録を照合する]
+//   処理: [Recipeを検証し、IDとimmutable revisionの組をregistry viewから検索する]
+//   引数: [recipe: 検証対象 / registered_datasets: 登録済み参照一覧]
+//   戻り値: [なし。未登録revisionはinvalid_argument]
+// }
 void validate_training_recipe(const OfficialTrainingRecipe& recipe,
                               std::span<const DatasetRegistryReference> registered_datasets) {
     validate_training_recipe(recipe);
@@ -711,12 +822,18 @@ void validate_training_recipe(const OfficialTrainingRecipe& recipe,
     }
 }
 
+// {
+//   責務: [serialize_training_recipe: 公式Training Recipeをcanonical JSONへ変換する]
+//   処理: [値を検証し、固定property順とdataset ID順でJSONを生成する]
+//   引数: [recipe: シリアライズ対象]
+//   戻り値: [canonical UTF-8 JSON。不正値はinvalid_argument]
+// }
 std::string serialize_training_recipe(const OfficialTrainingRecipe& recipe) {
     validate_training_recipe(recipe);
     // Canonical dataset order keeps equivalent recipes byte-for-byte stable.
     std::vector<DatasetRecipeWeight> datasets = recipe.datasets;
     std::sort(datasets.begin(), datasets.end(),
-              [](const auto& lhs, const auto& rhs) { return lhs.dataset_id < rhs.dataset_id; });
+              [](const auto& lhs, const auto& rhs) { return Utf8ByteLess{}(lhs.dataset_id, rhs.dataset_id); });
 
     std::string output = "{\"schema_version\":1,\"datasets\":[";
     for (std::size_t index = 0; index < datasets.size(); ++index) {
@@ -761,6 +878,12 @@ std::string serialize_training_recipe(const OfficialTrainingRecipe& recipe) {
     return output;
 }
 
+// {
+//   責務: [deserialize_training_recipe: canonical JSONから公式Training Recipeを復元する]
+//   処理: [JSON構造、canonical設定原文、UTF-8とRecipe不変条件を検査する]
+//   引数: [json: 読み取るmanifest JSON]
+//   戻り値: [復元したRecipe。不正値はinvalid_argument]
+// }
 OfficialTrainingRecipe deserialize_training_recipe(std::string_view json) {
     const JsonValue root = JsonParser(json).parse();
     OfficialTrainingRecipe recipe;
@@ -788,8 +911,11 @@ OfficialTrainingRecipe deserialize_training_recipe(std::string_view json) {
     recipe.source_weights.self = parse_source_weight(source, "self");
     recipe.architecture_id = require_string(require_field(root, "architecture_id"), "architecture_id");
     recipe.architecture_version = require_string(require_field(root, "architecture_version"), "architecture_version");
+    const JsonValue& effective_config = require_field(root, "effective_config");
     std::string canonical_effective_config;
-    append_json_value(canonical_effective_config, require_field(root, "effective_config"));
+    append_json_value(canonical_effective_config, effective_config);
+    if (effective_config.raw != canonical_effective_config)
+        throw std::invalid_argument("effective_config must use canonical JSON encoding");
     recipe.effective_config_json = std::move(canonical_effective_config);
     recipe.config_hash = require_string(require_field(root, "config_hash"), "config_hash");
     recipe.champion_generation =
@@ -800,6 +926,12 @@ OfficialTrainingRecipe deserialize_training_recipe(std::string_view json) {
     return recipe;
 }
 
+// {
+//   責務: [deserialize_training_recipe: registry参照も照合してRecipeを復元する]
+//   処理: [JSONを復元し、dataset IDとimmutable revisionの登録を検証する]
+//   引数: [json: manifest JSON / registered_datasets: 登録済み参照一覧]
+//   戻り値: [registryと整合するRecipe。不正値はinvalid_argument]
+// }
 OfficialTrainingRecipe deserialize_training_recipe(std::string_view json,
                                                    std::span<const DatasetRegistryReference> registered_datasets) {
     OfficialTrainingRecipe recipe = deserialize_training_recipe(json);
