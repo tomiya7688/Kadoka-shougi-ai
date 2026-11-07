@@ -1,0 +1,283 @@
+#include "kadoka/tree/pure_tree.hpp"
+
+#include <cassert>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+
+using namespace kadoka::shogi::tree;
+
+namespace {
+
+template <typename Action> void expect_invalid(Action&& action) {
+    bool rejected = false;
+    try {
+        action();
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    assert(rejected);
+}
+
+template <typename Action> void expect_runtime_error(Action&& action) {
+    bool rejected = false;
+    try {
+        action();
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    assert(rejected);
+}
+
+PureTree sample_tree() {
+    PureTree tree = PureTree::empty();
+    tree.add_node(PureTreeNode{
+        "root\tid",
+        "start-position\nseed",
+        "root-path",
+        3,
+        1,
+        1,
+        1,
+        0.25,
+    });
+    tree.add_node(PureTreeNode{
+        "child-a",
+        "same-position",
+        "root-path/7g7f",
+        2,
+        1,
+        0,
+        1,
+        0.5,
+    });
+    tree.add_node(PureTreeNode{
+        "child-b",
+        "same-position",
+        "root-path/2g2f",
+        1,
+        0,
+        1,
+        0,
+        -0.5,
+    });
+    tree.set_root("root\tid");
+    tree.add_edge(PureTreeEdge{
+        "edge-a",
+        "root\tid",
+        "child-a",
+        "7g7f",
+        2,
+        1,
+        0,
+        1,
+        0.5,
+    });
+    tree.add_edge(PureTreeEdge{
+        "edge-b",
+        "root\tid",
+        "child-b",
+        "2g2f",
+        1,
+        0,
+        1,
+        0,
+        -0.5,
+    });
+    return tree;
+}
+
+void assert_same_tree(const PureTree& expected, const PureTree& actual) {
+    assert(expected.root_node_id() == actual.root_node_id());
+    assert(expected.nodes().size() == actual.nodes().size());
+    assert(expected.edges().size() == actual.edges().size());
+    for (std::size_t i = 0; i < expected.nodes().size(); ++i) {
+        const PureTreeNode& lhs = expected.nodes()[i];
+        const PureTreeNode& rhs = actual.nodes()[i];
+        assert(lhs.id == rhs.id);
+        assert(lhs.position_identity == rhs.position_identity);
+        assert(lhs.path_identity == rhs.path_identity);
+        assert(lhs.visits == rhs.visits);
+        assert(lhs.wins == rhs.wins);
+        assert(lhs.losses == rhs.losses);
+        assert(lhs.draws == rhs.draws);
+        assert(lhs.mean_value == rhs.mean_value);
+    }
+    for (std::size_t i = 0; i < expected.edges().size(); ++i) {
+        const PureTreeEdge& lhs = expected.edges()[i];
+        const PureTreeEdge& rhs = actual.edges()[i];
+        assert(lhs.id == rhs.id);
+        assert(lhs.parent_node_id == rhs.parent_node_id);
+        assert(lhs.child_node_id == rhs.child_node_id);
+        assert(lhs.move_usi == rhs.move_usi);
+        assert(lhs.visits == rhs.visits);
+        assert(lhs.wins == rhs.wins);
+        assert(lhs.losses == rhs.losses);
+        assert(lhs.draws == rhs.draws);
+        assert(lhs.mean_value == rhs.mean_value);
+    }
+}
+
+} // namespace
+
+int main() {
+    const PureTree empty = PureTree::empty();
+    validate_pure_tree(empty);
+    const PureTree empty_round_trip = deserialize_pure_tree(serialize_pure_tree(empty));
+    assert(empty_round_trip.nodes().empty());
+    assert(empty_round_trip.edges().empty());
+    assert(!empty_round_trip.root_node_id().has_value());
+
+    const PureTree expected = sample_tree();
+    validate_pure_tree(expected);
+    const std::string serialized = serialize_pure_tree(expected);
+    assert(serialized.find("KADOKA_PURE_TREE\t1") == 0);
+    assert(serialized.find("\\t") != std::string::npos);
+    const PureTree decoded = deserialize_pure_tree(serialized);
+    assert_same_tree(expected, decoded);
+
+    const std::string edge_before_nodes =
+        "KADOKA_PURE_TREE\t1\nROOT\troot\nEDGE\tedge\troot\tchild\t7g7f\t0\t0\t0\t0\t0\n"
+        "NODE\troot\tp0\troot\t0\t0\t0\t0\t0\nNODE\tchild\tp1\tchild\t0\t0\t0\t0\t0\n";
+    const PureTree reordered_records = deserialize_pure_tree(edge_before_nodes);
+    assert(reordered_records.nodes().size() == 2);
+    assert(reordered_records.edges().size() == 1);
+
+    const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / ("kadoka_pure_tree_" + std::to_string(stamp) + ".tree");
+    save_pure_tree(path, expected);
+    const PureTree from_file = load_pure_tree(path);
+    assert_same_tree(expected, from_file);
+    std::filesystem::remove(path);
+
+    PureTree duplicate_identity = PureTree::empty();
+    duplicate_identity.add_node(PureTreeNode{"first", "position", "path"});
+    expect_invalid([&] { duplicate_identity.add_node(PureTreeNode{"second", "position", "path"}); });
+
+    // 長さ接頭辞により、NULを含む別々の識別子ペアを区別する。
+    PureTree nul_identity = PureTree::empty();
+    nul_identity.add_node(PureTreeNode{"nul-a", std::string("a\0b", 3), "c"});
+    nul_identity.add_node(PureTreeNode{"nul-b", "a", std::string("b\0c", 3)});
+    nul_identity.set_root("nul-a");
+    nul_identity.add_edge(PureTreeEdge{"nul-edge", "nul-a", "nul-b", "7g7f"});
+    validate_pure_tree(nul_identity);
+    assert_same_tree(nul_identity, deserialize_pure_tree(serialize_pure_tree(nul_identity)));
+
+    PureTree invalid_utf8 = PureTree::empty();
+    const std::string invalid_utf8_id =
+        "bad-\xff-\xe0\x80\x80-\xed\xa0\x80-\xf0\x80\x80\x80-\xf4\x90\x80\x80-\xf5-\xf0\x9f-tail";
+    invalid_utf8.add_node(PureTreeNode{invalid_utf8_id, "position", "path"});
+    invalid_utf8.set_root(invalid_utf8_id);
+    const std::string invalid_utf8_serialized = serialize_pure_tree(invalid_utf8);
+    assert(invalid_utf8_serialized.find("bad-\\xff-\\xe0\\x80\\x80-\\xed\\xa0\\x80-\\xf0\\x80\\x80\\x80-"
+                                        "\\xf4\\x90\\x80\\x80-\\xf5-\\xf0\\x9f-tail") != std::string::npos);
+    assert(invalid_utf8_serialized.find("\\xff") != std::string::npos);
+    assert(invalid_utf8_serialized.find("\\xe0\\x80\\x80") != std::string::npos);
+    assert(invalid_utf8_serialized.find("\\xed\\xa0\\x80") != std::string::npos);
+    assert(invalid_utf8_serialized.find("\\xf5") != std::string::npos);
+    assert(invalid_utf8_serialized.find("\\xf0\\x9f-tail") != std::string::npos);
+    assert(invalid_utf8_serialized.find(static_cast<char>(0xff)) == std::string::npos);
+    assert_same_tree(invalid_utf8, deserialize_pure_tree(invalid_utf8_serialized));
+
+    PureTree valid_utf8 = PureTree::empty();
+    const std::string valid_utf8_id = "valid-\xe3\x81\x82-\xf0\x9f\x8c\x8d";
+    valid_utf8.add_node(PureTreeNode{valid_utf8_id, "position", "path"});
+    valid_utf8.set_root(valid_utf8_id);
+    const std::string valid_utf8_serialized = serialize_pure_tree(valid_utf8);
+    assert(valid_utf8_serialized.find("\\xe3") == std::string::npos);
+    assert(valid_utf8_serialized.find("\\xf0") == std::string::npos);
+    assert_same_tree(valid_utf8, deserialize_pure_tree(valid_utf8_serialized));
+
+    // USI形式の着手でも、NULを含む親ノードIDを保持できる。
+    PureTree nul_parent_move = PureTree::empty();
+    nul_parent_move.add_node(PureTreeNode{std::string("p\0q", 3), "position-0", "root-path"});
+    nul_parent_move.add_node(PureTreeNode{"p", "position-1", "parent-2"});
+    nul_parent_move.add_node(PureTreeNode{"child-1", "position-2", "path-2"});
+    nul_parent_move.add_node(PureTreeNode{"child-2", "position-3", "path-3"});
+    nul_parent_move.set_root(std::string("p\0q", 3));
+    nul_parent_move.add_edge(PureTreeEdge{"root-parent", std::string("p\0q", 3), "p", "7g7f"});
+    nul_parent_move.add_edge(PureTreeEdge{"edge-1", std::string("p\0q", 3), "child-1", "2g2f"});
+    nul_parent_move.add_edge(PureTreeEdge{"edge-2", "p", "child-2", "3c3d"});
+    validate_pure_tree(nul_parent_move);
+
+    PureTree valid_special_moves = PureTree::empty();
+    valid_special_moves.add_node(PureTreeNode{"move-root", "move-position-0", "move-path-0"});
+    valid_special_moves.add_node(PureTreeNode{"move-child-1", "move-position-1", "move-path-1"});
+    valid_special_moves.add_node(PureTreeNode{"move-child-2", "move-position-2", "move-path-2"});
+    valid_special_moves.set_root("move-root");
+    valid_special_moves.add_edge(PureTreeEdge{"drop", "move-root", "move-child-1", "P*5e"});
+    valid_special_moves.add_edge(PureTreeEdge{"promote", "move-root", "move-child-2", "7g7f+"});
+    validate_pure_tree(valid_special_moves);
+
+    PureTree invalid_move = PureTree::empty();
+    invalid_move.add_node(PureTreeNode{"move-root", "invalid-position-0", "invalid-path-0"});
+    invalid_move.add_node(PureTreeNode{"move-child", "invalid-position-1", "invalid-path-1"});
+    invalid_move.set_root("move-root");
+    expect_invalid([&] { invalid_move.add_edge(PureTreeEdge{"bad-move", "move-root", "move-child", "not-a-move"}); });
+
+#if !defined(_WIN32)
+    if (std::filesystem::exists("/dev/full")) {
+        expect_runtime_error([&] { save_pure_tree(std::filesystem::path{"/dev/full"}, empty); });
+    }
+#endif
+
+    PureTree invalid_mean = PureTree::empty();
+    expect_invalid([&] { invalid_mean.add_node(PureTreeNode{"bad", "position", "path", 0, 0, 0, 0, 1.1}); });
+
+    PureTree excessive_results = PureTree::empty();
+    expect_invalid([&] { excessive_results.add_node(PureTreeNode{"bad", "position", "path", 10, 7, 2, 2}); });
+    expect_invalid([&] {
+        excessive_results.add_node(PureTreeNode{
+            "boundary",
+            "position-boundary",
+            "path-boundary",
+            std::numeric_limits<std::uint64_t>::max(),
+            std::numeric_limits<std::uint64_t>::max(),
+            1,
+        });
+    });
+
+    PureTree missing_root = PureTree::empty();
+    missing_root.add_node(PureTreeNode{"node", "position", "path"});
+    expect_invalid([&] { validate_pure_tree(missing_root); });
+
+    const std::filesystem::path preserved_path = path.string() + ".preserve";
+    {
+        std::ofstream existing(preserved_path, std::ios::binary | std::ios::trunc);
+        existing << "keep existing contents";
+    }
+    expect_invalid([&] { save_pure_tree(preserved_path, missing_root); });
+    {
+        std::ifstream existing(preserved_path, std::ios::binary);
+        const std::string contents{std::istreambuf_iterator<char>{existing}, std::istreambuf_iterator<char>{}};
+        assert(contents == "keep existing contents");
+    }
+    std::filesystem::remove(preserved_path);
+
+    PureTree disconnected = PureTree::empty();
+    disconnected.add_node(PureTreeNode{"root", "p0", "root"});
+    disconnected.add_node(PureTreeNode{"orphan", "p1", "orphan"});
+    disconnected.set_root("root");
+    expect_invalid([&] { validate_pure_tree(disconnected); });
+
+    PureTree cycle = PureTree::empty();
+    cycle.add_node(PureTreeNode{"a", "p0", "a"});
+    cycle.add_node(PureTreeNode{"b", "p1", "a/b"});
+    cycle.set_root("a");
+    cycle.add_edge(PureTreeEdge{"ab", "a", "b", "7g7f"});
+    cycle.add_edge(PureTreeEdge{"ba", "b", "a", "3c3d"});
+    expect_invalid([&] { validate_pure_tree(cycle); });
+
+    cycle.add_node(PureTreeNode{"detached-root", "p2", "detached-root"});
+    cycle.set_root("detached-root");
+    expect_invalid([&] { validate_pure_tree(cycle); });
+
+    expect_invalid([] { (void)deserialize_pure_tree("KADOKA_PURE_TREE\t2\nROOT\t\n"); });
+    expect_invalid(
+        [] { (void)deserialize_pure_tree("KADOKA_PURE_TREE\t1\nROOT\t\nNODE\tn\tp\tpath\t0\t0\t0\t0\t0\n"); });
+}
