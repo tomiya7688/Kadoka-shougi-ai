@@ -4,6 +4,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -225,6 +226,19 @@ int main() {
     PureTree invalid_mean = PureTree::empty();
     expect_invalid([&] { invalid_mean.add_node(PureTreeNode{"bad", "position", "path", 0, 0, 0, 0, 1.1}); });
 
+    PureTree excessive_results = PureTree::empty();
+    expect_invalid([&] { excessive_results.add_node(PureTreeNode{"bad", "position", "path", 10, 7, 2, 2}); });
+    expect_invalid([&] {
+        excessive_results.add_node(PureTreeNode{
+            "boundary",
+            "position-boundary",
+            "path-boundary",
+            std::numeric_limits<std::uint64_t>::max(),
+            std::numeric_limits<std::uint64_t>::max(),
+            1,
+        });
+    });
+
     PureTree missing_root = PureTree::empty();
     missing_root.add_node(PureTreeNode{"node", "position", "path"});
     expect_invalid([&] { validate_pure_tree(missing_root); });
@@ -254,6 +268,10 @@ int main() {
     cycle.set_root("a");
     cycle.add_edge(PureTreeEdge{"ab", "a", "b", "7g7f"});
     cycle.add_edge(PureTreeEdge{"ba", "b", "a", "3c3d"});
+    expect_invalid([&] { validate_pure_tree(cycle); });
+
+    cycle.add_node(PureTreeNode{"detached-root", "p2", "detached-root"});
+    cycle.set_root("detached-root");
     expect_invalid([&] { validate_pure_tree(cycle); });
 
     expect_invalid([] { (void)deserialize_pure_tree("KADOKA_PURE_TREE\t2\nROOT\t\n"); });
