@@ -20,8 +20,7 @@ namespace {
 //   引数: [function: 実行する処理]
 //   戻り値: [なし]
 // }
-template <class Function>
-void assert_invalid(Function&& function) {
+template <class Function> void assert_invalid(Function&& function) {
     bool failed = false;
     try {
         function();
@@ -39,10 +38,7 @@ void assert_invalid(Function&& function) {
 // }
 OfficialTrainingRecipe sample_recipe() {
     OfficialTrainingRecipe recipe;
-    recipe.datasets = {
-        {"dataset-b", "revision-b", 0.25},
-        {"dataset-a", "revision-a", 1.5}
-    };
+    recipe.datasets = {{"dataset-b", "revision-b", 0.25}, {"dataset-a", "revision-a", 1.5}};
     recipe.source_weights = {0.1, 0.0, 0.2, 0.7};
     recipe.architecture_id = "policy-value-v1";
     recipe.architecture_version = "1";
@@ -63,10 +59,8 @@ OfficialTrainingRecipe sample_recipe() {
 //   戻り値: [int: 成功時0]
 // }
 int main() {
-    const std::array<DatasetRegistryReference, 2> registered{{
-        {"dataset-a", "revision-a"},
-        {"dataset-b", "revision-b"}
-    }};
+    const std::array<DatasetRegistryReference, 2> registered{
+        {{"dataset-a", "revision-a"}, {"dataset-b", "revision-b"}}};
     // Round-trip a valid recipe and check the canonical JSON representation.
     {
         const auto recipe = sample_recipe();
@@ -109,15 +103,12 @@ int main() {
     {
         auto recipe = sample_recipe();
         assert_invalid([&] { validate_training_recipe(recipe, std::span<const DatasetRegistryReference>{}); });
-        const std::array<DatasetRegistryReference, 2> wrong_revisions{{
-            {"dataset-a", "old-revision"},
-            {"dataset-b", "old-revision"}
-        }};
+        const std::array<DatasetRegistryReference, 2> wrong_revisions{
+            {{"dataset-a", "old-revision"}, {"dataset-b", "old-revision"}}};
         assert_invalid([&] { validate_training_recipe(recipe, wrong_revisions); });
         assert_invalid([&] {
-            static_cast<void>(deserialize_training_recipe(
-                serialize_training_recipe(recipe), std::span<const DatasetRegistryReference>{}
-            ));
+            static_cast<void>(deserialize_training_recipe(serialize_training_recipe(recipe),
+                                                          std::span<const DatasetRegistryReference>{}));
         });
     }
 
@@ -159,12 +150,7 @@ int main() {
         assert(decoded.champion_generation == std::numeric_limits<std::uint64_t>::max());
 
         const std::string serialized = serialize_training_recipe(sample_recipe());
-        for (const std::string invalid_generation : {
-                 "1.5",
-                 "-1",
-                 "1e3",
-                 "18446744073709551616"
-             }) {
+        for (const std::string invalid_generation : {"1.5", "-1", "1e3", "18446744073709551616"}) {
             std::string invalid = serialized;
             const std::string field = "\"champion_generation\":3";
             const auto value = invalid.find(field);
@@ -178,33 +164,25 @@ int main() {
     {
         const auto recipe = sample_recipe();
         const std::string serialized = serialize_training_recipe(recipe);
-        assert_invalid([&] {
-            static_cast<void>(deserialize_training_recipe("{"));
-        });
+        assert_invalid([&] { static_cast<void>(deserialize_training_recipe("{")); });
         std::string invalid_exponent = serialized;
         const auto weight = invalid_exponent.find("0.25");
         assert(weight != std::string::npos);
         invalid_exponent.replace(weight, 4, "1e+-2");
-        assert_invalid([&] {
-            static_cast<void>(deserialize_training_recipe(invalid_exponent));
-        });
+        assert_invalid([&] { static_cast<void>(deserialize_training_recipe(invalid_exponent)); });
         std::string unsupported = serialized;
         const auto version = unsupported.find("\"schema_version\":1");
         assert(version != std::string::npos);
         unsupported.replace(version, 18, "\"schema_version\":2");
-        assert_invalid([&] {
-            static_cast<void>(deserialize_training_recipe(unsupported));
-        });
+        assert_invalid([&] { static_cast<void>(deserialize_training_recipe(unsupported)); });
     }
 
     // Escaped quotes, newlines, and UTF-8 survive serialization.
     {
         auto recipe = sample_recipe();
         recipe.datasets.front().dataset_id = "quoted\"id\n雪";
-        const std::vector<DatasetRegistryReference> special_ids{
-            {"quoted\"id\n雪", "revision-b"},
-            {"dataset-a", "revision-a"}
-        };
+        const std::vector<DatasetRegistryReference> special_ids{{"quoted\"id\n雪", "revision-b"},
+                                                                {"dataset-a", "revision-a"}};
         validate_training_recipe(recipe, special_ids);
         const auto decoded = deserialize_training_recipe(serialize_training_recipe(recipe));
         assert(decoded.datasets.front().dataset_id == "dataset-a");

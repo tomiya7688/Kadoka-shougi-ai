@@ -1,5 +1,7 @@
 # Coding Guidelines
 
+The Japanese document [コーディング規約](coding-guidelines.ja.md) is canonical for the inheritance section below. This English section is a supplemental translation; all other sections remain the English originals until they are migrated.
+
 This document defines the default implementation rules for Kadoka Shougi AI. The goal is to keep the codebase easy to extend while preserving direct, low-overhead implementations in performance-critical engine code.
 
 ## 1. Language and build baseline
@@ -165,19 +167,63 @@ Prefer compact SFEN positions that isolate one rule. Important shogi-specific ca
 
 Keep rule fixes separate from AI-strength tuning when possible. A rules regression should be reviewable without also evaluating evaluation weights or search heuristics.
 
-## 11. Formatting
+## 11. Structured comments
 
-`.clang-format` is the repository formatting source of truth.
+New or changed C++ class/struct and function/method declarations must have a
+JSON-like comment block immediately before the declaration. Use the semantic
+keys from the
+[JSON-like Comment Outs specification](https://github.com/tomiya7688/Json-like-comment-outs/blob/main/docs/jp/SPECIFICATION.md)
+in the language the team reads most easily.
+
+- Classes and structs must describe their responsibility and principal fields.
+- Functions and methods must describe responsibility, action, parameters, and return value.
+- Comments inside implementations remain ordinary comments. Use them to explain intent,
+  non-obvious algorithms, and non-obvious local state rather than restating each line.
+- Keep the comment accurate when the declaration or behavior changes.
+
+C++ example:
+
+```cpp
+// {
+//   責務: [TrainingRecipe: 学習recipeと検証対象の項目を保持する]
+//   フィールド: [datasets: 使用datasetと重み / config_hash: 学習設定の識別子]
+// }
+struct TrainingRecipe {
+    // ...
+};
+
+// {
+//   責務: [validate_recipe: 学習recipeの制約を検証する]
+//   処理: [1: 必須値と重みを確認する]
+//   引数: [recipe: 検証対象]
+//   戻り値: [void: 不正ならinvalid_argumentを送出する]
+// }
+void validate_recipe(const TrainingRecipe& recipe);
+```
+
+A code change that adds or changes declarations without these blocks is returned
+for correction.
+
+## 12. Formatting
+
+`.clang-format` is the repository formatting source of truth. Install the pinned
+`clang-format==18.1.8` from `tools/requirements-format.txt` into your development
+environment. Check `clang-format --version` before formatting.
 
 Typical usage:
 
 ```bash
-clang-format -i engine/src/*.cpp engine/include/kadoka/*.hpp tests/*.cpp protocol/cli/*.cpp
+python -m pip install --no-deps -r tools/requirements-format.txt
+clang-format -i path/to/changed.cpp path/to/changed.hpp
+clang-format --dry-run --Werror path/to/changed.cpp path/to/changed.hpp
 ```
 
-Format touched C/C++ files before opening a PR. Avoid large format-only rewrites mixed with functional changes.
+Pass only the C/C++ files changed by the task. Do not pass generated build
+output, vendor files, or unrelated working-tree changes. Run `-i`, then
+`--dry-run --Werror` and the related tests before review. Avoid large
+format-only rewrites mixed with functional changes.
 
-## 12. Static analysis
+## 13. Static analysis
 
 `.clang-tidy` defines the baseline static-analysis policy.
 
@@ -196,7 +242,21 @@ cmake --build build
 
 Static-analysis fixes should remain understandable and should not introduce abstraction or allocations into hot paths merely to silence a warning. Suppressions must be local and justified.
 
-## 13. Hot-path review rule
+The CI-equivalent quality gate on Ubuntu uses these commands from the repository root:
+
+```bash
+python -m pip install --no-deps -r tools/requirements-format.txt
+sudo apt-get update && sudo apt-get install --yes clang-tidy
+BASE_SHA="$(git merge-base origin/main HEAD)"
+git diff --diff-filter=ACMR --name-only -z "$BASE_SHA...HEAD" -- '*.cpp' '*.hpp' '*.h' | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+cmake --build build --config Release --parallel 2
+ctest --test-dir build -C Release --output-on-failure
+```
+
+The format check covers C++ source and header files changed since the branch point. CMake runs clang-tidy as each target is compiled; the normal CTest suite remains the test gate.
+
+## 14. Hot-path review rule
 
 Before adding a layer, allocation, virtual dispatch, lock, container conversion, or string operation to a frequently executed engine path, ask whether the operation is required by the component contract.
 
@@ -211,14 +271,35 @@ If performance is part of the feature contract:
 
 Use this checklist before submitting code:
 
-1. Core rules remain centralized in the shogi core.
-2. A new AI connects through an interface/adapter rather than editing rule code.
-3. Commander/Messenger/Processing is used for non-hot-path application flows where it improves separation.
-4. Search, move generation, evaluation, and inference hot paths may use direct low-level code.
-5. Names follow repository conventions.
-6. Ownership is explicit; `unique_ptr` is preferred over shared ownership.
-7. Expected failures use explicit status/result handling where practical.
-8. No uncontrolled `std::cout` is added to library code.
-9. New rule behavior has a compact regression test.
+01. Core rules remain centralized in the shogi core.
+02. A new AI connects through an interface/adapter rather than editing rule code.
+03. Commander/Messenger/Processing is used for non-hot-path application flows where it improves separation.
+04. Search, move generation, evaluation, and inference hot paths may use direct low-level code.
+05. Names follow repository conventions.
+06. Ownership is explicit; `unique_ptr` is preferred over shared ownership.
+07. Expected failures use explicit status/result handling where practical.
+08. No uncontrolled `std::cout` is added to library code.
+09. New rule behavior has a compact regression test.
 10. Touched C/C++ files are formatted and major clang-tidy findings are addressed or justified.
 11. README stays concise; detailed specifications belong under `doc/`.
+
+## Inheritance conventions (required review criteria)
+
+### Prohibition: multi-level inheritance rooted in a concrete class
+
+- **A class C must not inherit from a class B that inherits from a concrete class A.** In other words, `concrete A → B → C` is prohibited whether B is concrete or abstract.
+- **`abstract A → concrete B → C` does not violate this prohibition.** It still requires design and readability review.
+- This rule alone does not prohibit a single inheritance step such as `concrete A → B`. Always follow stricter existing project rules, such as a rule that prohibits inheriting from concrete classes at all.
+- Implicit root types such as `Object`, `System.Object`, and `java.lang.Object`, along with interface inheritance and implementation, are outside this violation check.
+
+### Design principles before choosing inheritance
+
+- **Avoid inheriting from classes with concrete behavior by default.** The same applies to abstract classes that contain concrete implementations. Prefer delegation or composition when the inheritance relationship has no meaning of its own and exists only to reuse behavior.
+- Consider inheritance only when the base and derived types share a meaningful shape or contract, or when there is a reasonable expectation that more types with the same shape will be needed. Do not create an abstraction or hierarchy merely because it might be useful someday.
+- Reject inheritance in review when the hierarchy is hard to follow, responsibilities are unclear, changes have excessive impact, or substitutability does not hold, even if it is formally permitted. Passing the prohibition check does not mean the design is approved.
+
+### Scope and exceptions
+
+- A deliberately adopted inheritance structure is exempt only when its rationale and scope are documented in the project's design source of truth. Existing code with the same structure is not, by itself, a reason for an exception.
+- Distinguish the inheritance rules of languages accepted as input by compilers or analyzers, samples, and test fixtures from this project's own implementation rules.
+- Apply this rule to new and modified project-owned code. It does not require mass changes to unrelated existing code.

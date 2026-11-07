@@ -41,7 +41,8 @@ struct TrainingSourceWeights {
 
 // {
 //   責務: [OfficialTrainingRecipe: 再現可能な学習recipeのversion付き項目を保持する]
-//   フィールド: [schema_version / datasets / source_weights / architecture_idとversion / effective_config_json: 再現可能な有効設定JSON / config_hash / generation / 任意の調整・評価参照]
+//   フィールド: [schema_version / datasets / source_weights / architecture_idとversion / effective_config_json:
+//   再現可能な有効設定JSON / config_hash / generation / 任意の調整・評価参照]
 // }
 struct OfficialTrainingRecipe {
     std::uint32_t schema_version{1};
@@ -70,10 +71,8 @@ void validate_training_recipe(const OfficialTrainingRecipe& recipe);
 //   引数: [recipe: 検証対象 / registered_datasets: 利用可能なIDとrevision一覧]
 //   戻り値: [void。不正または未登録ならinvalid_argumentを送出する]
 // }
-void validate_training_recipe(
-    const OfficialTrainingRecipe& recipe,
-    std::span<const DatasetRegistryReference> registered_datasets
-);
+void validate_training_recipe(const OfficialTrainingRecipe& recipe,
+                              std::span<const DatasetRegistryReference> registered_datasets);
 
 // {
 //   責務: [serialize_training_recipe: recipeを決定的なJSONに変換する]
@@ -81,9 +80,7 @@ void validate_training_recipe(
 //   引数: [recipe: serialize対象]
 //   戻り値: [JSON文字列]
 // }
-[[nodiscard]] std::string serialize_training_recipe(
-    const OfficialTrainingRecipe& recipe
-);
+[[nodiscard]] std::string serialize_training_recipe(const OfficialTrainingRecipe& recipe);
 
 // Parsing rejects malformed JSON and unsupported schema versions.
 // {
@@ -92,9 +89,7 @@ void validate_training_recipe(
 //   引数: [json: 読み込むJSON]
 //   戻り値: [復元したrecipe。不正ならinvalid_argumentを送出する]
 // }
-[[nodiscard]] OfficialTrainingRecipe deserialize_training_recipe(
-    std::string_view json
-);
+[[nodiscard]] OfficialTrainingRecipe deserialize_training_recipe(std::string_view json);
 
 // {
 //   責務: [deserialize_training_recipe: JSONからrecipeを復元しdataset参照を照合する]
@@ -102,9 +97,7 @@ void validate_training_recipe(
 //   引数: [json: 読み込むJSON / registered_datasets: 利用可能IDとrevision一覧]
 //   戻り値: [復元したrecipe。不正または未登録ならinvalid_argumentを送出する]
 // }
-[[nodiscard]] OfficialTrainingRecipe deserialize_training_recipe(
-    std::string_view json,
-    std::span<const DatasetRegistryReference> registered_datasets
-);
+[[nodiscard]] OfficialTrainingRecipe
+deserialize_training_recipe(std::string_view json, std::span<const DatasetRegistryReference> registered_datasets);
 
 } // namespace kadoka::shogi::training
