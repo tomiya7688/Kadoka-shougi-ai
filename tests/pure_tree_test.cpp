@@ -169,15 +169,17 @@ int main() {
     assert_same_tree(nul_identity, deserialize_pure_tree(serialize_pure_tree(nul_identity)));
 
     PureTree invalid_utf8 = PureTree::empty();
-    const std::string invalid_utf8_id = "bad-\xff-\xe0\x80\x80-\xed\xa0\x80-\xf5-\xf0\x9f";
+    const std::string invalid_utf8_id = "bad-\xff-\xe0\x80\x80-\xed\xa0\x80-\xf5-\xf0\x9f-tail";
     invalid_utf8.add_node(PureTreeNode{invalid_utf8_id, "position", "path"});
     invalid_utf8.set_root(invalid_utf8_id);
     const std::string invalid_utf8_serialized = serialize_pure_tree(invalid_utf8);
+    assert(invalid_utf8_serialized.find("bad-\\xff-\\xe0\\x80\\x80-\\xed\\xa0\\x80-\\xf5-\\xf0\\x9f-tail") !=
+           std::string::npos);
     assert(invalid_utf8_serialized.find("\\xff") != std::string::npos);
     assert(invalid_utf8_serialized.find("\\xe0\\x80\\x80") != std::string::npos);
     assert(invalid_utf8_serialized.find("\\xed\\xa0\\x80") != std::string::npos);
     assert(invalid_utf8_serialized.find("\\xf5") != std::string::npos);
-    assert(invalid_utf8_serialized.find("\\xf0\\x9f") != std::string::npos);
+    assert(invalid_utf8_serialized.find("\\xf0\\x9f-tail") != std::string::npos);
     assert(invalid_utf8_serialized.find(static_cast<char>(0xff)) == std::string::npos);
     assert_same_tree(invalid_utf8, deserialize_pure_tree(invalid_utf8_serialized));
 
