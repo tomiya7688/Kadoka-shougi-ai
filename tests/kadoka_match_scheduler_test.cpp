@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <map>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -84,6 +85,7 @@ int main() {
     const auto registry = make_registry({"alpha", "beta", "gamma"});
     const auto round_robin = kadoka::league::create_schedule(registry, {ScheduleMode::round_robin, 17});
     expect(round_robin.size() == 6, "round robin should create two games for each of three pairs");
+    std::mt19937_64 expected_seed_generator(17);
 
     std::map<std::pair<std::string, std::string>, unsigned> pair_counts;
     std::map<std::string, unsigned> first_counts;
@@ -95,6 +97,7 @@ int main() {
                "match IDs should be assigned in stable order");
         expect(!match.black_time_control_config_hash.empty() && !match.white_time_control_config_hash.empty(),
                "match config should carry both participants' time controls");
+        expect(match.seed == expected_seed_generator(), "round robin should assign deterministic per-match seeds");
         const auto ordered = std::minmax(match.black.value, match.white.value);
         ++pair_counts[{ordered.first, ordered.second}];
         ++first_counts[match.black.value];
