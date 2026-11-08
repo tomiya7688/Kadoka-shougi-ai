@@ -146,6 +146,15 @@ add_dependencies(kadoka_shogi_model_registry kadoka_rule_check)
 
 target_include_directories(kadoka_shogi_model_registry PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tools/model_registry/include)
 
+# { 責務: [kadoka_shogi_league_scheduler: 競技個体を組み合わせて再現可能な対局計画を作成する], 依存: [kadoka_rule_check] }
+add_library(kadoka_shogi_league_scheduler tools/ai_league/src/match_scheduler.cpp)
+
+add_dependencies(kadoka_shogi_league_scheduler kadoka_rule_check)
+
+target_include_directories(kadoka_shogi_league_scheduler PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tools/ai_league/include)
+
+target_link_libraries(kadoka_shogi_league_scheduler PUBLIC kadoka_shogi_best_manifest)
+
 # { 責務: [kadoka_shogi_rating_store: 対局結果からratingを更新し履歴を保存する], 依存: [kadoka_shogi_best_manifest] }
 add_library(kadoka_shogi_rating_store tools/ai_league/src/rating_store.cpp)
 
@@ -214,6 +223,11 @@ add_test(NAME kadoka_best_manifest_test COMMAND kadoka_best_manifest_test)
 add_executable(kadoka_participant_registry_test tests/kadoka_participant_registry_test.cpp)
 target_link_libraries(kadoka_participant_registry_test PRIVATE kadoka_shogi_best_manifest)
 add_test(NAME kadoka_participant_registry_test COMMAND kadoka_participant_registry_test)
+
+# { 責務: [kadoka_match_scheduler_test: 組合せ生成と再現性をCTestで検証する], 依存: [kadoka_shogi_league_scheduler] }
+add_executable(kadoka_match_scheduler_test tests/kadoka_match_scheduler_test.cpp)
+target_link_libraries(kadoka_match_scheduler_test PRIVATE kadoka_shogi_league_scheduler)
+add_test(NAME kadoka_match_scheduler_test COMMAND kadoka_match_scheduler_test)
 
 # { 責務: [kadoka_rating_store_test: rating更新と保存復元を検証する], 依存: [kadoka_shogi_rating_store] }
 add_executable(kadoka_rating_store_test tests/kadoka_rating_store_test.cpp)
