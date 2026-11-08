@@ -188,6 +188,28 @@ int main() {
     }
     expect(too_few_rejected, "scheduling fewer than two participants should be rejected");
 
+    bool empty_rejected = false;
+    try {
+        const kadoka::best::ParticipantRegistry empty;
+        (void)kadoka::league::create_schedule(empty, {ScheduleMode::round_robin, 1});
+    } catch (const std::invalid_argument&) {
+        empty_rejected = true;
+    }
+    expect(empty_rejected, "scheduling zero participants should be rejected");
+
+    const auto two_registry = make_registry({"alpha", "beta"});
+    const auto two_matches = kadoka::league::create_schedule(two_registry, {ScheduleMode::round_robin, 1});
+    expect(two_matches.size() == 2, "two participants should produce two matches");
+    const auto first_participant = two_registry.participants().begin();
+    const auto second_participant = std::next(first_participant);
+    expect((two_matches[0].black == first_participant->second.id &&
+            two_matches[0].white == second_participant->second.id) ||
+               (two_matches[0].black == second_participant->second.id &&
+                two_matches[0].white == first_participant->second.id),
+           "the first match should include both participants");
+    expect(two_matches[1].black == two_matches[0].white && two_matches[1].white == two_matches[0].black,
+           "the second match should swap sides");
+
     bool unsupported_mode_rejected = false;
     try {
         (void)kadoka::league::create_schedule(registry, {static_cast<ScheduleMode>(99), 1});
