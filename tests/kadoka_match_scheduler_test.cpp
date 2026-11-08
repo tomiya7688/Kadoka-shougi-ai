@@ -1,6 +1,7 @@
 #include "kadoka/league/match_scheduler.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <map>
 #include <random>
 #include <stdexcept>
@@ -83,9 +84,10 @@ int main() {
     using kadoka::league::SchedulerOptions;
 
     const auto registry = make_registry({"alpha", "beta", "gamma"});
-    const auto round_robin = kadoka::league::create_schedule(registry, {ScheduleMode::round_robin, 17});
+    const std::uint64_t round_robin_seed = 17;
+    const auto round_robin = kadoka::league::create_schedule(registry, {ScheduleMode::round_robin, round_robin_seed});
     expect(round_robin.size() == 6, "round robin should create two games for each of three pairs");
-    std::mt19937_64 expected_seed_generator(17);
+    std::mt19937_64 expected_seed_generator(round_robin_seed);
 
     std::map<std::pair<std::string, std::string>, unsigned> pair_counts;
     std::map<std::string, unsigned> first_counts;

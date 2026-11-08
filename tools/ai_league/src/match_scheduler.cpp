@@ -54,9 +54,9 @@ std::string format_match_id(std::size_t index) {
 }
 
 // {
-//   責務: [make_match: 参加者の先後・時間設定を持つ対局設定を作る]
+//   責務: [make_match: IDとseed付与前の参加者・時間設定付き対局設定を作る]
 //   引数: [black: 先手参加者] [white: 後手参加者]
-//   戻り値: [まだ連番IDを付けていない対局設定]
+//   戻り値: [呼び出し元が連番IDとseedを後付けする対局設定]
 // }
 MatchConfig make_match(const best::Participant& black, const best::Participant& white) {
     return {"", black.id, white.id, black.time_control_config_hash, white.time_control_config_hash};
