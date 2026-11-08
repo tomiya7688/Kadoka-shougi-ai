@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iterator>
 #include <limits>
+#include <locale>
 #include <random>
 #include <sstream>
 #include <stdexcept>
@@ -46,6 +47,7 @@ void shuffle_matches(std::vector<MatchConfig>& matches, std::mt19937_64& generat
 // }
 std::string format_match_id(std::size_t index) {
     std::ostringstream output;
+    output.imbue(std::locale::classic());
     output << "match-";
     output.width(8);
     output.fill('0');
